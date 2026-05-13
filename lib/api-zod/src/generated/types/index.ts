@@ -68,6 +68,7 @@ export * from "./revenueReportDataItem";
 export * from "./service";
 export * from "./serviceInput";
 export * from "./serviceInputSize";
+export * from "./serviceItem";
 export * from "./serviceSize";
 export * from "./serviceUpdate";
 export * from "./serviceUpdateSize";

@@ -463,7 +463,12 @@ export const ListPackagesResponseItem = zod.object({
   tenantId: zod.number(),
   name: zod.string(),
   description: zod.string().nullish(),
-  serviceIds: zod.array(zod.number()).optional(),
+  serviceItems: zod.array(
+    zod.object({
+      serviceName: zod.string(),
+      quantity: zod.number().min(1),
+    }),
+  ),
   price: zod.number(),
   createdAt: zod.coerce.date(),
 });
@@ -472,11 +477,19 @@ export const ListPackagesResponse = zod.array(ListPackagesResponseItem);
 /**
  * @summary Create a service package
  */
+
 export const CreatePackageBody = zod.object({
   tenantId: zod.number(),
   name: zod.string(),
   description: zod.string().optional(),
-  serviceIds: zod.array(zod.number()).optional(),
+  serviceItems: zod
+    .array(
+      zod.object({
+        serviceName: zod.string(),
+        quantity: zod.number().min(1),
+      }),
+    )
+    .optional(),
   price: zod.number(),
 });
 
@@ -492,7 +505,12 @@ export const GetPackageResponse = zod.object({
   tenantId: zod.number(),
   name: zod.string(),
   description: zod.string().nullish(),
-  serviceIds: zod.array(zod.number()).optional(),
+  serviceItems: zod.array(
+    zod.object({
+      serviceName: zod.string(),
+      quantity: zod.number().min(1),
+    }),
+  ),
   price: zod.number(),
   createdAt: zod.coerce.date(),
 });
@@ -507,7 +525,14 @@ export const UpdatePackageParams = zod.object({
 export const UpdatePackageBody = zod.object({
   name: zod.string().optional(),
   description: zod.string().optional(),
-  serviceIds: zod.array(zod.number()).optional(),
+  serviceItems: zod
+    .array(
+      zod.object({
+        serviceName: zod.string(),
+        quantity: zod.number().min(1),
+      }),
+    )
+    .optional(),
   price: zod.number().optional(),
 });
 
@@ -516,7 +541,12 @@ export const UpdatePackageResponse = zod.object({
   tenantId: zod.number(),
   name: zod.string(),
   description: zod.string().nullish(),
-  serviceIds: zod.array(zod.number()).optional(),
+  serviceItems: zod.array(
+    zod.object({
+      serviceName: zod.string(),
+      quantity: zod.number().min(1),
+    }),
+  ),
   price: zod.number(),
   createdAt: zod.coerce.date(),
 });

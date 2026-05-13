@@ -1316,9 +1316,19 @@ components:
           type: integer
 
     # Package
+    ServiceItem:
+      type: object
+      required: [serviceName, quantity]
+      properties:
+        serviceName:
+          type: string
+        quantity:
+          type: integer
+          minimum: 1
+
     Package:
       type: object
-      required: [id, tenantId, name, price, createdAt]
+      required: [id, tenantId, name, price, serviceItems, createdAt]
       properties:
         id:
           type: integer
@@ -1328,10 +1338,10 @@ components:
           type: string
         description:
           type: ["string", "null"]
-        serviceIds:
+        serviceItems:
           type: array
           items:
-            type: integer
+            $ref: "#/components/schemas/ServiceItem"
         price:
           type: number
         createdAt:
@@ -1348,10 +1358,10 @@ components:
           type: string
         description:
           type: string
-        serviceIds:
+        serviceItems:
           type: array
           items:
-            type: integer
+            $ref: "#/components/schemas/ServiceItem"
         price:
           type: number
 
@@ -1362,10 +1372,10 @@ components:
           type: string
         description:
           type: string
-        serviceIds:
+        serviceItems:
           type: array
           items:
-            type: integer
+            $ref: "#/components/schemas/ServiceItem"
         price:
           type: number
 

@@ -226,13 +226,19 @@ export interface ServiceUpdate {
   durationMinutes?: number;
 }
 
+export interface ServiceItem {
+  serviceName: string;
+  /** @minimum 1 */
+  quantity: number;
+}
+
 export interface Package {
   id: number;
   tenantId: number;
   name: string;
   /** @nullable */
   description?: string | null;
-  serviceIds?: number[];
+  serviceItems: ServiceItem[];
   price: number;
   createdAt: string;
 }
@@ -241,14 +247,14 @@ export interface PackageInput {
   tenantId: number;
   name: string;
   description?: string;
-  serviceIds?: number[];
+  serviceItems?: ServiceItem[];
   price: number;
 }
 
 export interface PackageUpdate {
   name?: string;
   description?: string;
-  serviceIds?: number[];
+  serviceItems?: ServiceItem[];
   price?: number;
 }
 

@@ -5,6 +5,7 @@
  * Grooming CRM API
  * OpenAPI spec version: 0.1.0
  */
+import type { ServiceItem } from "./serviceItem";
 
 export interface Package {
   id: number;
@@ -12,7 +13,7 @@ export interface Package {
   name: string;
   /** @nullable */
   description?: string | null;
-  serviceIds?: number[];
+  serviceItems: ServiceItem[];
   price: number;
   createdAt: Date;
 }
