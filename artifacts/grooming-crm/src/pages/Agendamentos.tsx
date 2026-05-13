@@ -279,7 +279,10 @@ export default function Agendamentos() {
   const autoFillPrice = (serviceId: string, packageId: string) => {
     if (usePackage && packageId) {
       const pkg = (packages as any[]).find(p => p.id === Number(packageId));
-      if (pkg) setForm(f => ({ ...f, totalPrice: String(pkg.price) }));
+      if (pkg && petSize && Array.isArray(pkg.priceBySizes)) {
+        const entry = pkg.priceBySizes.find((e: any) => e.size === petSize);
+        if (entry) setForm(f => ({ ...f, totalPrice: String(entry.price) }));
+      }
     } else if (!usePackage && serviceId) {
       const svc = (services as any[]).find(s => s.id === Number(serviceId));
       if (svc) setForm(f => ({ ...f, totalPrice: String(svc.price) }));

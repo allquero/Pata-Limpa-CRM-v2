@@ -232,6 +232,11 @@ export interface ServiceItem {
   quantity: number;
 }
 
+export interface PriceBySize {
+  size: string;
+  price: number;
+}
+
 export interface Package {
   id: number;
   tenantId: number;
@@ -239,7 +244,7 @@ export interface Package {
   /** @nullable */
   description?: string | null;
   serviceItems: ServiceItem[];
-  price: number;
+  priceBySizes: PriceBySize[];
   createdAt: string;
 }
 
@@ -248,14 +253,14 @@ export interface PackageInput {
   name: string;
   description?: string;
   serviceItems?: ServiceItem[];
-  price: number;
+  priceBySizes?: PriceBySize[];
 }
 
 export interface PackageUpdate {
   name?: string;
   description?: string;
   serviceItems?: ServiceItem[];
-  price?: number;
+  priceBySizes?: PriceBySize[];
 }
 
 export type AppointmentFullStatus =

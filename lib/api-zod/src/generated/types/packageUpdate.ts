@@ -5,11 +5,12 @@
  * Grooming CRM API
  * OpenAPI spec version: 0.1.0
  */
+import type { PriceBySize } from "./priceBySize";
 import type { ServiceItem } from "./serviceItem";
 
 export interface PackageUpdate {
   name?: string;
   description?: string;
   serviceItems?: ServiceItem[];
-  price?: number;
+  priceBySizes?: PriceBySize[];
 }

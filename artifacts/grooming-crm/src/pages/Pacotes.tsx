@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useListPackages, useCreatePackage, useUpdatePackage, useDeletePackage, useListServices } from "@workspace/api-client-react";
-import { DEFAULT_TENANT_ID } from "@/lib/constants";
+import { DEFAULT_TENANT_ID, PORTE_SIZES } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,23 +11,29 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Package, Tag, X } from "lucide-react";
+import { Plus, Pencil, Trash2, Package, X } from "lucide-react";
 
 type ServiceItem = { serviceName: string; quantity: number };
+type PriceBySize = { size: string; price: number };
 
 type Pkg = {
   id: number;
   name: string;
   description: string | null;
-  price: number;
   serviceItems: ServiceItem[];
+  priceBySizes: PriceBySize[];
 };
+
+const ALL_SIZES = Object.entries(PORTE_SIZES) as [string, string][];
+
+const emptyPriceBySizes = (): PriceBySize[] =>
+  ALL_SIZES.map(([size]) => ({ size, price: 0 }));
 
 const emptyForm = {
   name: "",
   description: "",
-  price: "",
   serviceItems: [] as ServiceItem[],
+  priceBySizes: emptyPriceBySizes(),
 };
 
 function formatBRL(v: number) {
@@ -47,11 +53,9 @@ export default function Pacotes() {
   const [form, setForm] = useState(emptyForm);
   const [deleteTarget, setDeleteTarget] = useState<Pkg | null>(null);
 
-  // Unique service names (types) from the catalog
-  const serviceNames = Array.from(new Set((services as any[]).map(s => s.name))).sort();
-
-  // Which service names are already in the form
+  const serviceNames = Array.from(new Set((services as any[]).map((s: any) => s.name))).sort() as string[];
   const usedNames = form.serviceItems.map(i => i.serviceName);
+  const availableNames = serviceNames.filter(n => !usedNames.includes(n));
 
   const openCreate = () => {
     setEditing(null);
@@ -61,11 +65,14 @@ export default function Pacotes() {
 
   const openEdit = (pkg: Pkg) => {
     setEditing(pkg);
+    // Merge saved prices with full size list (in case new sizes were added)
+    const savedMap = Object.fromEntries((pkg.priceBySizes ?? []).map(p => [p.size, p.price]));
+    const priceBySizes = ALL_SIZES.map(([size]) => ({ size, price: savedMap[size] ?? 0 }));
     setForm({
       name: pkg.name,
       description: pkg.description ?? "",
-      price: String(pkg.price),
       serviceItems: pkg.serviceItems.map(i => ({ ...i })),
+      priceBySizes,
     });
     setModalOpen(true);
   };
@@ -87,16 +94,25 @@ export default function Pacotes() {
     setForm(f => ({ ...f, serviceItems: f.serviceItems.filter((_, i) => i !== idx) }));
   };
 
+  const updatePrice = (size: string, raw: string) => {
+    const price = parseFloat(raw) || 0;
+    setForm(f => ({
+      ...f,
+      priceBySizes: f.priceBySizes.map(p => p.size === size ? { ...p, price } : p),
+    }));
+  };
+
   const handleSave = async () => {
     if (!form.name.trim()) { toast({ title: "Nome é obrigatório", variant: "destructive" }); return; }
-    if (!form.price || isNaN(Number(form.price))) { toast({ title: "Preço inválido", variant: "destructive" }); return; }
+    const hasAnyPrice = form.priceBySizes.some(p => p.price > 0);
+    if (!hasAnyPrice) { toast({ title: "Defina ao menos um preço por porte", variant: "destructive" }); return; }
     try {
       const payload = {
         tenantId: DEFAULT_TENANT_ID,
         name: form.name.trim(),
         description: form.description.trim() || null,
-        price: Number(form.price),
         serviceItems: form.serviceItems,
+        priceBySizes: form.priceBySizes.filter(p => p.price > 0),
       };
       if (editing) {
         await updatePackage.mutateAsync({ id: editing.id, data: payload });
@@ -127,15 +143,12 @@ export default function Pacotes() {
 
   const isSaving = createPackage.isPending || updatePackage.isPending;
 
-  // Service names not yet added to the form
-  const availableNames = serviceNames.filter(n => !usedNames.includes(n));
-
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Pacotes</h1>
-          <p className="text-muted-foreground">Combos de serviços com preço especial — válidos para qualquer porte</p>
+          <p className="text-muted-foreground">Combos de serviços com preço por porte</p>
         </div>
         <Button onClick={openCreate} className="gap-2">
           <Plus className="h-4 w-4" />
@@ -145,7 +158,7 @@ export default function Pacotes() {
 
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1, 2, 3].map(i => <Skeleton key={i} className="h-48 w-full rounded-xl" />)}
+          {[1, 2, 3].map(i => <Skeleton key={i} className="h-64 w-full rounded-xl" />)}
         </div>
       ) : packages.length === 0 ? (
         <Card className="flex flex-col items-center justify-center py-16 gap-3 text-muted-foreground">
@@ -155,51 +168,76 @@ export default function Pacotes() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {(packages as Pkg[]).map(pkg => (
-            <Card key={pkg.id} className="flex flex-col border hover:shadow-md transition-shadow">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <CardTitle className="text-lg leading-tight">{pkg.name}</CardTitle>
-                    {pkg.description && (
-                      <CardDescription className="mt-1 line-clamp-2">{pkg.description}</CardDescription>
-                    )}
-                  </div>
-                  <div className="flex gap-1 shrink-0">
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(pkg)}>
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteTarget(pkg)}>
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="flex-1 space-y-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl font-bold text-primary">{formatBRL(pkg.price)}</span>
-                  <Badge variant="secondary" className="bg-green-100 text-green-700 gap-1 text-xs">
-                    <Tag className="h-3 w-3" />
-                    todos os portes
-                  </Badge>
-                </div>
-                {pkg.serviceItems && pkg.serviceItems.length > 0 && (
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Inclui</p>
-                    <div className="flex flex-col gap-1">
-                      {pkg.serviceItems.map((item, i) => (
-                        <div key={i} className="flex items-center gap-2">
-                          <Badge variant="outline" className="text-xs font-normal">
-                            {item.quantity}× {item.serviceName}
-                          </Badge>
-                        </div>
-                      ))}
+          {(packages as Pkg[]).map(pkg => {
+            const prices = pkg.priceBySizes ?? [];
+            const priceValues = prices.map(p => p.price).filter(p => p > 0);
+            const minPrice = priceValues.length ? Math.min(...priceValues) : 0;
+            const maxPrice = priceValues.length ? Math.max(...priceValues) : 0;
+
+            return (
+              <Card key={pkg.id} className="flex flex-col border hover:shadow-md transition-shadow">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="text-lg leading-tight">{pkg.name}</CardTitle>
+                      {pkg.description && (
+                        <CardDescription className="mt-1 line-clamp-2">{pkg.description}</CardDescription>
+                      )}
+                    </div>
+                    <div className="flex gap-1 shrink-0">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(pkg)}>
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteTarget(pkg)}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
                     </div>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
+                </CardHeader>
+                <CardContent className="flex-1 space-y-3">
+                  {/* Price range */}
+                  <div>
+                    {minPrice === maxPrice && minPrice > 0 ? (
+                      <span className="text-2xl font-bold text-primary">{formatBRL(minPrice)}</span>
+                    ) : minPrice > 0 ? (
+                      <span className="text-xl font-bold text-primary">{formatBRL(minPrice)} – {formatBRL(maxPrice)}</span>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">Sem preços definidos</span>
+                    )}
+                  </div>
+
+                  {/* Service items */}
+                  {pkg.serviceItems && pkg.serviceItems.length > 0 && (
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Inclui</p>
+                      <div className="flex flex-wrap gap-1">
+                        {pkg.serviceItems.map((item, i) => (
+                          <Badge key={i} variant="outline" className="text-xs font-normal">
+                            {item.quantity}× {item.serviceName}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Price by size table */}
+                  {prices.length > 0 && (
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Preço por porte</p>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
+                        {prices.map(p => (
+                          <div key={p.size} className="flex items-center justify-between text-xs">
+                            <span className="text-muted-foreground capitalize">{PORTE_SIZES[p.size as keyof typeof PORTE_SIZES] ?? p.size}</span>
+                            <span className="font-medium">{formatBRL(p.price)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
 
@@ -209,7 +247,8 @@ export default function Pacotes() {
           <DialogHeader>
             <DialogTitle>{editing ? "Editar Pacote" : "Novo Pacote"}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-2">
+          <div className="space-y-5 py-2">
+            {/* Name */}
             <div className="space-y-1.5">
               <Label>Nome do pacote *</Label>
               <Input
@@ -218,6 +257,8 @@ export default function Pacotes() {
                 onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
               />
             </div>
+
+            {/* Description */}
             <div className="space-y-1.5">
               <Label>Descrição</Label>
               <Input
@@ -226,62 +267,27 @@ export default function Pacotes() {
                 onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
               />
             </div>
-            <div className="space-y-1.5">
-              <Label>Preço do pacote (R$) *</Label>
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="0,00"
-                value={form.price}
-                onChange={e => setForm(f => ({ ...f, price: e.target.value }))}
-              />
-            </div>
 
-            {/* Service Items */}
+            {/* Service items */}
             <div className="space-y-2">
               <Label>Serviços incluídos</Label>
-              <p className="text-xs text-muted-foreground">
-                Selecione o tipo de serviço e a quantidade — o preço se adapta automaticamente ao porte de cada pet no agendamento.
-              </p>
-
               {form.serviceItems.length > 0 && (
                 <div className="space-y-2 rounded-lg border p-3 bg-muted/30">
                   {form.serviceItems.map((item, idx) => (
                     <div key={idx} className="flex items-center gap-2">
                       <span className="flex-1 text-sm font-medium">{item.serviceName}</span>
                       <div className="flex items-center gap-1">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() => updateItemQty(idx, item.quantity - 1)}
-                        >
-                          −
-                        </Button>
+                        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateItemQty(idx, item.quantity - 1)}>−</Button>
                         <span className="w-8 text-center text-sm font-semibold">{item.quantity}</span>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() => updateItemQty(idx, item.quantity + 1)}
-                        >
-                          +
-                        </Button>
+                        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateItemQty(idx, item.quantity + 1)}>+</Button>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                        onClick={() => removeItem(idx)}
-                      >
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => removeItem(idx)}>
                         <X className="h-3.5 w-3.5" />
                       </Button>
                     </div>
                   ))}
                 </div>
               )}
-
               {availableNames.length > 0 && (
                 <Select onValueChange={addServiceItem} value="">
                   <SelectTrigger>
@@ -294,15 +300,31 @@ export default function Pacotes() {
                   </SelectContent>
                 </Select>
               )}
+            </div>
 
-              {form.serviceItems.length > 0 && (
-                <p className="text-xs text-muted-foreground">
-                  Total de sessões:{" "}
-                  <span className="font-medium text-foreground">
-                    {form.serviceItems.reduce((s, i) => s + i.quantity, 0)}
-                  </span>
-                </p>
-              )}
+            {/* Prices by size */}
+            <div className="space-y-2">
+              <Label>Preço por porte *</Label>
+              <p className="text-xs text-muted-foreground">Deixe 0 para portes que não se aplicam a este pacote.</p>
+              <div className="rounded-lg border divide-y">
+                {form.priceBySizes.map(({ size, price }) => (
+                  <div key={size} className="flex items-center justify-between px-3 py-2 gap-3">
+                    <span className="text-sm w-32 shrink-0">{PORTE_SIZES[size as keyof typeof PORTE_SIZES] ?? size}</span>
+                    <div className="flex items-center gap-1.5 flex-1">
+                      <span className="text-sm text-muted-foreground">R$</span>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0,00"
+                        value={price === 0 ? "" : price}
+                        onChange={e => updatePrice(size, e.target.value)}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
           <DialogFooter>
@@ -325,10 +347,7 @@ export default function Pacotes() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Excluir
             </AlertDialogAction>
           </AlertDialogFooter>

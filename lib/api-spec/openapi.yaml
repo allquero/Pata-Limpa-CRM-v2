@@ -1326,9 +1326,18 @@ components:
           type: integer
           minimum: 1
 
+    PriceBySize:
+      type: object
+      required: [size, price]
+      properties:
+        size:
+          type: string
+        price:
+          type: number
+
     Package:
       type: object
-      required: [id, tenantId, name, price, serviceItems, createdAt]
+      required: [id, tenantId, name, serviceItems, priceBySizes, createdAt]
       properties:
         id:
           type: integer
@@ -1342,15 +1351,17 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ServiceItem"
-        price:
-          type: number
+        priceBySizes:
+          type: array
+          items:
+            $ref: "#/components/schemas/PriceBySize"
         createdAt:
           type: string
           format: date-time
 
     PackageInput:
       type: object
-      required: [tenantId, name, price]
+      required: [tenantId, name]
       properties:
         tenantId:
           type: integer
@@ -1362,8 +1373,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ServiceItem"
-        price:
-          type: number
+        priceBySizes:
+          type: array
+          items:
+            $ref: "#/components/schemas/PriceBySize"
 
     PackageUpdate:
       type: object
@@ -1376,8 +1389,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ServiceItem"
-        price:
-          type: number
+        priceBySizes:
+          type: array
+          items:
+            $ref: "#/components/schemas/PriceBySize"
 
     # Appointment
     AppointmentFull:

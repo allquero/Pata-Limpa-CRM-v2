@@ -469,7 +469,12 @@ export const ListPackagesResponseItem = zod.object({
       quantity: zod.number().min(1),
     }),
   ),
-  price: zod.number(),
+  priceBySizes: zod.array(
+    zod.object({
+      size: zod.string(),
+      price: zod.number(),
+    }),
+  ),
   createdAt: zod.coerce.date(),
 });
 export const ListPackagesResponse = zod.array(ListPackagesResponseItem);
@@ -490,7 +495,14 @@ export const CreatePackageBody = zod.object({
       }),
     )
     .optional(),
-  price: zod.number(),
+  priceBySizes: zod
+    .array(
+      zod.object({
+        size: zod.string(),
+        price: zod.number(),
+      }),
+    )
+    .optional(),
 });
 
 /**
@@ -511,7 +523,12 @@ export const GetPackageResponse = zod.object({
       quantity: zod.number().min(1),
     }),
   ),
-  price: zod.number(),
+  priceBySizes: zod.array(
+    zod.object({
+      size: zod.string(),
+      price: zod.number(),
+    }),
+  ),
   createdAt: zod.coerce.date(),
 });
 
@@ -533,7 +550,14 @@ export const UpdatePackageBody = zod.object({
       }),
     )
     .optional(),
-  price: zod.number().optional(),
+  priceBySizes: zod
+    .array(
+      zod.object({
+        size: zod.string(),
+        price: zod.number(),
+      }),
+    )
+    .optional(),
 });
 
 export const UpdatePackageResponse = zod.object({
@@ -547,7 +571,12 @@ export const UpdatePackageResponse = zod.object({
       quantity: zod.number().min(1),
     }),
   ),
-  price: zod.number(),
+  priceBySizes: zod.array(
+    zod.object({
+      size: zod.string(),
+      price: zod.number(),
+    }),
+  ),
   createdAt: zod.coerce.date(),
 });
 

@@ -63,6 +63,7 @@ export * from "./petInputSize";
 export * from "./petSize";
 export * from "./petUpdate";
 export * from "./petUpdateSize";
+export * from "./priceBySize";
 export * from "./revenueReport";
 export * from "./revenueReportDataItem";
 export * from "./service";
