@@ -208,6 +208,13 @@ export default function Agendamentos() {
   const deleteAppointment = useDeleteAppointment();
 
   const clientPets = (allPets as any[]).filter(p => p.clientId === Number(form.clientId));
+  const selectedPet = (allPets as any[]).find(p => p.id === Number(form.petId));
+  const petSize = selectedPet?.size ?? null;
+
+  // Only show services that match the pet's size; if no pet selected, show all
+  const filteredServices = petSize
+    ? (services as any[]).filter(s => s.size === petSize)
+    : (services as any[]);
 
   const handleDragStart = (event: DragStartEvent) => setActiveId(event.active.id as number);
 
@@ -378,13 +385,26 @@ export default function Agendamentos() {
             </div>
             <div>
               <Label>Pet *</Label>
-              <Select value={form.petId} onValueChange={v => setForm(f => ({ ...f, petId: v }))}>
+              <Select
+                value={form.petId}
+                onValueChange={v => setForm(f => ({ ...f, petId: v, serviceId: "", totalPrice: "" }))}
+              >
                 <SelectTrigger><SelectValue placeholder="Selecionar pet" /></SelectTrigger>
                 <SelectContent>
                   {clientPets.length === 0 && <SelectItem value="_none" disabled>Selecione um cliente primeiro</SelectItem>}
-                  {clientPets.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name} ({PORTE_SIZES[p.size as keyof typeof PORTE_SIZES] ?? p.size})</SelectItem>)}
+                  {clientPets.map(p => (
+                    <SelectItem key={p.id} value={String(p.id)}>
+                      {p.name}
+                      {p.size && <span className="text-muted-foreground"> · {PORTE_SIZES[p.size as keyof typeof PORTE_SIZES] ?? p.size}</span>}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
+              {petSize && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Porte: <span className="font-medium text-foreground">{PORTE_SIZES[petSize as keyof typeof PORTE_SIZES] ?? petSize}</span> — serviços filtrados automaticamente
+                </p>
+              )}
             </div>
             <div className="flex items-center gap-3">
               <Switch checked={usePackage} onCheckedChange={setUsePackage} id="use-package" />
@@ -393,10 +413,22 @@ export default function Agendamentos() {
             {!usePackage ? (
               <div>
                 <Label>Serviço *</Label>
-                <Select value={form.serviceId} onValueChange={v => { setForm(f => ({ ...f, serviceId: v })); autoFillPrice(v, form.packageId); }}>
-                  <SelectTrigger><SelectValue placeholder="Selecionar serviço" /></SelectTrigger>
+                <Select
+                  value={form.serviceId}
+                  onValueChange={v => { setForm(f => ({ ...f, serviceId: v })); autoFillPrice(v, form.packageId); }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={form.petId ? "Selecionar serviço" : "Selecione um pet primeiro"} />
+                  </SelectTrigger>
                   <SelectContent>
-                    {(services as any[]).map(s => <SelectItem key={s.id} value={String(s.id)}>{s.name} — {PORTE_SIZES[s.size as keyof typeof PORTE_SIZES] ?? s.size} — R$ {Number(s.price).toFixed(2)}</SelectItem>)}
+                    {filteredServices.length === 0 && (
+                      <SelectItem value="_none" disabled>Nenhum serviço para este porte</SelectItem>
+                    )}
+                    {filteredServices.map(s => (
+                      <SelectItem key={s.id} value={String(s.id)}>
+                        {s.name} — R$ {Number(s.price).toFixed(2)}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
