@@ -4,6 +4,7 @@ import Dashboard from "@/pages/Dashboard";
 import Clientes from "@/pages/Clientes";
 import Agendamentos from "@/pages/Agendamentos";
 import Servicos from "@/pages/Servicos";
+import Pacotes from "@/pages/Pacotes";
 import Financeiro from "@/pages/Financeiro";
 import Relatorios from "@/pages/Relatorios";
 import Mensagens from "@/pages/Mensagens";
@@ -19,6 +20,7 @@ export function Router() {
         <Route path="/clientes" component={Clientes} />
         <Route path="/agendamentos" component={Agendamentos} />
         <Route path="/servicos" component={Servicos} />
+        <Route path="/pacotes" component={Pacotes} />
         <Route path="/financeiro" component={Financeiro} />
         <Route path="/relatorios" component={Relatorios} />
         <Route path="/mensagens" component={Mensagens} />

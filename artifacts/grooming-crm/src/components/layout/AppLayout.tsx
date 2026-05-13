@@ -9,7 +9,8 @@ import {
   BarChart3, 
   MessageSquare, 
   Magnet, 
-  Building2 
+  Building2,
+  Package
 } from "lucide-react";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider } from "@/components/ui/sidebar";
 
@@ -18,6 +19,7 @@ const navItems = [
   { href: "/clientes", label: "Clientes", icon: Users },
   { href: "/agendamentos", label: "Agendamentos", icon: Calendar },
   { href: "/servicos", label: "Serviços", icon: Scissors },
+  { href: "/pacotes", label: "Pacotes", icon: Package },
   { href: "/financeiro", label: "Financeiro", icon: DollarSign },
   { href: "/relatorios", label: "Relatórios", icon: BarChart3 },
   { href: "/mensagens", label: "Mensagens", icon: MessageSquare },
