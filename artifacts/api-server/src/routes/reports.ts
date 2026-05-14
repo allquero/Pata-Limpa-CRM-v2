@@ -156,7 +156,7 @@ router.get("/dashboard", async (req, res): Promise<void> => {
       pet: petsTable,
       client: clientsTable,
       service: { id: servicesTable.id, name: servicesTable.name, price: servicesTable.price },
-      package: { id: packagesTable.id, name: packagesTable.name, price: packagesTable.price },
+      package: { id: packagesTable.id, name: packagesTable.name },
     })
     .from(appointmentsTable)
     .leftJoin(petsTable, eq(appointmentsTable.petId, petsTable.id))
@@ -173,7 +173,7 @@ router.get("/dashboard", async (req, res): Promise<void> => {
     pet: row.pet!,
     client: row.client!,
     service: row.service?.id ? { ...row.service, price: parseFloat(row.service.price) } : null,
-    package: row.package?.id ? { ...row.package, price: parseFloat(row.package.price) } : null,
+    package: row.package?.id ? row.package : null,
   }));
 
   res.json({

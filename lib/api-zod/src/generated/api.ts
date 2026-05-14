@@ -588,6 +588,22 @@ export const DeletePackageParams = zod.object({
 });
 
 /**
+ * @summary Sell a package (generates appointments + financial entry)
+ */
+export const SellPackageParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const SellPackageBody = zod.object({
+  tenantId: zod.number(),
+  clientId: zod.number(),
+  petId: zod.number(),
+  startDate: zod.coerce.date(),
+  startTime: zod.string().describe("HH:MM"),
+  notes: zod.string().nullish(),
+});
+
+/**
  * @summary List appointments
  */
 export const ListAppointmentsQueryParams = zod.object({

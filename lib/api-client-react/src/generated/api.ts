@@ -56,6 +56,8 @@ import type {
   PetInput,
   PetUpdate,
   RevenueReport,
+  SellPackageInput,
+  SellPackageResult,
   Service,
   ServiceInput,
   ServiceUpdate,
@@ -2300,6 +2302,93 @@ export const useDeletePackage = <
   TContext
 > => {
   return useMutation(getDeletePackageMutationOptions(options));
+};
+
+/**
+ * @summary Sell a package (generates appointments + financial entry)
+ */
+export const getSellPackageUrl = (id: number) => {
+  return `/api/packages/${id}/sell`;
+};
+
+export const sellPackage = async (
+  id: number,
+  sellPackageInput: SellPackageInput,
+  options?: RequestInit,
+): Promise<SellPackageResult> => {
+  return customFetch<SellPackageResult>(getSellPackageUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(sellPackageInput),
+  });
+};
+
+export const getSellPackageMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof sellPackage>>,
+    TError,
+    { id: number; data: BodyType<SellPackageInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof sellPackage>>,
+  TError,
+  { id: number; data: BodyType<SellPackageInput> },
+  TContext
+> => {
+  const mutationKey = ["sellPackage"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof sellPackage>>,
+    { id: number; data: BodyType<SellPackageInput> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return sellPackage(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SellPackageMutationResult = NonNullable<
+  Awaited<ReturnType<typeof sellPackage>>
+>;
+export type SellPackageMutationBody = BodyType<SellPackageInput>;
+export type SellPackageMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Sell a package (generates appointments + financial entry)
+ */
+export const useSellPackage = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof sellPackage>>,
+    TError,
+    { id: number; data: BodyType<SellPackageInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof sellPackage>>,
+  TError,
+  { id: number; data: BodyType<SellPackageInput> },
+  TContext
+> => {
+  return useMutation(getSellPackageMutationOptions(options));
 };
 
 /**

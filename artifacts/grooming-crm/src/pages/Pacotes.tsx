@@ -1,5 +1,8 @@
 import { useState } from "react";
-import { useListPackages, useCreatePackage, useUpdatePackage, useDeletePackage, useListServices } from "@workspace/api-client-react";
+import {
+  useListPackages, useCreatePackage, useUpdatePackage, useDeletePackage,
+  useListServices, useListClients, useListPets, useSellPackage,
+} from "@workspace/api-client-react";
 import { DEFAULT_TENANT_ID, PORTE_SIZES } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,8 +13,10 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Package, X } from "lucide-react";
+import { Plus, Pencil, Trash2, Package, X, ShoppingCart, CalendarCheck } from "lucide-react";
+import { format } from "date-fns";
 
 type ServiceItem = { serviceName: string; quantity: number };
 type PriceBySize = { size: string; price: number };
@@ -36,6 +41,14 @@ const emptyForm = {
   priceBySizes: emptyPriceBySizes(),
 };
 
+const emptySellForm = {
+  clientId: "",
+  petId: "",
+  startDate: format(new Date(), "yyyy-MM-dd"),
+  startTime: "09:00",
+  notes: "",
+};
+
 function formatBRL(v: number) {
   return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
@@ -44,18 +57,59 @@ export default function Pacotes() {
   const { toast } = useToast();
   const { data: packages = [], isLoading, refetch } = useListPackages({ tenantId: DEFAULT_TENANT_ID });
   const { data: services = [] } = useListServices({ tenantId: DEFAULT_TENANT_ID });
+  const { data: clients = [] } = useListClients({ tenantId: DEFAULT_TENANT_ID });
   const createPackage = useCreatePackage();
   const updatePackage = useUpdatePackage();
   const deletePackage = useDeletePackage();
+  const sellPackage = useSellPackage();
 
+  // Package create/edit modal
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Pkg | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [deleteTarget, setDeleteTarget] = useState<Pkg | null>(null);
 
+  // Sell modal
+  const [sellTarget, setSellTarget] = useState<Pkg | null>(null);
+  const [sellForm, setSellForm] = useState(emptySellForm);
+
   const serviceNames = Array.from(new Set((services as any[]).map((s: any) => s.name))).sort() as string[];
   const usedNames = form.serviceItems.map(i => i.serviceName);
   const availableNames = serviceNames.filter(n => !usedNames.includes(n));
+
+  // Pets filtered by selected client in sell form
+  const { data: clientPets = [] } = useListPets(
+    sellForm.clientId ? { clientId: Number(sellForm.clientId) } : { clientId: 0 },
+    { enabled: !!sellForm.clientId }
+  );
+
+  // Price for selected pet
+  const selectedPet = (clientPets as any[]).find((p: any) => p.id === Number(sellForm.petId));
+  const petSize = selectedPet?.size as string | undefined;
+  const priceForPet = petSize && sellTarget
+    ? (sellTarget.priceBySizes.find(p => p.size === petSize)?.price ?? null)
+    : null;
+
+  // Compute session summary for sell modal
+  const sellSessions = (() => {
+    if (!sellTarget) return [];
+    const items = [...(sellTarget.serviceItems ?? [])].sort((a, b) => b.quantity - a.quantity);
+    const main = items[0];
+    const extras = items.slice(1);
+    if (!main) return [];
+    const sessions = [];
+    for (let i = 0; i < main.quantity; i++) {
+      const isLast = i === main.quantity - 1;
+      sessions.push({
+        index: i + 1,
+        label: isLast && extras.length > 0
+          ? `${main.serviceName} + ${extras.map(e => e.serviceName).join(" + ")}`
+          : main.serviceName,
+        hasExtra: isLast && extras.length > 0,
+      });
+    }
+    return sessions;
+  })();
 
   const openCreate = () => {
     setEditing(null);
@@ -65,7 +119,6 @@ export default function Pacotes() {
 
   const openEdit = (pkg: Pkg) => {
     setEditing(pkg);
-    // Merge saved prices with full size list (in case new sizes were added)
     const savedMap = Object.fromEntries((pkg.priceBySizes ?? []).map(p => [p.size, p.price]));
     const priceBySizes = ALL_SIZES.map(([size]) => ({ size, price: savedMap[size] ?? 0 }));
     setForm({
@@ -75,6 +128,11 @@ export default function Pacotes() {
       priceBySizes,
     });
     setModalOpen(true);
+  };
+
+  const openSell = (pkg: Pkg) => {
+    setSellTarget(pkg);
+    setSellForm(emptySellForm);
   };
 
   const addServiceItem = (serviceName: string) => {
@@ -138,6 +196,37 @@ export default function Pacotes() {
       toast({ title: "Erro ao excluir", variant: "destructive" });
     } finally {
       setDeleteTarget(null);
+    }
+  };
+
+  const handleSell = async () => {
+    if (!sellTarget) return;
+    if (!sellForm.clientId) { toast({ title: "Selecione o cliente", variant: "destructive" }); return; }
+    if (!sellForm.petId) { toast({ title: "Selecione o pet", variant: "destructive" }); return; }
+    if (!sellForm.startDate) { toast({ title: "Informe a data do primeiro agendamento", variant: "destructive" }); return; }
+    if (!sellForm.startTime) { toast({ title: "Informe o horário", variant: "destructive" }); return; }
+
+    try {
+      const result = await sellPackage.mutateAsync({
+        id: sellTarget.id,
+        data: {
+          tenantId: DEFAULT_TENANT_ID,
+          clientId: Number(sellForm.clientId),
+          petId: Number(sellForm.petId),
+          startDate: sellForm.startDate,
+          startTime: sellForm.startTime,
+          notes: sellForm.notes || null,
+        },
+      });
+      const count = (result as any).appointments?.length ?? 0;
+      const price = (result as any).financialEntry?.amount ?? 0;
+      toast({
+        title: "Pacote vendido com sucesso!",
+        description: `${count} agendamento${count !== 1 ? "s" : ""} criado${count !== 1 ? "s" : ""} · Receita: ${formatBRL(price)}`,
+      });
+      setSellTarget(null);
+    } catch {
+      toast({ title: "Erro ao vender pacote", variant: "destructive" });
     }
   };
 
@@ -234,6 +323,16 @@ export default function Pacotes() {
                       </div>
                     </div>
                   )}
+
+                  {/* Sell button */}
+                  <Button
+                    className="w-full gap-2 mt-1"
+                    size="sm"
+                    onClick={() => openSell(pkg)}
+                  >
+                    <ShoppingCart className="h-4 w-4" />
+                    Vender Pacote
+                  </Button>
                 </CardContent>
               </Card>
             );
@@ -331,6 +430,140 @@ export default function Pacotes() {
             <Button variant="outline" onClick={() => setModalOpen(false)}>Cancelar</Button>
             <Button onClick={handleSave} disabled={isSaving}>
               {isSaving ? "Salvando..." : editing ? "Salvar" : "Criar Pacote"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Sell Modal */}
+      <Dialog open={!!sellTarget} onOpenChange={o => !o && setSellTarget(null)}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ShoppingCart className="h-5 w-5" />
+              Vender Pacote
+            </DialogTitle>
+            {sellTarget && (
+              <p className="text-sm text-muted-foreground mt-1">{sellTarget.name}</p>
+            )}
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            {/* Cliente */}
+            <div className="space-y-1.5">
+              <Label>Cliente *</Label>
+              <Select
+                value={sellForm.clientId}
+                onValueChange={v => setSellForm(f => ({ ...f, clientId: v, petId: "" }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o cliente" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(clients as any[]).map((c: any) => (
+                    <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Pet */}
+            <div className="space-y-1.5">
+              <Label>Pet *</Label>
+              <Select
+                value={sellForm.petId}
+                onValueChange={v => setSellForm(f => ({ ...f, petId: v }))}
+                disabled={!sellForm.clientId}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={sellForm.clientId ? "Selecione o pet" : "Selecione um cliente primeiro"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {(clientPets as any[]).map((p: any) => (
+                    <SelectItem key={p.id} value={String(p.id)}>
+                      {p.name} — {PORTE_SIZES[p.size as keyof typeof PORTE_SIZES] ?? p.size}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Price preview */}
+            {sellForm.petId && (
+              <div className="rounded-lg bg-muted/40 border px-4 py-3 flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Valor do pacote</span>
+                {priceForPet !== null ? (
+                  <span className="text-lg font-bold text-primary">{formatBRL(priceForPet)}</span>
+                ) : (
+                  <span className="text-sm text-amber-600">Sem preço definido para este porte</span>
+                )}
+              </div>
+            )}
+
+            {/* Data */}
+            <div className="space-y-1.5">
+              <Label>Data do 1º agendamento *</Label>
+              <Input
+                type="date"
+                value={sellForm.startDate}
+                onChange={e => setSellForm(f => ({ ...f, startDate: e.target.value }))}
+              />
+            </div>
+
+            {/* Horário */}
+            <div className="space-y-1.5">
+              <Label>Horário *</Label>
+              <Input
+                type="time"
+                value={sellForm.startTime}
+                onChange={e => setSellForm(f => ({ ...f, startTime: e.target.value }))}
+              />
+            </div>
+
+            {/* Session preview */}
+            {sellSessions.length > 0 && sellForm.startDate && (
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                  <CalendarCheck className="h-3.5 w-3.5" />
+                  Agendamentos que serão criados
+                </p>
+                <div className="rounded-lg border divide-y text-sm">
+                  {sellSessions.map((s, i) => {
+                    const d = new Date(`${sellForm.startDate}T${sellForm.startTime}`);
+                    d.setDate(d.getDate() + i * 7);
+                    return (
+                      <div key={s.index} className="flex items-center justify-between px-3 py-2">
+                        <span className="text-muted-foreground">
+                          {d.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" })}
+                          {" "}às {sellForm.startTime}
+                        </span>
+                        <span className={s.hasExtra ? "font-medium text-primary" : ""}>
+                          {s.label}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Notes */}
+            <div className="space-y-1.5">
+              <Label>Observações</Label>
+              <Textarea
+                placeholder="Observações para todos os agendamentos"
+                value={sellForm.notes}
+                onChange={e => setSellForm(f => ({ ...f, notes: e.target.value }))}
+                rows={2}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSellTarget(null)}>Cancelar</Button>
+            <Button onClick={handleSell} disabled={sellPackage.isPending} className="gap-2">
+              <ShoppingCart className="h-4 w-4" />
+              {sellPackage.isPending ? "Criando..." : `Confirmar Venda (${sellSessions.length} agend.)`}
             </Button>
           </DialogFooter>
         </DialogContent>

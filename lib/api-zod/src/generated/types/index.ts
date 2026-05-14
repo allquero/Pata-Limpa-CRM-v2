@@ -66,6 +66,8 @@ export * from "./petUpdateSize";
 export * from "./priceBySize";
 export * from "./revenueReport";
 export * from "./revenueReportDataItem";
+export * from "./sellPackageInput";
+export * from "./sellPackageResult";
 export * from "./service";
 export * from "./serviceInput";
 export * from "./serviceInputSize";

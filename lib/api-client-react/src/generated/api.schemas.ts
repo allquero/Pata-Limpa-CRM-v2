@@ -263,6 +263,17 @@ export interface PackageUpdate {
   priceBySizes?: PriceBySize[];
 }
 
+export interface SellPackageInput {
+  tenantId: number;
+  clientId: number;
+  petId: number;
+  startDate: string;
+  /** HH:MM */
+  startTime: string;
+  /** @nullable */
+  notes?: string | null;
+}
+
 export type AppointmentFullStatus =
   (typeof AppointmentFullStatus)[keyof typeof AppointmentFullStatus];
 
@@ -318,6 +329,34 @@ export interface AppointmentFull {
   package?: AppointmentFullPackage;
 }
 
+export type FinancialEntryType =
+  (typeof FinancialEntryType)[keyof typeof FinancialEntryType];
+
+export const FinancialEntryType = {
+  receita: "receita",
+  despesa: "despesa",
+  despesa_fixa: "despesa_fixa",
+} as const;
+
+export interface FinancialEntry {
+  id: number;
+  tenantId: number;
+  type: FinancialEntryType;
+  description: string;
+  amount: number;
+  date: string;
+  /** @nullable */
+  category?: string | null;
+  /** @nullable */
+  appointmentId?: number | null;
+  createdAt: string;
+}
+
+export interface SellPackageResult {
+  appointments: AppointmentFull[];
+  financialEntry: FinancialEntry;
+}
+
 export interface AppointmentInput {
   tenantId: number;
   petId: number;
@@ -362,29 +401,6 @@ export const AppointmentStatusUpdateStatus = {
 
 export interface AppointmentStatusUpdate {
   status: AppointmentStatusUpdateStatus;
-}
-
-export type FinancialEntryType =
-  (typeof FinancialEntryType)[keyof typeof FinancialEntryType];
-
-export const FinancialEntryType = {
-  receita: "receita",
-  despesa: "despesa",
-  despesa_fixa: "despesa_fixa",
-} as const;
-
-export interface FinancialEntry {
-  id: number;
-  tenantId: number;
-  type: FinancialEntryType;
-  description: string;
-  amount: number;
-  date: string;
-  /** @nullable */
-  category?: string | null;
-  /** @nullable */
-  appointmentId?: number | null;
-  createdAt: string;
 }
 
 export type FinancialEntryInputType =

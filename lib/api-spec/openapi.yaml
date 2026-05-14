@@ -515,6 +515,31 @@ paths:
         "204":
           description: Deleted
 
+  /packages/{id}/sell:
+    post:
+      operationId: sellPackage
+      tags: [packages]
+      summary: Sell a package (generates appointments + financial entry)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SellPackageInput"
+      responses:
+        "201":
+          description: Created appointments and financial entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SellPackageResult"
+
   # Appointments
   /appointments:
     get:
@@ -1393,6 +1418,36 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/PriceBySize"
+
+    SellPackageInput:
+      type: object
+      required: [tenantId, clientId, petId, startDate, startTime]
+      properties:
+        tenantId:
+          type: integer
+        clientId:
+          type: integer
+        petId:
+          type: integer
+        startDate:
+          type: string
+          format: date
+        startTime:
+          type: string
+          description: "HH:MM"
+        notes:
+          type: ["string", "null"]
+
+    SellPackageResult:
+      type: object
+      required: [appointments, financialEntry]
+      properties:
+        appointments:
+          type: array
+          items:
+            $ref: "#/components/schemas/AppointmentFull"
+        financialEntry:
+          $ref: "#/components/schemas/FinancialEntry"
 
     # Appointment
     AppointmentFull:
