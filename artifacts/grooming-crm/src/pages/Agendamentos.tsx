@@ -9,6 +9,7 @@ import {
   useDeleteAppointment, useListClients, useListPets, useListServices,
   useListPackages, useCreateClient, useCreatePet, useSellPackage,
   getListPetsQueryKey, useListMessageTemplates,
+  getListAppointmentsQueryKey, getListMessageTemplatesQueryKey,
 } from "@workspace/api-client-react";
 import type {
   Client, Pet, Service, Package, SellPackageResult, PetInputSize, MessageTemplate,
@@ -59,13 +60,14 @@ function formatBRL(v: number) {
 
 // ─── Card components ──────────────────────────────────────────────────────────
 
-function AppointmentCard({ appt, clients, pets, services, packages, onDelete, isDragging = false, isEditingDate, editDate, editTime, onStartEditDate, onChangeEditDate, onSaveEditDate, onCancelEditDate }: {
+function AppointmentCard({ appt, clients, pets, services, packages, onDelete, onWhatsapp, isDragging = false, isEditingDate, editDate, editTime, onStartEditDate, onChangeEditDate, onSaveEditDate, onCancelEditDate }: {
   appt: Appointment;
   clients: Client[];
   pets: Pet[];
   services: Service[];
   packages: Package[];
   onDelete: (id: number) => void;
+  onWhatsapp?: (appt: Appointment) => void;
   isDragging?: boolean;
   isEditingDate?: boolean;
   editDate?: string;
@@ -82,14 +84,6 @@ function AppointmentCard({ appt, clients, pets, services, packages, onDelete, is
   const time = new Date(appt.scheduledDate).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
   const price = Number(appt.totalPrice);
   const dateStr = new Date(appt.scheduledDate).toISOString().substring(0, 10);
-
-  const openWhatsapp = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!client?.phone) return;
-    const msg = `Olá ${client.name}! Confirmamos o agendamento de ${pet?.name ?? "seu pet"} para ${format(new Date(appt.scheduledDate), "dd/MM 'às' HH:mm")}. Serviço: ${service?.name ?? pkg?.name ?? "Serviço"}. Valor: ${formatBRL(price)}.`;
-    const cleaned = client.phone.replace(/\D/g, "");
-    window.open(`https://wa.me/55${cleaned}?text=${encodeURIComponent(msg)}`, "_blank");
-  };
 
   return (
     <div className="bg-white rounded-lg border shadow-sm p-3 cursor-grab active:cursor-grabbing select-none hover:shadow-md transition-shadow pl-[5px] pr-[5px] pt-[5px] pb-[5px]">
@@ -152,24 +146,28 @@ function AppointmentCard({ appt, clients, pets, services, packages, onDelete, is
         )}
         <div className="flex items-center gap-1">
           <span className="text-xs font-semibold text-primary">{formatBRL(price)}</span>
-          {client?.phone && (
-            <button onClick={openWhatsapp} className="p-1 rounded hover:bg-green-50 text-green-600 transition-colors" title="Enviar WhatsApp">
-              <MessageSquare className="h-3.5 w-3.5" />
-            </button>
-          )}
+          <button
+            onClick={e => { e.stopPropagation(); onWhatsapp?.(appt); }}
+            className={`p-1 rounded transition-colors ${client?.phone ? "hover:bg-green-50 text-green-600" : "text-muted-foreground/40 cursor-not-allowed"}`}
+            title={client?.phone ? "Enviar confirmação WhatsApp" : "Cliente sem telefone"}
+            disabled={!onWhatsapp}
+          >
+            <MessageSquare className="h-3.5 w-3.5" />
+          </button>
         </div>
       </div>
     </div>
   );
 }
 
-function DraggableCard({ appt, clients, pets, services, packages, onDelete, isEditingDate, editDate, editTime, onStartEditDate, onChangeEditDate, onSaveEditDate, onCancelEditDate }: {
+function DraggableCard({ appt, clients, pets, services, packages, onDelete, onWhatsapp, isEditingDate, editDate, editTime, onStartEditDate, onChangeEditDate, onSaveEditDate, onCancelEditDate }: {
   appt: Appointment;
   clients: Client[];
   pets: Pet[];
   services: Service[];
   packages: Package[];
   onDelete: (id: number) => void;
+  onWhatsapp?: (appt: Appointment) => void;
   isEditingDate?: boolean;
   editDate?: string;
   editTime?: string;
@@ -188,6 +186,7 @@ function DraggableCard({ appt, clients, pets, services, packages, onDelete, isEd
         services={services}
         packages={packages}
         onDelete={onDelete}
+        onWhatsapp={onWhatsapp}
         isDragging={isDragging}
         isEditingDate={isEditingDate}
         editDate={editDate}
@@ -201,7 +200,7 @@ function DraggableCard({ appt, clients, pets, services, packages, onDelete, isEd
   );
 }
 
-function KanbanColumn({ status, label, color, bg, appointments, clients, pets, services, packages, onDelete, editingApptId, editDate, editTime, onStartEditDate, onChangeEditDate, onSaveEditDate, onCancelEditDate }: {
+function KanbanColumn({ status, label, color, bg, appointments, clients, pets, services, packages, onDelete, onWhatsapp, editingApptId, editDate, editTime, onStartEditDate, onChangeEditDate, onSaveEditDate, onCancelEditDate }: {
   status: AppStatus;
   label: string;
   color: string;
@@ -212,6 +211,7 @@ function KanbanColumn({ status, label, color, bg, appointments, clients, pets, s
   services: Service[];
   packages: Package[];
   onDelete: (id: number) => void;
+  onWhatsapp: (appt: Appointment) => void;
   editingApptId: number | null;
   editDate: string;
   editTime: string;
@@ -240,6 +240,7 @@ function KanbanColumn({ status, label, color, bg, appointments, clients, pets, s
             services={services}
             packages={packages}
             onDelete={onDelete}
+            onWhatsapp={onWhatsapp}
             isEditingDate={editingApptId === appt.id}
             editDate={editDate}
             editTime={editTime}
@@ -251,6 +252,153 @@ function KanbanColumn({ status, label, color, bg, appointments, clients, pets, s
         ))}
       </div>
     </div>
+  );
+}
+
+// ─── ConfirmacaoWhatsAppModal ─────────────────────────────────────────────────
+
+function ConfirmacaoWhatsAppModal({
+  appt, clients, pets, services, packages, onClose,
+}: {
+  appt: Appointment | null;
+  clients: Client[];
+  pets: Pet[];
+  services: Service[];
+  packages: Package[];
+  onClose: () => void;
+}) {
+  const [templateId, setTemplateId] = useState("default");
+
+  const pet = appt ? pets.find(p => p.id === appt.petId) : null;
+  const client = appt ? clients.find(c => c.id === appt.clientId) : null;
+  const service = appt ? services.find(s => s.id === appt.serviceId) : null;
+  const pkg = appt ? packages.find(p => p.id === appt.packageId) : null;
+
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+
+  const clientApptParams = appt
+    ? { tenantId: DEFAULT_TENANT_ID, clientId: appt.clientId, startDate: todayStart.toISOString() }
+    : undefined;
+  const { data: clientAppts = [] } = useListAppointments(
+    clientApptParams,
+    { query: { queryKey: getListAppointmentsQueryKey(clientApptParams), enabled: !!appt } }
+  );
+  const tmplParams = { tenantId: DEFAULT_TENANT_ID };
+  const { data: msgTemplates = [] } = useListMessageTemplates(
+    tmplParams,
+    { query: { queryKey: getListMessageTemplatesQueryKey(tmplParams), enabled: !!appt } }
+  );
+  const confirmTemplates = (msgTemplates as MessageTemplate[]).filter(t => t.type === "confirmacao");
+
+  const buildMessage = (): string => {
+    if (!appt || !client) return "";
+    const apptTime = new Date(appt.scheduledDate).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    const apptDate = format(new Date(appt.scheduledDate), "dd/MM/yyyy");
+    const serviceName = service?.name ?? pkg?.name ?? "Serviço";
+    const price = formatBRL(Number(appt.totalPrice));
+
+    const futureAppts = (clientAppts as Appointment[])
+      .filter(a => a.id !== appt.id && new Date(a.scheduledDate) > new Date())
+      .sort((a, b) => new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime());
+
+    const selectedTmpl = templateId !== "default"
+      ? confirmTemplates.find(t => String(t.id) === templateId)
+      : null;
+
+    const baseContent = selectedTmpl?.content
+      ?? `Olá {nome_cliente}! Obrigado pela visita de {nome_pet} hoje! Serviço: {servico}. Valor pago: {preco}.`;
+
+    let msg = baseContent
+      .replace(/\{nome_cliente\}/g, client.name)
+      .replace(/\{nome_pet\}/g, pet?.name ?? "")
+      .replace(/\{data\}/g, apptDate)
+      .replace(/\{horario\}/g, apptTime)
+      .replace(/\{servico\}/g, serviceName)
+      .replace(/\{preco\}/g, price);
+
+    if (futureAppts.length > 0) {
+      const datesList = futureAppts
+        .map(a => `📅 ${format(new Date(a.scheduledDate), "dd/MM/yyyy 'às' HH:mm")}`)
+        .join("\n");
+      msg += `\n\nPróximos agendamentos:\n${datesList}`;
+    }
+
+    return msg;
+  };
+
+  const handleSend = () => {
+    if (!client?.phone) return;
+    const message = buildMessage();
+    const cleaned = client.phone.replace(/\D/g, "");
+    const number = cleaned.length === 11 ? `55${cleaned}` : cleaned;
+    window.open(`https://wa.me/${number}?text=${encodeURIComponent(message)}`, "_blank");
+    onClose();
+  };
+
+  return (
+    <Dialog open={!!appt} onOpenChange={open => { if (!open) onClose(); }}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <MessageSquare className="h-5 w-5 text-green-600" />
+            Confirmação via WhatsApp
+          </DialogTitle>
+        </DialogHeader>
+        {appt && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 p-3 bg-muted/40 rounded-lg">
+              <PawPrint className="h-5 w-5 text-primary shrink-0" />
+              <div>
+                <p className="font-semibold text-sm">{pet?.name ?? "Pet"} — {client?.name ?? "Cliente"}</p>
+                <p className="text-xs text-muted-foreground">
+                  {service?.name ?? pkg?.name ?? "Serviço"} · {formatBRL(Number(appt.totalPrice))} · {format(new Date(appt.scheduledDate), "dd/MM 'às' HH:mm")}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">Template de confirmação</Label>
+              <Select value={templateId} onValueChange={setTemplateId}>
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="default">Mensagem padrão</SelectItem>
+                  {confirmTemplates.map(t => (
+                    <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">Pré-visualização da mensagem</Label>
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-sm whitespace-pre-wrap font-mono text-green-900 max-h-52 overflow-y-auto">
+                {buildMessage()}
+              </div>
+            </div>
+
+            {!client?.phone && (
+              <p className="text-xs text-amber-600">
+                ⚠️ Cliente sem telefone cadastrado — não é possível enviar pelo WhatsApp.
+              </p>
+            )}
+          </div>
+        )}
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Fechar</Button>
+          <Button
+            className="bg-green-600 hover:bg-green-700 gap-2"
+            onClick={handleSend}
+            disabled={!client?.phone}
+          >
+            <MessageSquare className="h-4 w-4" />
+            Enviar pelo WhatsApp
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -317,6 +465,10 @@ export default function Agendamentos() {
   const [editingApptId, setEditingApptId] = useState<number | null>(null);
   const [editDate, setEditDate] = useState("");
   const [editTime, setEditTime] = useState("");
+
+  // WhatsApp confirmation modal
+  const [confirmacaoAppt, setConfirmacaoAppt] = useState<Appointment | null>(null);
+  const openConfirmacao = (appt: Appointment) => setConfirmacaoAppt(appt);
 
   // Reminders panel
   const tomorrow = addDays(new Date(), 1);
@@ -470,6 +622,9 @@ export default function Agendamentos() {
     try {
       await updateStatus.mutateAsync({ id: appt.id, data: { status: newStatus } });
       refetch();
+      if (newStatus === "concluido") {
+        setConfirmacaoAppt(appt);
+      }
     } catch {
       toast({ title: "Erro ao mover card", variant: "destructive" });
     }
@@ -782,6 +937,7 @@ export default function Agendamentos() {
               services={services as Service[]}
               packages={packages as Package[]}
               onDelete={handleDelete}
+              onWhatsapp={openConfirmacao}
               editingApptId={editingApptId}
               editDate={editDate}
               editTime={editTime}
@@ -941,6 +1097,16 @@ export default function Agendamentos() {
           </div>
         )}
       </div>
+
+      {/* ── Modal: Confirmação WhatsApp ───────────────────────────────────── */}
+      <ConfirmacaoWhatsAppModal
+        appt={confirmacaoAppt}
+        clients={clients as Client[]}
+        pets={allPets as Pet[]}
+        services={services as Service[]}
+        packages={packages as Package[]}
+        onClose={() => setConfirmacaoAppt(null)}
+      />
 
       {/* ── Modal: Cliente Casual ─────────────────────────────────────────── */}
       <Dialog open={casualOpen} onOpenChange={open => { if (!open) setCasualOpen(false); }}>
