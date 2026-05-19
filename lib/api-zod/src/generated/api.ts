@@ -144,6 +144,124 @@ export const HealthCheckResponse = zod.object({
 });
 
 /**
+ * @summary List all pet shop tenants (admin only)
+ */
+export const AdminListTenantsResponseItem = zod.object({
+  id: zod.number(),
+  userId: zod.string().nullish(),
+  name: zod.string(),
+  phone: zod.string().nullish(),
+  email: zod.string().nullish(),
+  address: zod.string().nullish(),
+  accessStart: zod.coerce.date().nullish(),
+  accessEnd: zod.coerce.date().nullish(),
+  createdAt: zod.coerce.date(),
+});
+export const AdminListTenantsResponse = zod.array(AdminListTenantsResponseItem);
+
+/**
+ * @summary Register a new pet shop tenant (admin only)
+ */
+export const AdminCreateTenantBody = zod.object({
+  userId: zod.string(),
+  name: zod.string(),
+  phone: zod.string().optional(),
+  email: zod.string().optional(),
+  address: zod.string().optional(),
+  accessStart: zod.coerce.date().optional(),
+  accessEnd: zod.coerce.date().optional(),
+});
+
+/**
+ * @summary Update a pet shop tenant (admin only)
+ */
+export const AdminUpdateTenantParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminUpdateTenantBody = zod.object({
+  name: zod.string().optional(),
+  phone: zod.string().nullish(),
+  email: zod.string().nullish(),
+  address: zod.string().nullish(),
+  accessStart: zod.coerce.date().nullish(),
+  accessEnd: zod.coerce.date().nullish(),
+});
+
+export const AdminUpdateTenantResponse = zod.object({
+  id: zod.number(),
+  userId: zod.string().nullish(),
+  name: zod.string(),
+  phone: zod.string().nullish(),
+  email: zod.string().nullish(),
+  address: zod.string().nullish(),
+  accessStart: zod.coerce.date().nullish(),
+  accessEnd: zod.coerce.date().nullish(),
+  createdAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Delete a pet shop tenant (admin only)
+ */
+export const AdminDeleteTenantParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
+ * @summary List users without a registered pet shop (admin only)
+ */
+export const AdminListPendingUsersResponseItem = zod.object({
+  id: zod.string(),
+  email: zod.string().nullish(),
+  firstName: zod.string().nullish(),
+  lastName: zod.string().nullish(),
+  createdAt: zod.coerce.date(),
+});
+export const AdminListPendingUsersResponse = zod.array(
+  AdminListPendingUsersResponseItem,
+);
+
+/**
+ * @summary List admin sales with financial summary (admin only)
+ */
+export const AdminListSalesResponse = zod.object({
+  sales: zod.array(
+    zod.object({
+      id: zod.number(),
+      tenantId: zod.number(),
+      description: zod.string(),
+      amount: zod.string(),
+      paidAt: zod.coerce.date(),
+      periodStart: zod.coerce.date(),
+      periodEnd: zod.coerce.date(),
+      createdAt: zod.coerce.date(),
+    }),
+  ),
+  monthTotal: zod.number(),
+  yearTotal: zod.number(),
+  allTimeTotal: zod.number(),
+});
+
+/**
+ * @summary Register a new sale and extend tenant access period (admin only)
+ */
+export const AdminCreateSaleBody = zod.object({
+  tenantId: zod.number(),
+  description: zod.string(),
+  amount: zod.number(),
+  paidAt: zod.coerce.date(),
+  periodStart: zod.coerce.date(),
+  periodEnd: zod.coerce.date(),
+});
+
+/**
+ * @summary Delete an admin sale entry (admin only)
+ */
+export const AdminDeleteSaleParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
  * @summary List all grooming businesses
  */
 export const ListTenantsResponseItem = zod.object({

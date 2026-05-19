@@ -9,6 +9,68 @@ export interface HealthStatus {
   status: string;
 }
 
+export interface AdminTenantInput {
+  userId: string;
+  name: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  accessStart?: string;
+  accessEnd?: string;
+}
+
+export interface AdminTenantUpdate {
+  name?: string;
+  /** @nullable */
+  phone?: string | null;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  address?: string | null;
+  /** @nullable */
+  accessStart?: string | null;
+  /** @nullable */
+  accessEnd?: string | null;
+}
+
+export interface AdminUser {
+  id: string;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  firstName?: string | null;
+  /** @nullable */
+  lastName?: string | null;
+  createdAt: string;
+}
+
+export interface AdminSale {
+  id: number;
+  tenantId: number;
+  description: string;
+  amount: string;
+  paidAt: string;
+  periodStart: string;
+  periodEnd: string;
+  createdAt: string;
+}
+
+export interface AdminSaleInput {
+  tenantId: number;
+  description: string;
+  amount: number;
+  paidAt: string;
+  periodStart: string;
+  periodEnd: string;
+}
+
+export interface AdminSalesEnvelope {
+  sales: AdminSale[];
+  monthTotal: number;
+  yearTotal: number;
+  allTimeTotal: number;
+}
+
 export interface Tenant {
   id: number;
   /** @nullable */

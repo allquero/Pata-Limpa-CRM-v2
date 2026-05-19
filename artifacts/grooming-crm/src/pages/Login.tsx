@@ -1,6 +1,8 @@
-import { CheckCircle2, PawPrint, Calendar, Users, DollarSign, BarChart3 } from "lucide-react";
+import { CheckCircle2, PawPrint, Calendar, Users, DollarSign, BarChart3, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAppAuth } from "@/lib/auth-context";
+
+const ADMIN_WHATSAPP = "5511999999999";
 
 const features = [
   { icon: Calendar, title: "Agendamentos Kanban", description: "Organize seus atendimentos por status com drag-and-drop" },
@@ -38,11 +40,22 @@ export default function Login() {
               Gerencie agendamentos, clientes, pets, financeiro e muito mais — tudo em um só lugar.
             </p>
           </div>
-          <Button onClick={login} size="lg" className="px-8 text-base">
-            Começar agora
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button onClick={login} size="lg" className="px-8 text-base">
+              Entrar
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              className="px-8 text-base border-green-600 text-green-700 hover:bg-green-50"
+              onClick={() => window.open(`https://wa.me/${ADMIN_WHATSAPP}?text=${encodeURIComponent("Olá! Quero conhecer o Pata Limpa CRM para meu pet shop.")}`, "_blank")}
+            >
+              <MessageCircle className="h-5 w-5 mr-2" />
+              Quero conhecer
+            </Button>
+          </div>
           <p className="text-xs text-muted-foreground">
-            Acesso exclusivo para pet shops cadastrados. Entre em contato para saber mais.
+            Acesso exclusivo para pet shops cadastrados.
           </p>
         </section>
 

@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, notInArray, desc, and } from "drizzle-orm";
+import { eq, notInArray, desc } from "drizzle-orm";
 import { db, tenantsTable, usersTable, adminSalesTable } from "@workspace/db";
 import { requireAdmin } from "../middlewares/requireAdmin";
 
@@ -151,7 +151,7 @@ router.post("/admin/sales", async (req, res): Promise<void> => {
   const saleData = { description: body.description as string, amount: String(amount), paidAt: body.paidAt as string };
 
   const [existingTenant] = await db
-    .select({ id: tenantsTable.id, accessEnd: tenantsTable.accessEnd })
+    .select({ id: tenantsTable.id, accessEnd: tenantsTable.accessEnd, accessStart: tenantsTable.accessStart })
     .from(tenantsTable)
     .where(eq(tenantsTable.id, tenantId));
 
@@ -165,20 +165,29 @@ router.post("/admin/sales", async (req, res): Promise<void> => {
     .values({ tenantId, periodStart, periodEnd, ...saleData })
     .returning();
 
+  // Calculate sold duration in days
+  const soldStart = new Date(periodStart);
+  const soldEnd = new Date(periodEnd);
+  const soldDays = Math.round((soldEnd.getTime() - soldStart.getTime()) / (1000 * 60 * 60 * 24));
+
   const today = new Date().toISOString().slice(0, 10);
   const currentEnd = existingTenant.accessEnd;
-  const newEnd = currentEnd && currentEnd > today && currentEnd > periodEnd
-    ? currentEnd
-    : periodEnd;
+  const currentAccessStart = existingTenant.accessStart;
 
-  const currentStart = await db
-    .select({ accessStart: tenantsTable.accessStart })
-    .from(tenantsTable)
-    .where(and(eq(tenantsTable.id, tenantId)));
+  let newEnd: string;
+  if (currentEnd && currentEnd >= today) {
+    // Active tenant: extend from current accessEnd
+    const extendFrom = new Date(currentEnd);
+    extendFrom.setDate(extendFrom.getDate() + soldDays);
+    newEnd = extendFrom.toISOString().slice(0, 10);
+  } else {
+    // Expired or no access: start new period from periodStart
+    newEnd = periodEnd;
+  }
 
-  const existingStart = currentStart[0]?.accessStart;
-  const newStart = existingStart && existingStart <= periodStart
-    ? existingStart
+  // Keep earliest accessStart, or set to periodStart if none
+  const newStart = currentAccessStart && currentAccessStart <= periodStart
+    ? currentAccessStart
     : periodStart;
 
   await db

@@ -227,6 +227,185 @@ paths:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
 
+  # Admin
+  /admin/tenants:
+    get:
+      operationId: adminListTenants
+      tags: [admin]
+      summary: List all pet shop tenants (admin only)
+      responses:
+        "200":
+          description: List of all tenants
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Tenant"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Not admin
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+    post:
+      operationId: adminCreateTenant
+      tags: [admin]
+      summary: Register a new pet shop tenant (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminTenantInput"
+      responses:
+        "201":
+          description: Created tenant
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tenant"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Not admin
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  /admin/tenants/{id}:
+    patch:
+      operationId: adminUpdateTenant
+      tags: [admin]
+      summary: Update a pet shop tenant (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminTenantUpdate"
+      responses:
+        "200":
+          description: Updated tenant
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tenant"
+        "404":
+          description: Tenant not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+    delete:
+      operationId: adminDeleteTenant
+      tags: [admin]
+      summary: Delete a pet shop tenant (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /admin/pending-users:
+    get:
+      operationId: adminListPendingUsers
+      tags: [admin]
+      summary: List users without a registered pet shop (admin only)
+      responses:
+        "200":
+          description: List of users without tenants
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminUser"
+
+  /admin/sales:
+    get:
+      operationId: adminListSales
+      tags: [admin]
+      summary: List admin sales with financial summary (admin only)
+      responses:
+        "200":
+          description: Sales list with totals
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminSalesEnvelope"
+    post:
+      operationId: adminCreateSale
+      tags: [admin]
+      summary: Register a new sale and extend tenant access period (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminSaleInput"
+      responses:
+        "201":
+          description: Created sale
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminSale"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "404":
+          description: Tenant not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  /admin/sales/{id}:
+    delete:
+      operationId: adminDeleteSale
+      tags: [admin]
+      summary: Delete an admin sale entry (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
   # Tenants
   /tenants:
     get:
@@ -1249,6 +1428,122 @@ components:
           type: string
       required:
         - status
+
+    # Admin
+    AdminTenantInput:
+      type: object
+      required: [userId, name]
+      properties:
+        userId:
+          type: string
+        name:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        address:
+          type: string
+        accessStart:
+          type: string
+          format: date
+        accessEnd:
+          type: string
+          format: date
+
+    AdminTenantUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        phone:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+        accessStart:
+          type: ["string", "null"]
+          format: date
+        accessEnd:
+          type: ["string", "null"]
+          format: date
+
+    AdminUser:
+      type: object
+      required: [id, createdAt]
+      properties:
+        id:
+          type: string
+        email:
+          type: ["string", "null"]
+        firstName:
+          type: ["string", "null"]
+        lastName:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    AdminSale:
+      type: object
+      required: [id, tenantId, description, amount, paidAt, periodStart, periodEnd, createdAt]
+      properties:
+        id:
+          type: integer
+        tenantId:
+          type: integer
+        description:
+          type: string
+        amount:
+          type: string
+        paidAt:
+          type: string
+          format: date
+        periodStart:
+          type: string
+          format: date
+        periodEnd:
+          type: string
+          format: date
+        createdAt:
+          type: string
+          format: date-time
+
+    AdminSaleInput:
+      type: object
+      required: [tenantId, description, amount, paidAt, periodStart, periodEnd]
+      properties:
+        tenantId:
+          type: integer
+        description:
+          type: string
+        amount:
+          type: number
+        paidAt:
+          type: string
+          format: date
+        periodStart:
+          type: string
+          format: date
+        periodEnd:
+          type: string
+          format: date
+
+    AdminSalesEnvelope:
+      type: object
+      required: [sales, monthTotal, yearTotal, allTimeTotal]
+      properties:
+        sales:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminSale"
+        monthTotal:
+          type: number
+        yearTotal:
+          type: number
+        allTimeTotal:
+          type: number
 
     # Tenant
     Tenant:

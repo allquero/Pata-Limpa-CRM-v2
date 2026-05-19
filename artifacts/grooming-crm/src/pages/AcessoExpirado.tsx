@@ -1,6 +1,8 @@
-import { AlertCircle, PawPrint } from "lucide-react";
+import { AlertCircle, PawPrint, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAppAuth } from "@/lib/auth-context";
+
+const ADMIN_WHATSAPP = "5511999999999";
 
 export default function AcessoExpirado() {
   const { logout, tenant, user } = useAppAuth();
@@ -32,11 +34,13 @@ export default function AcessoExpirado() {
           )}
         </div>
 
-        <div className="w-full border rounded-lg p-4 bg-red-50 border-red-200">
-          <p className="text-sm text-red-800">
-            Renove seu plano para continuar usando o sistema.
-          </p>
-        </div>
+        <Button
+          className="w-full bg-green-600 hover:bg-green-700 text-white"
+          onClick={() => window.open(`https://wa.me/${ADMIN_WHATSAPP}?text=${encodeURIComponent("Olá! Meu acesso ao Pata Limpa expirou e gostaria de renovar.")}`, "_blank")}
+        >
+          <MessageCircle className="h-4 w-4 mr-2" />
+          Renovar pelo WhatsApp
+        </Button>
 
         <Button variant="outline" onClick={logout} className="w-full">
           Sair

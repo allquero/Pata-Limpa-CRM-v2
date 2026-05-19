@@ -6,6 +6,12 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./adminSale";
+export * from "./adminSaleInput";
+export * from "./adminSalesEnvelope";
+export * from "./adminTenantInput";
+export * from "./adminTenantUpdate";
+export * from "./adminUser";
 export * from "./appointmentFull";
 export * from "./appointmentFullPackage";
 export * from "./appointmentFullService";
