@@ -151,16 +151,31 @@ paths:
           description: Redirect to the `returnTo` path on success (defaults to `/`) or `/api/login` on failure.
 
   /logout:
-    get:
+    post:
       tags: [Auth]
       operationId: logoutBrowserSession
-      summary: Clear the session and begin OIDC logout
+      summary: Clear the session and return the OIDC logout URL
       parameters:
         - $ref: '#/components/parameters/AuthorizationSessionHeader'
         - $ref: '#/components/parameters/SessionCookie'
       responses:
-        '302':
-          description: Redirect to the OIDC provider logout URL.
+        '200':
+          description: Session cleared. Client should navigate to `redirectUrl` to complete OIDC logout.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [redirectUrl]
+                properties:
+                  redirectUrl:
+                    type: string
+                    format: uri
+        '403':
+          description: Cross-origin request rejected.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
 
   /mobile-auth/token-exchange:
     post:

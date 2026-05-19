@@ -711,6 +711,10 @@ export type HandleBrowserLoginCallbackParams = {
   iss?: string;
 };
 
+export type LogoutBrowserSession200 = {
+  redirectUrl: string;
+};
+
 export type ListClientsParams = {
   tenantId?: number;
   search?: string;

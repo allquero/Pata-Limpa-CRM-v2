@@ -60,6 +60,7 @@ export * from "./listMessageTemplatesParams";
 export * from "./listPackagesParams";
 export * from "./listPetsParams";
 export * from "./listServicesParams";
+export * from "./logoutBrowserSession200";
 export * from "./logoutSuccess";
 export * from "./messageTemplate";
 export * from "./messageTemplateInput";

@@ -51,6 +51,33 @@ function setOidcCookie(res: Response, name: string, value: string) {
   });
 }
 
+/**
+ * Returns true only when the request originates from the same origin as the
+ * server. Checks the `Origin` header first (always present on fetch requests
+ * issued by browser JavaScript), then falls back to the `Referer` header.
+ * Fails closed — returns false when both headers are absent, preventing
+ * edge-client or proxy scenarios from bypassing the check.
+ */
+function isSameOrigin(req: Request): boolean {
+  const expected = getOrigin(req);
+
+  const origin = req.headers["origin"];
+  if (origin) {
+    return origin === expected;
+  }
+
+  const referer = req.headers["referer"];
+  if (referer) {
+    try {
+      return new URL(referer).origin === expected;
+    } catch {
+      return false;
+    }
+  }
+
+  return false;
+}
+
 function getSafeReturnTo(value: unknown): string {
   if (typeof value !== "string" || !value.startsWith("/") || value.startsWith("//")) {
     return "/";
@@ -206,7 +233,12 @@ router.get("/callback", async (req: Request, res: Response) => {
   res.redirect(returnTo);
 });
 
-router.get("/logout", async (req: Request, res: Response) => {
+router.post("/logout", async (req: Request, res: Response) => {
+  if (!isSameOrigin(req)) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+
   const config = await getOidcConfig();
   const origin = getOrigin(req);
 
@@ -218,7 +250,7 @@ router.get("/logout", async (req: Request, res: Response) => {
     post_logout_redirect_uri: origin,
   });
 
-  res.redirect(endSessionUrl.href);
+  res.json({ redirectUrl: endSessionUrl.href });
 });
 
 router.post(
