@@ -13,4 +13,5 @@ export const MessageTemplateInputType = {
   confirmacao: "confirmacao",
   lembrete: "lembrete",
   leads: "leads",
+  agradecimento: "agradecimento",
 } as const;

@@ -3,7 +3,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { tenantsTable } from "./tenants";
 
-export const templateTypeEnum = ["confirmacao", "lembrete", "leads"] as const;
+export const templateTypeEnum = ["confirmacao", "lembrete", "leads", "agradecimento"] as const;
 export type TemplateType = typeof templateTypeEnum[number];
 
 export const messageTemplatesTable = pgTable("message_templates", {

@@ -257,17 +257,22 @@ function KanbanColumn({ status, label, color, bg, appointments, clients, pets, s
 
 // ─── ConfirmacaoWhatsAppModal ─────────────────────────────────────────────────
 
+type ConfirmacaoMode = "agradecimento" | "conclusao";
+
 function ConfirmacaoWhatsAppModal({
-  appt, clients, pets, services, packages, onClose,
+  appt, clients, pets, services, packages, mode = "conclusao", onClose,
 }: {
   appt: Appointment | null;
   clients: Client[];
   pets: Pet[];
   services: Service[];
   packages: Package[];
+  mode?: ConfirmacaoMode;
   onClose: () => void;
 }) {
   const [templateId, setTemplateId] = useState("default");
+
+  useEffect(() => { setTemplateId("default"); }, [appt?.id, mode]);
 
   const pet = appt ? pets.find(p => p.id === appt.petId) : null;
   const client = appt ? clients.find(c => c.id === appt.clientId) : null;
@@ -289,7 +294,9 @@ function ConfirmacaoWhatsAppModal({
     tmplParams,
     { query: { queryKey: getListMessageTemplatesQueryKey(tmplParams), enabled: !!appt } }
   );
-  const confirmTemplates = (msgTemplates as MessageTemplate[]).filter(t => t.type === "confirmacao");
+
+  const templateType = mode === "agradecimento" ? "agradecimento" : "confirmacao";
+  const filteredTemplates = (msgTemplates as MessageTemplate[]).filter(t => t.type === templateType);
 
   const buildMessage = (): string => {
     if (!appt || !client) return "";
@@ -298,16 +305,27 @@ function ConfirmacaoWhatsAppModal({
     const serviceName = service?.name ?? pkg?.name ?? "Serviço";
     const price = formatBRL(Number(appt.totalPrice));
 
-    const futureAppts = (clientAppts as Appointment[])
-      .filter(a => a.id !== appt.id && new Date(a.scheduledDate) > new Date())
+    // For agradecimento: include current appt + all future; for conclusao: only future (excl. current)
+    const allAppts = (clientAppts as Appointment[])
       .sort((a, b) => new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime());
 
+    const datesForList = mode === "agradecimento"
+      ? allAppts
+      : allAppts.filter(a => a.id !== appt.id && new Date(a.scheduledDate) > new Date());
+
+    const datasStr = datesForList.length > 0
+      ? datesForList.map(a => `📅 ${format(new Date(a.scheduledDate), "dd/MM/yyyy 'às' HH:mm")}`).join("\n")
+      : apptDate + " às " + apptTime;
+
     const selectedTmpl = templateId !== "default"
-      ? confirmTemplates.find(t => String(t.id) === templateId)
+      ? filteredTemplates.find(t => String(t.id) === templateId)
       : null;
 
-    const baseContent = selectedTmpl?.content
-      ?? `Olá {nome_cliente}! Obrigado pela visita de {nome_pet} hoje! Serviço: {servico}. Valor pago: {preco}.`;
+    const defaultContent = mode === "agradecimento"
+      ? `Olá {nome_cliente}! Obrigado por agendar com a gente! 🐾\n\n{nome_pet} está agendado nas seguintes datas:\n{datas}\n\nServiço: {servico}\nValor: {preco}\n\nQualquer dúvida, estamos à disposição!`
+      : `Olá {nome_cliente}! Obrigado pela visita de {nome_pet} hoje! Serviço: {servico}. Valor pago: {preco}.`;
+
+    const baseContent = selectedTmpl?.content ?? defaultContent;
 
     let msg = baseContent
       .replace(/\{nome_cliente\}/g, client.name)
@@ -315,10 +333,12 @@ function ConfirmacaoWhatsAppModal({
       .replace(/\{data\}/g, apptDate)
       .replace(/\{horario\}/g, apptTime)
       .replace(/\{servico\}/g, serviceName)
-      .replace(/\{preco\}/g, price);
+      .replace(/\{preco\}/g, price)
+      .replace(/\{datas\}/g, datasStr);
 
-    if (futureAppts.length > 0) {
-      const datesList = futureAppts
+    // For conclusao mode: append future dates if not already in template
+    if (mode === "conclusao" && !baseContent.includes("{datas}") && datesForList.length > 0) {
+      const datesList = datesForList
         .map(a => `📅 ${format(new Date(a.scheduledDate), "dd/MM/yyyy 'às' HH:mm")}`)
         .join("\n");
       msg += `\n\nPróximos agendamentos:\n${datesList}`;
@@ -336,13 +356,16 @@ function ConfirmacaoWhatsAppModal({
     onClose();
   };
 
+  const modalTitle = mode === "agradecimento" ? "Agradecimento via WhatsApp" : "Confirmação via WhatsApp";
+  const templateLabel = mode === "agradecimento" ? "Template de agradecimento" : "Template de confirmação";
+
   return (
     <Dialog open={!!appt} onOpenChange={open => { if (!open) onClose(); }}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <MessageSquare className="h-5 w-5 text-green-600" />
-            Confirmação via WhatsApp
+            {modalTitle}
           </DialogTitle>
         </DialogHeader>
         {appt && (
@@ -358,14 +381,14 @@ function ConfirmacaoWhatsAppModal({
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs">Template de confirmação</Label>
+              <Label className="text-xs">{templateLabel}</Label>
               <Select value={templateId} onValueChange={setTemplateId}>
                 <SelectTrigger className="h-8 text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="default">Mensagem padrão</SelectItem>
-                  {confirmTemplates.map(t => (
+                  {filteredTemplates.map(t => (
                     <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>
                   ))}
                 </SelectContent>
@@ -468,7 +491,8 @@ export default function Agendamentos() {
 
   // WhatsApp confirmation modal
   const [confirmacaoAppt, setConfirmacaoAppt] = useState<Appointment | null>(null);
-  const openConfirmacao = (appt: Appointment) => setConfirmacaoAppt(appt);
+  const [confirmacaoMode, setConfirmacaoMode] = useState<ConfirmacaoMode>("conclusao");
+  const openConfirmacao = (appt: Appointment) => { setConfirmacaoMode("conclusao"); setConfirmacaoAppt(appt); };
 
   // Reminders panel
   const tomorrow = addDays(new Date(), 1);
@@ -724,7 +748,7 @@ export default function Agendamentos() {
       }
 
       const dt = new Date(`${casual.scheduledDate}T${casual.scheduledTime}:00`);
-      await createAppointment.mutateAsync({
+      const createdAppt = await createAppointment.mutateAsync({
         data: {
           tenantId: DEFAULT_TENANT_ID,
           clientId: resolvedClientId,
@@ -743,6 +767,8 @@ export default function Agendamentos() {
       toast({ title: "Agendamento criado!", description: `${clientName} · ${petName}` });
       setCasualOpen(false);
       refetch();
+      setConfirmacaoMode("agradecimento");
+      setConfirmacaoAppt(createdAppt as unknown as Appointment);
     } catch {
       toast({ title: "Erro ao criar agendamento", variant: "destructive" });
     }
@@ -781,6 +807,10 @@ export default function Agendamentos() {
       });
       setSellOpen(false);
       refetch();
+      if (result.appointments[0]) {
+        setConfirmacaoMode("agradecimento");
+        setConfirmacaoAppt(result.appointments[0] as unknown as Appointment);
+      }
     } catch {
       toast({ title: "Erro ao vender pacote", variant: "destructive" });
     }
@@ -1105,6 +1135,7 @@ export default function Agendamentos() {
         pets={allPets as Pet[]}
         services={services as Service[]}
         packages={packages as Package[]}
+        mode={confirmacaoMode}
         onClose={() => setConfirmacaoAppt(null)}
       />
 

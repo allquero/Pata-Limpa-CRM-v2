@@ -1056,7 +1056,7 @@ export const ListMessageTemplatesResponseItem = zod.object({
   id: zod.number(),
   tenantId: zod.number(),
   name: zod.string(),
-  type: zod.enum(["confirmacao", "lembrete", "leads"]),
+  type: zod.enum(["confirmacao", "lembrete", "leads", "agradecimento"]),
   content: zod.string(),
   createdAt: zod.coerce.date(),
 });
@@ -1070,7 +1070,7 @@ export const ListMessageTemplatesResponse = zod.array(
 export const CreateMessageTemplateBody = zod.object({
   tenantId: zod.number(),
   name: zod.string(),
-  type: zod.enum(["confirmacao", "lembrete", "leads"]),
+  type: zod.enum(["confirmacao", "lembrete", "leads", "agradecimento"]),
   content: zod.string(),
 });
 
@@ -1085,7 +1085,7 @@ export const GetMessageTemplateResponse = zod.object({
   id: zod.number(),
   tenantId: zod.number(),
   name: zod.string(),
-  type: zod.enum(["confirmacao", "lembrete", "leads"]),
+  type: zod.enum(["confirmacao", "lembrete", "leads", "agradecimento"]),
   content: zod.string(),
   createdAt: zod.coerce.date(),
 });
@@ -1099,7 +1099,9 @@ export const UpdateMessageTemplateParams = zod.object({
 
 export const UpdateMessageTemplateBody = zod.object({
   name: zod.string().optional(),
-  type: zod.enum(["confirmacao", "lembrete", "leads"]).optional(),
+  type: zod
+    .enum(["confirmacao", "lembrete", "leads", "agradecimento"])
+    .optional(),
   content: zod.string().optional(),
 });
 
@@ -1107,7 +1109,7 @@ export const UpdateMessageTemplateResponse = zod.object({
   id: zod.number(),
   tenantId: zod.number(),
   name: zod.string(),
-  type: zod.enum(["confirmacao", "lembrete", "leads"]),
+  type: zod.enum(["confirmacao", "lembrete", "leads", "agradecimento"]),
   content: zod.string(),
   createdAt: zod.coerce.date(),
 });

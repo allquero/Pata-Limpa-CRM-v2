@@ -461,6 +461,7 @@ export const MessageTemplateType = {
   confirmacao: "confirmacao",
   lembrete: "lembrete",
   leads: "leads",
+  agradecimento: "agradecimento",
 } as const;
 
 export interface MessageTemplate {
@@ -479,6 +480,7 @@ export const MessageTemplateInputType = {
   confirmacao: "confirmacao",
   lembrete: "lembrete",
   leads: "leads",
+  agradecimento: "agradecimento",
 } as const;
 
 export interface MessageTemplateInput {
@@ -495,6 +497,7 @@ export const MessageTemplateUpdateType = {
   confirmacao: "confirmacao",
   lembrete: "lembrete",
   leads: "leads",
+  agradecimento: "agradecimento",
 } as const;
 
 export interface MessageTemplateUpdate {

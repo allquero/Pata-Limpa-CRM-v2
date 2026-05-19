@@ -27,6 +27,7 @@ export const MESSAGE_TEMPLATE_TYPES = {
   confirmacao: "Confirmação",
   lembrete: "Lembrete",
   leads: "Leads",
+  agradecimento: "Agradecimento",
 };
 
 export const DEFAULT_TENANT_ID = 1;

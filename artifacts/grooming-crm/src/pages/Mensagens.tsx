@@ -20,9 +20,10 @@ const typeColors: Record<string, string> = {
   confirmacao: "bg-blue-100 text-blue-800",
   lembrete: "bg-yellow-100 text-yellow-800",
   leads: "bg-purple-100 text-purple-800",
+  agradecimento: "bg-green-100 text-green-800",
 };
 
-const variables = ["{nome_cliente}", "{nome_pet}", "{data}", "{horario}", "{servico}", "{preco}"];
+const variables = ["{nome_cliente}", "{nome_pet}", "{data}", "{horario}", "{servico}", "{preco}", "{datas}"];
 
 export default function Mensagens() {
   const { toast } = useToast();
