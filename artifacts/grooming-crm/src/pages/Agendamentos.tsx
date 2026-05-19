@@ -324,9 +324,10 @@ function ConfirmacaoWhatsAppModal({
     const allAppts = (clientAppts as Appointment[])
       .sort((a, b) => new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime());
 
+    const now = new Date();
     const datesForList = mode === "agradecimento"
-      ? allAppts
-      : allAppts.filter(a => a.id !== appt.id && new Date(a.scheduledDate) > new Date());
+      ? allAppts.filter(a => new Date(a.scheduledDate) >= now)
+      : allAppts.filter(a => a.id !== appt.id && new Date(a.scheduledDate) > now);
 
     const datasStr = datesForList.length > 0
       ? datesForList.map(a => `📅 ${format(new Date(a.scheduledDate), "dd/MM/yyyy 'às' HH:mm")}`).join("\n")
@@ -667,7 +668,7 @@ export default function Agendamentos() {
       await updateStatus.mutateAsync({ id: appt.id, data: { status: newStatus } });
       refetch();
       if (newStatus === "concluido") {
-        setConfirmacaoAppt(appt);
+        openConfirmacao(appt);
       }
     } catch {
       toast({ title: "Erro ao mover card", variant: "destructive" });
