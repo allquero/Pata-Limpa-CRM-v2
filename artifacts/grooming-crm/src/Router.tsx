@@ -1,4 +1,4 @@
-import { Route, Switch } from "wouter";
+import { Route, Switch, Redirect } from "wouter";
 import { AppLayout } from "@/components/layout/AppLayout";
 import Dashboard from "@/pages/Dashboard";
 import Clientes from "@/pages/Clientes";
@@ -37,17 +37,46 @@ export function Router() {
   if (!isAuthenticated) return <Login />;
 
   if (isAdmin) {
-    return <Admin />;
+    return (
+      <Switch>
+        <Route path="/admin" component={Admin} />
+        <Route><Redirect to="/admin" /></Route>
+      </Switch>
+    );
   }
 
-  if (!hasTenant || accessStatus === "pending") return <AguardandoAprovacao />;
-  if (accessStatus === "not_started") return <AcessoNaoIniciado />;
-  if (accessStatus === "expired") return <AcessoExpirado />;
+  if (!hasTenant || accessStatus === "pending") {
+    return (
+      <Switch>
+        <Route path="/aguardando" component={AguardandoAprovacao} />
+        <Route><Redirect to="/aguardando" /></Route>
+      </Switch>
+    );
+  }
+
+  if (accessStatus === "not_started") {
+    return (
+      <Switch>
+        <Route path="/acesso-nao-iniciado" component={AcessoNaoIniciado} />
+        <Route><Redirect to="/acesso-nao-iniciado" /></Route>
+      </Switch>
+    );
+  }
+
+  if (accessStatus === "expired") {
+    return (
+      <Switch>
+        <Route path="/acesso-expirado" component={AcessoExpirado} />
+        <Route><Redirect to="/acesso-expirado" /></Route>
+      </Switch>
+    );
+  }
 
   return (
     <AppLayout>
       <Switch>
         <Route path="/" component={Dashboard} />
+        <Route path="/dashboard" component={Dashboard} />
         <Route path="/clientes" component={Clientes} />
         <Route path="/agendamentos" component={Agendamentos} />
         <Route path="/servicos" component={Servicos} />

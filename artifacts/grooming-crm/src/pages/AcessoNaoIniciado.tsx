@@ -1,8 +1,7 @@
 import { CalendarClock, PawPrint, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAppAuth } from "@/lib/auth-context";
-
-const ADMIN_WHATSAPP = "5511999999999";
+import { buildWhatsAppUrl } from "@/lib/admin-config";
 
 export default function AcessoNaoIniciado() {
   const { logout, tenant } = useAppAuth();
@@ -33,7 +32,7 @@ export default function AcessoNaoIniciado() {
 
         <Button
           className="w-full bg-green-600 hover:bg-green-700 text-white"
-          onClick={() => window.open(`https://wa.me/${ADMIN_WHATSAPP}?text=${encodeURIComponent("Olá! Tenho uma dúvida sobre meu acesso ao Pata Limpa.")}`, "_blank")}
+          onClick={() => window.open(buildWhatsAppUrl("Olá! Tenho uma dúvida sobre meu acesso ao Pata Limpa."), "_blank")}
         >
           <MessageCircle className="h-4 w-4 mr-2" />
           Falar com o suporte pelo WhatsApp

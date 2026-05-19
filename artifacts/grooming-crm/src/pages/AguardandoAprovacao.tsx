@@ -1,8 +1,7 @@
 import { Clock, PawPrint, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAppAuth } from "@/lib/auth-context";
-
-const ADMIN_WHATSAPP = "5511999999999";
+import { buildWhatsAppUrl } from "@/lib/admin-config";
 
 export default function AguardandoAprovacao() {
   const { logout, user } = useAppAuth();
@@ -28,7 +27,7 @@ export default function AguardandoAprovacao() {
 
         <Button
           className="w-full bg-green-600 hover:bg-green-700 text-white"
-          onClick={() => window.open(`https://wa.me/${ADMIN_WHATSAPP}?text=${encodeURIComponent("Olá! Acabei de me cadastrar no Pata Limpa e gostaria de ativar meu acesso.")}`, "_blank")}
+          onClick={() => window.open(buildWhatsAppUrl("Olá! Acabei de me cadastrar no Pata Limpa e gostaria de ativar meu acesso."), "_blank")}
         >
           <MessageCircle className="h-4 w-4 mr-2" />
           Falar com o suporte pelo WhatsApp

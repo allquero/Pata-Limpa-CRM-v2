@@ -148,6 +148,10 @@ router.post("/admin/sales", async (req, res): Promise<void> => {
   }
   const periodStart = body.periodStart as string;
   const periodEnd = body.periodEnd as string;
+  if (periodEnd < periodStart) {
+    res.status(400).json({ error: "periodEnd deve ser maior ou igual a periodStart" });
+    return;
+  }
   const saleData = { description: body.description as string, amount: String(amount), paidAt: body.paidAt as string };
 
   const [existingTenant] = await db
