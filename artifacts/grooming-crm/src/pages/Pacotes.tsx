@@ -146,7 +146,7 @@ export default function Pacotes() {
   const updateItemQty = (idx: number, qty: number) => {
     setForm(f => {
       const items = [...f.serviceItems];
-      items[idx] = { ...items[idx], quantity: Math.max(1, qty) };
+      items[idx] = { ...items[idx], quantity: Math.max(1, Math.min(52, qty)) };
       return { ...f, serviceItems: items };
     });
   };

@@ -295,8 +295,12 @@ export interface ServiceUpdate {
 }
 
 export interface ServiceItem {
+  /** @maxLength 100 */
   serviceName: string;
-  /** @minimum 1 */
+  /**
+   * @minimum 1
+   * @maximum 52
+   */
   quantity: number;
 }
 
@@ -318,16 +322,24 @@ export interface Package {
 
 export interface PackageInput {
   tenantId: number;
+  /** @maxLength 200 */
   name: string;
+  /** @maxLength 1000 */
   description?: string;
+  /** @maxItems 20 */
   serviceItems?: ServiceItem[];
+  /** @maxItems 20 */
   priceBySizes?: PriceBySize[];
 }
 
 export interface PackageUpdate {
+  /** @maxLength 200 */
   name?: string;
+  /** @maxLength 1000 */
   description?: string;
+  /** @maxItems 20 */
   serviceItems?: ServiceItem[];
+  /** @maxItems 20 */
   priceBySizes?: PriceBySize[];
 }
 
@@ -434,6 +446,10 @@ export interface AppointmentInput {
   scheduledDate: string;
   totalPrice: number;
   notes?: string;
+  /**
+   * @minimum 1
+   * @maximum 52
+   */
   recurringWeeks?: number;
 }
 

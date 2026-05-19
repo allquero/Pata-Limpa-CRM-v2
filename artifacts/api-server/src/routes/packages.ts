@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq, and } from "drizzle-orm";
 import { randomUUID } from "crypto";
+import * as zod from "zod";
 import {
   db,
   packagesTable,
@@ -12,6 +13,27 @@ import {
 } from "@workspace/db";
 import type { ServiceItem, PriceBySize } from "@workspace/db";
 import { requireTenant } from "../middlewares/requireTenant";
+
+const MAX_PACKAGE_SESSIONS = 52;
+
+const ServiceItemSchema = zod.object({
+  serviceName: zod.string().min(1).max(100),
+  quantity: zod.number().int().min(1).max(MAX_PACKAGE_SESSIONS),
+});
+
+const PriceBySizeSchema = zod.object({
+  size: zod.string().min(1).max(50),
+  price: zod.number().min(0),
+});
+
+const PackageBodySchema = zod.object({
+  name: zod.string().min(1).max(200),
+  description: zod.string().max(1000).optional().nullable(),
+  serviceItems: zod.array(ServiceItemSchema).max(20).optional(),
+  priceBySizes: zod.array(PriceBySizeSchema).max(20).optional(),
+});
+
+const PackageUpdateSchema = PackageBodySchema.partial();
 
 const router: IRouter = Router();
 
@@ -61,19 +83,18 @@ router.get("/packages", async (req, res): Promise<void> => {
 });
 
 router.post("/packages", async (req, res): Promise<void> => {
-  const body = req.body as Record<string, unknown>;
-  if (!body.name) {
-    res.status(400).json({ error: "name é obrigatório" });
+  const parsed = PackageBodySchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const serviceItems: ServiceItem[] = Array.isArray(body.serviceItems) ? body.serviceItems : [];
-  const priceBySizes: PriceBySize[] = Array.isArray(body.priceBySizes) ? body.priceBySizes : [];
+  const { name, description, serviceItems = [], priceBySizes = [] } = parsed.data;
   const [pkg] = await db
     .insert(packagesTable)
     .values({
       tenantId: req.tenantId!,
-      name: String(body.name),
-      description: body.description ? String(body.description) : null,
+      name,
+      description: description ?? null,
       serviceItems,
       priceBySizes,
     })
@@ -95,12 +116,16 @@ router.get("/packages/:id", async (req, res): Promise<void> => {
 router.patch("/packages/:id", async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   if (isNaN(id)) { res.status(400).json({ error: "ID inválido" }); return; }
-  const body = req.body as Record<string, unknown>;
+  const parsed = PackageUpdateSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
   const updateData: Record<string, unknown> = {};
-  if (body.name !== undefined) updateData.name = String(body.name);
-  if (body.description !== undefined) updateData.description = body.description ? String(body.description) : null;
-  if (body.serviceItems !== undefined) updateData.serviceItems = Array.isArray(body.serviceItems) ? body.serviceItems : [];
-  if (body.priceBySizes !== undefined) updateData.priceBySizes = Array.isArray(body.priceBySizes) ? body.priceBySizes : [];
+  if (parsed.data.name !== undefined) updateData.name = parsed.data.name;
+  if (parsed.data.description !== undefined) updateData.description = parsed.data.description ?? null;
+  if (parsed.data.serviceItems !== undefined) updateData.serviceItems = parsed.data.serviceItems;
+  if (parsed.data.priceBySizes !== undefined) updateData.priceBySizes = parsed.data.priceBySizes;
   const [pkg] = await db
     .update(packagesTable)
     .set(updateData)
@@ -165,7 +190,7 @@ router.post("/packages/:id/sell", async (req, res): Promise<void> => {
   const sortedItems = [...serviceItems].sort((a, b) => b.quantity - a.quantity);
   const mainItem = sortedItems[0]!;
   const extraItems = sortedItems.slice(1);
-  const numSessions = mainItem.quantity;
+  const numSessions = Math.min(mainItem.quantity, MAX_PACKAGE_SESSIONS);
 
   const allServices = await db
     .select()

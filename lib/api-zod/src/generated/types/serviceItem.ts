@@ -7,7 +7,11 @@
  */
 
 export interface ServiceItem {
+  /** @maxLength 100 */
   serviceName: string;
-  /** @minimum 1 */
+  /**
+   * @minimum 1
+   * @maximum 52
+   */
   quantity: number;
 }

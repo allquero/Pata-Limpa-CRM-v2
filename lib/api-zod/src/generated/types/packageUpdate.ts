@@ -9,8 +9,12 @@ import type { PriceBySize } from "./priceBySize";
 import type { ServiceItem } from "./serviceItem";
 
 export interface PackageUpdate {
+  /** @maxLength 200 */
   name?: string;
+  /** @maxLength 1000 */
   description?: string;
+  /** @maxItems 20 */
   serviceItems?: ServiceItem[];
+  /** @maxItems 20 */
   priceBySizes?: PriceBySize[];
 }

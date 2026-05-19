@@ -718,6 +718,10 @@ export const ListPackagesQueryParams = zod.object({
   tenantId: zod.coerce.number().optional(),
 });
 
+export const listPackagesResponseServiceItemsItemServiceNameMax = 100;
+
+export const listPackagesResponseServiceItemsItemQuantityMax = 52;
+
 export const ListPackagesResponseItem = zod.object({
   id: zod.number(),
   tenantId: zod.number(),
@@ -725,8 +729,13 @@ export const ListPackagesResponseItem = zod.object({
   description: zod.string().nullish(),
   serviceItems: zod.array(
     zod.object({
-      serviceName: zod.string(),
-      quantity: zod.number().min(1),
+      serviceName: zod
+        .string()
+        .max(listPackagesResponseServiceItemsItemServiceNameMax),
+      quantity: zod
+        .number()
+        .min(1)
+        .max(listPackagesResponseServiceItemsItemQuantityMax),
     }),
   ),
   priceBySizes: zod.array(
@@ -742,18 +751,35 @@ export const ListPackagesResponse = zod.array(ListPackagesResponseItem);
 /**
  * @summary Create a service package
  */
+export const createPackageBodyNameMax = 200;
+
+export const createPackageBodyDescriptionMax = 1000;
+
+export const createPackageBodyServiceItemsItemServiceNameMax = 100;
+
+export const createPackageBodyServiceItemsItemQuantityMax = 52;
+
+export const createPackageBodyServiceItemsMax = 20;
+
+export const createPackageBodyPriceBySizesMax = 20;
 
 export const CreatePackageBody = zod.object({
   tenantId: zod.number(),
-  name: zod.string(),
-  description: zod.string().optional(),
+  name: zod.string().max(createPackageBodyNameMax),
+  description: zod.string().max(createPackageBodyDescriptionMax).optional(),
   serviceItems: zod
     .array(
       zod.object({
-        serviceName: zod.string(),
-        quantity: zod.number().min(1),
+        serviceName: zod
+          .string()
+          .max(createPackageBodyServiceItemsItemServiceNameMax),
+        quantity: zod
+          .number()
+          .min(1)
+          .max(createPackageBodyServiceItemsItemQuantityMax),
       }),
     )
+    .max(createPackageBodyServiceItemsMax)
     .optional(),
   priceBySizes: zod
     .array(
@@ -762,6 +788,7 @@ export const CreatePackageBody = zod.object({
         price: zod.number(),
       }),
     )
+    .max(createPackageBodyPriceBySizesMax)
     .optional(),
 });
 
@@ -772,6 +799,10 @@ export const GetPackageParams = zod.object({
   id: zod.coerce.number(),
 });
 
+export const getPackageResponseServiceItemsItemServiceNameMax = 100;
+
+export const getPackageResponseServiceItemsItemQuantityMax = 52;
+
 export const GetPackageResponse = zod.object({
   id: zod.number(),
   tenantId: zod.number(),
@@ -779,8 +810,13 @@ export const GetPackageResponse = zod.object({
   description: zod.string().nullish(),
   serviceItems: zod.array(
     zod.object({
-      serviceName: zod.string(),
-      quantity: zod.number().min(1),
+      serviceName: zod
+        .string()
+        .max(getPackageResponseServiceItemsItemServiceNameMax),
+      quantity: zod
+        .number()
+        .min(1)
+        .max(getPackageResponseServiceItemsItemQuantityMax),
     }),
   ),
   priceBySizes: zod.array(
@@ -799,16 +835,34 @@ export const UpdatePackageParams = zod.object({
   id: zod.coerce.number(),
 });
 
+export const updatePackageBodyNameMax = 200;
+
+export const updatePackageBodyDescriptionMax = 1000;
+
+export const updatePackageBodyServiceItemsItemServiceNameMax = 100;
+
+export const updatePackageBodyServiceItemsItemQuantityMax = 52;
+
+export const updatePackageBodyServiceItemsMax = 20;
+
+export const updatePackageBodyPriceBySizesMax = 20;
+
 export const UpdatePackageBody = zod.object({
-  name: zod.string().optional(),
-  description: zod.string().optional(),
+  name: zod.string().max(updatePackageBodyNameMax).optional(),
+  description: zod.string().max(updatePackageBodyDescriptionMax).optional(),
   serviceItems: zod
     .array(
       zod.object({
-        serviceName: zod.string(),
-        quantity: zod.number().min(1),
+        serviceName: zod
+          .string()
+          .max(updatePackageBodyServiceItemsItemServiceNameMax),
+        quantity: zod
+          .number()
+          .min(1)
+          .max(updatePackageBodyServiceItemsItemQuantityMax),
       }),
     )
+    .max(updatePackageBodyServiceItemsMax)
     .optional(),
   priceBySizes: zod
     .array(
@@ -817,8 +871,13 @@ export const UpdatePackageBody = zod.object({
         price: zod.number(),
       }),
     )
+    .max(updatePackageBodyPriceBySizesMax)
     .optional(),
 });
+
+export const updatePackageResponseServiceItemsItemServiceNameMax = 100;
+
+export const updatePackageResponseServiceItemsItemQuantityMax = 52;
 
 export const UpdatePackageResponse = zod.object({
   id: zod.number(),
@@ -827,8 +886,13 @@ export const UpdatePackageResponse = zod.object({
   description: zod.string().nullish(),
   serviceItems: zod.array(
     zod.object({
-      serviceName: zod.string(),
-      quantity: zod.number().min(1),
+      serviceName: zod
+        .string()
+        .max(updatePackageResponseServiceItemsItemServiceNameMax),
+      quantity: zod
+        .number()
+        .min(1)
+        .max(updatePackageResponseServiceItemsItemQuantityMax),
     }),
   ),
   priceBySizes: zod.array(
@@ -943,6 +1007,8 @@ export const ListAppointmentsResponse = zod.array(ListAppointmentsResponseItem);
 /**
  * @summary Create an appointment (supports recurring weeks)
  */
+export const createAppointmentBodyRecurringWeeksMax = 52;
+
 export const CreateAppointmentBody = zod.object({
   tenantId: zod.number(),
   petId: zod.number(),
@@ -952,7 +1018,11 @@ export const CreateAppointmentBody = zod.object({
   scheduledDate: zod.coerce.date(),
   totalPrice: zod.number(),
   notes: zod.string().optional(),
-  recurringWeeks: zod.number().optional(),
+  recurringWeeks: zod
+    .number()
+    .min(1)
+    .max(createAppointmentBodyRecurringWeeksMax)
+    .optional(),
 });
 
 /**

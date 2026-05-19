@@ -15,5 +15,9 @@ export interface AppointmentInput {
   scheduledDate: Date;
   totalPrice: number;
   notes?: string;
+  /**
+   * @minimum 1
+   * @maximum 52
+   */
   recurringWeeks?: number;
 }

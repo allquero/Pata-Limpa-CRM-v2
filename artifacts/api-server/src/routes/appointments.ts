@@ -163,7 +163,7 @@ router.post("/appointments", async (req, res): Promise<void> => {
     return;
   }
 
-  const weeks = recurringWeeks && recurringWeeks > 1 ? recurringWeeks : 1;
+  const weeks = Math.min(recurringWeeks && recurringWeeks > 1 ? recurringWeeks : 1, 52);
   const groupId = weeks > 1 ? randomUUID() : null;
   const baseDate = new Date(baseData.scheduledDate);
 

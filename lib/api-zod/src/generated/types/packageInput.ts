@@ -10,8 +10,12 @@ import type { ServiceItem } from "./serviceItem";
 
 export interface PackageInput {
   tenantId: number;
+  /** @maxLength 200 */
   name: string;
+  /** @maxLength 1000 */
   description?: string;
+  /** @maxItems 20 */
   serviceItems?: ServiceItem[];
+  /** @maxItems 20 */
   priceBySizes?: PriceBySize[];
 }
