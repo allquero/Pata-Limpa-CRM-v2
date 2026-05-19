@@ -1,5 +1,6 @@
+import bcrypt from "bcryptjs";
 import { Router, type IRouter } from "express";
-import { eq, notInArray, desc } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { db, tenantsTable, usersTable, adminSalesTable } from "@workspace/db";
 import { requireAdmin } from "../middlewares/requireAdmin";
 
@@ -15,54 +16,114 @@ function isOptionalString(v: unknown): v is string | undefined | null {
   return v === undefined || v === null || typeof v === "string";
 }
 
-router.get("/admin/pending-users", async (req, res): Promise<void> => {
-  const usersWithTenants = db
-    .select({ userId: tenantsTable.userId })
-    .from(tenantsTable);
+router.get("/admin/pending-users", async (_req, res): Promise<void> => {
+  const rows = await db
+    .select({
+      id: tenantsTable.id,
+      name: tenantsTable.name,
+      userId: tenantsTable.userId,
+      loginEmail: usersTable.email,
+      hasCredentials: usersTable.passwordHash,
+    })
+    .from(tenantsTable)
+    .leftJoin(usersTable, eq(tenantsTable.userId, usersTable.id));
 
-  const pendingUsers = await db
-    .select()
-    .from(usersTable)
-    .where(notInArray(usersTable.id, usersWithTenants));
-
-  res.json(pendingUsers);
+  const pending = rows.filter((r) => !r.userId || !r.hasCredentials);
+  res.json(pending);
 });
 
 router.get("/admin/tenants", async (_req, res): Promise<void> => {
   const tenants = await db
-    .select()
+    .select({
+      id: tenantsTable.id,
+      userId: tenantsTable.userId,
+      name: tenantsTable.name,
+      phone: tenantsTable.phone,
+      email: tenantsTable.email,
+      address: tenantsTable.address,
+      accessStart: tenantsTable.accessStart,
+      accessEnd: tenantsTable.accessEnd,
+      createdAt: tenantsTable.createdAt,
+      loginEmail: usersTable.email,
+    })
     .from(tenantsTable)
+    .leftJoin(usersTable, eq(tenantsTable.userId, usersTable.id))
     .orderBy(desc(tenantsTable.createdAt));
   res.json(tenants);
 });
 
 router.post("/admin/tenants", async (req, res): Promise<void> => {
   const body = req.body as Record<string, unknown>;
-  if (!isString(body.userId) || !isString(body.name)) {
-    res.status(400).json({ error: "userId e name são obrigatórios" });
+
+  if (
+    !isString(body.loginEmail) ||
+    !isString(body.loginPassword) ||
+    !isString(body.name)
+  ) {
+    res
+      .status(400)
+      .json({ error: "loginEmail, loginPassword e name são obrigatórios" });
     return;
   }
-  const existing = await db
-    .select({ id: tenantsTable.id })
-    .from(tenantsTable)
-    .where(eq(tenantsTable.userId, body.userId));
-  if (existing.length > 0) {
-    res.status(400).json({ error: "Usuário já possui um pet shop cadastrado" });
+
+  const loginEmail = (body.loginEmail as string).trim().toLowerCase();
+
+  const [existingUser] = await db
+    .select({ id: usersTable.id })
+    .from(usersTable)
+    .where(eq(usersTable.email, loginEmail));
+
+  if (existingUser) {
+    res.status(400).json({ error: "Este e-mail já está em uso" });
     return;
   }
+
+  const passwordHash = await bcrypt.hash(body.loginPassword as string, 12);
+
+  const [user] = await db
+    .insert(usersTable)
+    .values({
+      email: loginEmail,
+      passwordHash,
+      isAdmin: false,
+      firstName:
+        typeof body.name === "string"
+          ? (body.name as string).trim()
+          : null,
+      lastName: null,
+      profileImageUrl: null,
+    })
+    .returning();
+
   const [tenant] = await db
     .insert(tenantsTable)
     .values({
-      userId: body.userId,
-      name: body.name,
-      phone: typeof body.phone === "string" && body.phone ? body.phone : null,
-      email: typeof body.email === "string" && body.email ? body.email : null,
-      address: typeof body.address === "string" && body.address ? body.address : null,
-      accessStart: typeof body.accessStart === "string" && body.accessStart ? body.accessStart : null,
-      accessEnd: typeof body.accessEnd === "string" && body.accessEnd ? body.accessEnd : null,
+      userId: user.id,
+      name: (body.name as string).trim(),
+      phone:
+        typeof body.phone === "string" && body.phone
+          ? body.phone
+          : null,
+      email:
+        typeof body.email === "string" && body.email
+          ? body.email
+          : null,
+      address:
+        typeof body.address === "string" && body.address
+          ? body.address
+          : null,
+      accessStart:
+        typeof body.accessStart === "string" && body.accessStart
+          ? body.accessStart
+          : null,
+      accessEnd:
+        typeof body.accessEnd === "string" && body.accessEnd
+          ? body.accessEnd
+          : null,
     })
     .returning();
-  res.status(201).json(tenant);
+
+  res.status(201).json({ ...tenant, loginEmail });
 });
 
 router.patch("/admin/tenants/:id", async (req, res): Promise<void> => {
@@ -73,12 +134,15 @@ router.patch("/admin/tenants/:id", async (req, res): Promise<void> => {
   }
   const body = req.body as Record<string, unknown>;
   const update: Record<string, unknown> = { updatedAt: new Date() };
-  if (typeof body.name === "string" && body.name.trim()) update.name = body.name.trim();
+  if (typeof body.name === "string" && body.name.trim())
+    update.name = body.name.trim();
   if (isOptionalString(body.phone)) update.phone = body.phone || null;
   if (isOptionalString(body.email)) update.email = body.email || null;
   if (isOptionalString(body.address)) update.address = body.address || null;
-  if (isOptionalString(body.accessStart)) update.accessStart = body.accessStart || null;
-  if (isOptionalString(body.accessEnd)) update.accessEnd = body.accessEnd || null;
+  if (isOptionalString(body.accessStart))
+    update.accessStart = body.accessStart || null;
+  if (isOptionalString(body.accessEnd))
+    update.accessEnd = body.accessEnd || null;
   const [tenant] = await db
     .update(tenantsTable)
     .set(update)
@@ -89,6 +153,40 @@ router.patch("/admin/tenants/:id", async (req, res): Promise<void> => {
     return;
   }
   res.json(tenant);
+});
+
+router.patch("/admin/tenants/:id/password", async (req, res): Promise<void> => {
+  const id = Number(req.params.id);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "ID inválido" });
+    return;
+  }
+
+  const body = req.body as Record<string, unknown>;
+  if (!isString(body.newPassword)) {
+    res.status(400).json({ error: "newPassword é obrigatório" });
+    return;
+  }
+
+  const [tenant] = await db
+    .select({ userId: tenantsTable.userId })
+    .from(tenantsTable)
+    .where(eq(tenantsTable.id, id));
+
+  if (!tenant?.userId) {
+    res
+      .status(404)
+      .json({ error: "Pet shop não encontrado ou sem usuário vinculado" });
+    return;
+  }
+
+  const passwordHash = await bcrypt.hash(body.newPassword as string, 12);
+  await db
+    .update(usersTable)
+    .set({ passwordHash, updatedAt: new Date() })
+    .where(eq(usersTable.id, tenant.userId));
+
+  res.json({ ok: true });
 });
 
 router.delete("/admin/tenants/:id", async (req, res): Promise<void> => {
@@ -138,8 +236,18 @@ router.post("/admin/sales", async (req, res): Promise<void> => {
     res.status(400).json({ error: "tenantId inválido" });
     return;
   }
-  if (!isString(body.description) || !isString(body.paidAt) || !isString(body.periodStart) || !isString(body.periodEnd)) {
-    res.status(400).json({ error: "description, paidAt, periodStart e periodEnd são obrigatórios" });
+  if (
+    !isString(body.description) ||
+    !isString(body.paidAt) ||
+    !isString(body.periodStart) ||
+    !isString(body.periodEnd)
+  ) {
+    res
+      .status(400)
+      .json({
+        error:
+          "description, paidAt, periodStart e periodEnd são obrigatórios",
+      });
     return;
   }
   if (isNaN(amount) || amount <= 0) {
@@ -149,13 +257,25 @@ router.post("/admin/sales", async (req, res): Promise<void> => {
   const periodStart = body.periodStart as string;
   const periodEnd = body.periodEnd as string;
   if (periodEnd < periodStart) {
-    res.status(400).json({ error: "periodEnd deve ser maior ou igual a periodStart" });
+    res
+      .status(400)
+      .json({
+        error: "periodEnd deve ser maior ou igual a periodStart",
+      });
     return;
   }
-  const saleData = { description: body.description as string, amount: String(amount), paidAt: body.paidAt as string };
+  const saleData = {
+    description: body.description as string,
+    amount: String(amount),
+    paidAt: body.paidAt as string,
+  };
 
   const [existingTenant] = await db
-    .select({ id: tenantsTable.id, accessEnd: tenantsTable.accessEnd, accessStart: tenantsTable.accessStart })
+    .select({
+      id: tenantsTable.id,
+      accessEnd: tenantsTable.accessEnd,
+      accessStart: tenantsTable.accessStart,
+    })
     .from(tenantsTable)
     .where(eq(tenantsTable.id, tenantId));
 
@@ -169,10 +289,11 @@ router.post("/admin/sales", async (req, res): Promise<void> => {
     .values({ tenantId, periodStart, periodEnd, ...saleData })
     .returning();
 
-  // Calculate sold duration in days
   const soldStart = new Date(periodStart);
   const soldEnd = new Date(periodEnd);
-  const soldDays = Math.round((soldEnd.getTime() - soldStart.getTime()) / (1000 * 60 * 60 * 24));
+  const soldDays = Math.round(
+    (soldEnd.getTime() - soldStart.getTime()) / (1000 * 60 * 60 * 24),
+  );
 
   const today = new Date().toISOString().slice(0, 10);
   const currentEnd = existingTenant.accessEnd;
@@ -180,19 +301,17 @@ router.post("/admin/sales", async (req, res): Promise<void> => {
 
   let newEnd: string;
   if (currentEnd && currentEnd >= today) {
-    // Active tenant: extend from current accessEnd
     const extendFrom = new Date(currentEnd);
     extendFrom.setDate(extendFrom.getDate() + soldDays);
     newEnd = extendFrom.toISOString().slice(0, 10);
   } else {
-    // Expired or no access: start new period from periodStart
     newEnd = periodEnd;
   }
 
-  // Keep earliest accessStart, or set to periodStart if none
-  const newStart = currentAccessStart && currentAccessStart <= periodStart
-    ? currentAccessStart
-    : periodStart;
+  const newStart =
+    currentAccessStart && currentAccessStart <= periodStart
+      ? currentAccessStart
+      : periodStart;
 
   await db
     .update(tenantsTable)

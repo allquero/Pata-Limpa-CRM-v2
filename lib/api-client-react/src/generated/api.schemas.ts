@@ -653,6 +653,15 @@ export interface TopClient {
   lastAppointmentDate?: string | null;
 }
 
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface OkResponse {
+  ok: boolean;
+}
+
 export interface AuthUser {
   id: string;
   /** @nullable */
@@ -713,23 +722,6 @@ export interface DashboardSummary {
  * Opaque session token — `Bearer <sid>`.
  */
 export type AuthorizationSessionHeaderParameter = string;
-
-export type BeginBrowserLoginParams = {
-  /**
-   * Relative path to redirect to after login (must start with `/`). Defaults to `/`.
-   */
-  returnTo?: string;
-};
-
-export type HandleBrowserLoginCallbackParams = {
-  code?: string;
-  state?: string;
-  iss?: string;
-};
-
-export type LogoutBrowserSession200 = {
-  redirectUrl: string;
-};
 
 export type ListClientsParams = {
   tenantId?: number;

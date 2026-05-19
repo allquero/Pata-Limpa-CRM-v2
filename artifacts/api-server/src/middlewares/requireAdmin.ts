@@ -9,8 +9,7 @@ export function requireAdmin(
     res.status(401).json({ error: "Autenticação necessária" });
     return;
   }
-  const adminId = process.env.ADMIN_REPLIT_USER_ID;
-  if (!adminId || req.user.id !== adminId) {
+  if (!req.user.isAdmin) {
     res.status(403).json({ error: "Acesso restrito ao administrador" });
     return;
   }
