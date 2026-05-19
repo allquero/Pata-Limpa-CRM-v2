@@ -76,7 +76,7 @@ export default function Mensagens() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Templates de Mensagem</h1>
-          <p className="text-muted-foreground">Mensagens para WhatsApp — confirmações, lembretes e leads</p>
+          <p className="text-muted-foreground">Mensagens para WhatsApp — confirmações, lembretes, agradecimentos e leads</p>
         </div>
         <Button onClick={openCreate}><Plus className="h-4 w-4 mr-2" />Novo Template</Button>
       </div>

@@ -391,7 +391,7 @@ function ConfirmacaoWhatsAppModal({
               <div>
                 <p className="font-semibold text-sm">{pet?.name ?? "Pet"} — {client?.name ?? "Cliente"}</p>
                 <p className="text-xs text-muted-foreground">
-                  {service?.name ?? pkg?.name ?? "Serviço"} · {formatBRL(Number(appt.totalPrice))} · {format(new Date(appt.scheduledDate), "dd/MM 'às' HH:mm")}
+                  {service?.name ?? pkg?.name ?? "Serviço"} · {formatBRL(overridePrice !== undefined ? overridePrice : Number(appt.totalPrice))} · {format(new Date(appt.scheduledDate), "dd/MM 'às' HH:mm")}
                 </p>
               </div>
             </div>
