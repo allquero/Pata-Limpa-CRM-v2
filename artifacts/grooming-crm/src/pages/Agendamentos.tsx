@@ -12,7 +12,7 @@ import {
   getListAppointmentsQueryKey, getListMessageTemplatesQueryKey,
 } from "@workspace/api-client-react";
 import type {
-  Client, Pet, Service, Package, SellPackageResult, PetInputSize, MessageTemplate,
+  Client, Pet, Service, Package, SellPackageResult, PetInputSize, MessageTemplate, AppointmentFull,
 } from "@workspace/api-client-react";
 import { DEFAULT_TENANT_ID, PORTE_SIZES } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
@@ -34,6 +34,20 @@ import { format, addDays, startOfWeek, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 type AppStatus = "aguardando" | "em_atendimento" | "concluido" | "cancelado";
+
+function appointmentFromFull(af: AppointmentFull): Appointment {
+  return {
+    id: af.id,
+    petId: af.petId,
+    clientId: af.clientId,
+    serviceId: af.serviceId,
+    packageId: af.packageId,
+    scheduledDate: af.scheduledDate,
+    status: af.status as AppStatus,
+    totalPrice: af.totalPrice,
+    notes: af.notes,
+  };
+}
 
 type Appointment = {
   id: number;
@@ -260,7 +274,7 @@ function KanbanColumn({ status, label, color, bg, appointments, clients, pets, s
 type ConfirmacaoMode = "agradecimento" | "conclusao";
 
 function ConfirmacaoWhatsAppModal({
-  appt, clients, pets, services, packages, mode = "conclusao", onClose,
+  appt, clients, pets, services, packages, mode = "conclusao", overridePrice, onClose,
 }: {
   appt: Appointment | null;
   clients: Client[];
@@ -268,6 +282,7 @@ function ConfirmacaoWhatsAppModal({
   services: Service[];
   packages: Package[];
   mode?: ConfirmacaoMode;
+  overridePrice?: number;
   onClose: () => void;
 }) {
   const [templateId, setTemplateId] = useState("default");
@@ -303,7 +318,7 @@ function ConfirmacaoWhatsAppModal({
     const apptTime = new Date(appt.scheduledDate).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
     const apptDate = format(new Date(appt.scheduledDate), "dd/MM/yyyy");
     const serviceName = service?.name ?? pkg?.name ?? "Serviço";
-    const price = formatBRL(Number(appt.totalPrice));
+    const price = formatBRL(overridePrice !== undefined ? overridePrice : Number(appt.totalPrice));
 
     // For agradecimento: include current appt + all future; for conclusao: only future (excl. current)
     const allAppts = (clientAppts as Appointment[])
@@ -492,7 +507,12 @@ export default function Agendamentos() {
   // WhatsApp confirmation modal
   const [confirmacaoAppt, setConfirmacaoAppt] = useState<Appointment | null>(null);
   const [confirmacaoMode, setConfirmacaoMode] = useState<ConfirmacaoMode>("conclusao");
-  const openConfirmacao = (appt: Appointment) => { setConfirmacaoMode("conclusao"); setConfirmacaoAppt(appt); };
+  const [confirmacaoOverridePrice, setConfirmacaoOverridePrice] = useState<number | undefined>(undefined);
+  const openConfirmacao = (appt: Appointment) => {
+    setConfirmacaoMode("conclusao");
+    setConfirmacaoOverridePrice(undefined);
+    setConfirmacaoAppt(appt);
+  };
 
   // Reminders panel
   const tomorrow = addDays(new Date(), 1);
@@ -748,7 +768,7 @@ export default function Agendamentos() {
       }
 
       const dt = new Date(`${casual.scheduledDate}T${casual.scheduledTime}:00`);
-      const createdAppt = await createAppointment.mutateAsync({
+      const createdAppts = await createAppointment.mutateAsync({
         data: {
           tenantId: DEFAULT_TENANT_ID,
           clientId: resolvedClientId,
@@ -767,8 +787,12 @@ export default function Agendamentos() {
       toast({ title: "Agendamento criado!", description: `${clientName} · ${petName}` });
       setCasualOpen(false);
       refetch();
-      setConfirmacaoMode("agradecimento");
-      setConfirmacaoAppt(createdAppt as unknown as Appointment);
+      const first = createdAppts[0];
+      if (first) {
+        setConfirmacaoMode("agradecimento");
+        setConfirmacaoOverridePrice(undefined);
+        setConfirmacaoAppt(appointmentFromFull(first));
+      }
     } catch {
       toast({ title: "Erro ao criar agendamento", variant: "destructive" });
     }
@@ -807,9 +831,11 @@ export default function Agendamentos() {
       });
       setSellOpen(false);
       refetch();
-      if (result.appointments[0]) {
+      const firstSell = result.appointments[0];
+      if (firstSell) {
         setConfirmacaoMode("agradecimento");
-        setConfirmacaoAppt(result.appointments[0] as unknown as Appointment);
+        setConfirmacaoOverridePrice(result.financialEntry.amount);
+        setConfirmacaoAppt(appointmentFromFull(firstSell));
       }
     } catch {
       toast({ title: "Erro ao vender pacote", variant: "destructive" });
@@ -1136,6 +1162,7 @@ export default function Agendamentos() {
         services={services as Service[]}
         packages={packages as Package[]}
         mode={confirmacaoMode}
+        overridePrice={confirmacaoOverridePrice}
         onClose={() => setConfirmacaoAppt(null)}
       />
 
