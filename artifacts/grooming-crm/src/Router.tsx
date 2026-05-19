@@ -45,7 +45,7 @@ export function Router() {
     );
   }
 
-  if (!hasTenant || accessStatus === "pending") {
+  if (!hasTenant) {
     return (
       <Switch>
         <Route path="/aguardando" component={AguardandoAprovacao} />

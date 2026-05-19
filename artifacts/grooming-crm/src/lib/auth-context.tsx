@@ -11,7 +11,7 @@ interface AuthUser {
   isAdmin: boolean;
 }
 
-export type AccessStatus = "active" | "pending" | "expired" | "not_started" | null;
+export type AccessStatus = "active" | "expired" | "not_started" | null;
 
 function computeAccessStatus(tenant: Tenant | null): AccessStatus {
   if (!tenant) return null;
