@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useListServices, useCreateService, useUpdateService, useDeleteService } from "@workspace/api-client-react";
+import type { ServiceInputSize } from "@workspace/api-client-react";
 import { DEFAULT_TENANT_ID, PORTE_SIZES } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 
-type Service = { id: number; name: string; size: string; price: string; durationMinutes: number };
+type Service = { id: number; name: string; size: string; price: number; durationMinutes: number | null };
 const emptyForm = { name: "", size: "mini_longo", price: "", durationMinutes: 60 };
 
 export default function Servicos() {
@@ -30,13 +31,19 @@ export default function Servicos() {
   const openCreate = () => { setEditing(null); setForm(emptyForm); setModalOpen(true); };
   const openEdit = (s: Service) => {
     setEditing(s);
-    setForm({ name: s.name, size: s.size, price: String(s.price), durationMinutes: s.durationMinutes });
+    setForm({ name: s.name, size: s.size, price: String(s.price), durationMinutes: s.durationMinutes ?? 60 });
     setModalOpen(true);
   };
 
   const handleSave = async () => {
     try {
-      const payload = { ...form, tenantId: DEFAULT_TENANT_ID, price: form.price, durationMinutes: Number(form.durationMinutes) };
+      const payload = {
+        tenantId: DEFAULT_TENANT_ID,
+        name: form.name,
+        size: form.size as ServiceInputSize,
+        price: Number(form.price),
+        durationMinutes: Number(form.durationMinutes),
+      };
       if (editing) {
         await updateService.mutateAsync({ id: editing.id, data: payload });
         toast({ title: "Serviço atualizado!" });

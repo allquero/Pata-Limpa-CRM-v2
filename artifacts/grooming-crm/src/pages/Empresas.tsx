@@ -11,7 +11,7 @@ import { Building2, Save } from "lucide-react";
 
 export default function Empresas() {
   const { toast } = useToast();
-  const { data: tenant, isLoading, refetch } = useGetTenant({ id: DEFAULT_TENANT_ID });
+  const { data: tenant, isLoading, refetch } = useGetTenant(DEFAULT_TENANT_ID);
   const updateTenant = useUpdateTenant();
 
   const [form, setForm] = useState({ name: "", phone: "", email: "", address: "" });

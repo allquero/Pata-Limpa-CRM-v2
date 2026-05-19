@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   useListPackages, useCreatePackage, useUpdatePackage, useDeletePackage,
   useListServices, useListClients, useListPets, useSellPackage,
+  getListPetsQueryKey,
 } from "@workspace/api-client-react";
 import { DEFAULT_TENANT_ID, PORTE_SIZES } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
@@ -78,10 +79,10 @@ export default function Pacotes() {
   const availableNames = serviceNames.filter(n => !usedNames.includes(n));
 
   // Pets filtered by selected client in sell form
-  const { data: clientPets = [] } = useListPets(
-    sellForm.clientId ? { clientId: Number(sellForm.clientId) } : { clientId: 0 },
-    { enabled: !!sellForm.clientId }
-  );
+  const sellPetParams = sellForm.clientId ? { clientId: Number(sellForm.clientId) } : { clientId: 0 };
+  const { data: clientPets = [] } = useListPets(sellPetParams, {
+    query: { queryKey: getListPetsQueryKey(sellPetParams), enabled: !!sellForm.clientId },
+  });
 
   // Price for selected pet
   const selectedPet = (clientPets as any[]).find((p: any) => p.id === Number(sellForm.petId));
@@ -168,7 +169,7 @@ export default function Pacotes() {
       const payload = {
         tenantId: DEFAULT_TENANT_ID,
         name: form.name.trim(),
-        description: form.description.trim() || null,
+        description: form.description.trim() || undefined,
         serviceItems: form.serviceItems,
         priceBySizes: form.priceBySizes.filter(p => p.price > 0),
       };

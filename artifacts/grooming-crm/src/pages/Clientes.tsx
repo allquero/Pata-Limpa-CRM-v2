@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useListClients, useCreateClient, useUpdateClient, useDeleteClient, useListPets, useCreatePet, useDeletePet } from "@workspace/api-client-react";
+import { useListClients, useCreateClient, useUpdateClient, useDeleteClient, useListPets, useCreatePet, useDeletePet, getListPetsQueryKey } from "@workspace/api-client-react";
+import type { PetInputSize } from "@workspace/api-client-react";
 import { DEFAULT_TENANT_ID, PORTE_SIZES } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,7 +36,10 @@ export default function Clientes() {
   const [petClientId, setPetClientId] = useState<number | null>(null);
   const [petForm, setPetForm] = useState(emptyPet);
 
-  const { data: pets = [], refetch: refetchPets } = useListPets(expandedClient ? { clientId: expandedClient } : { clientId: 0 }, { enabled: !!expandedClient });
+  const petsParams = expandedClient ? { clientId: expandedClient } : { clientId: 0 };
+  const { data: pets = [], refetch: refetchPets } = useListPets(petsParams, {
+    query: { queryKey: getListPetsQueryKey(petsParams), enabled: !!expandedClient },
+  });
   const createPet = useCreatePet();
   const deletePet = useDeletePet();
 
@@ -50,7 +54,7 @@ export default function Clientes() {
   const handleSave = async () => {
     try {
       if (editingClient) {
-        await updateClient.mutateAsync({ id: editingClient.id, data: { ...form, tenantId: DEFAULT_TENANT_ID } });
+        await updateClient.mutateAsync({ id: editingClient.id, data: form });
         toast({ title: "Cliente atualizado!" });
       } else {
         await createClient.mutateAsync({ data: { ...form, tenantId: DEFAULT_TENANT_ID } });
@@ -72,7 +76,7 @@ export default function Clientes() {
   const handleSavePet = async () => {
     if (!petClientId) return;
     try {
-      await createPet.mutateAsync({ data: { ...petForm, clientId: petClientId } });
+      await createPet.mutateAsync({ data: { ...petForm, size: petForm.size as PetInputSize, clientId: petClientId } });
       toast({ title: "Pet adicionado!" });
       setPetModalOpen(false);
       setPetForm(emptyPet);

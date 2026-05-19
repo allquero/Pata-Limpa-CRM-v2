@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useListFinancialEntries, useGetFinancialSummary, useCreateFinancialEntry, useUpdateFinancialEntry, useDeleteFinancialEntry } from "@workspace/api-client-react";
+import type { FinancialEntryInputType, FinancialEntryUpdateType } from "@workspace/api-client-react";
 import { DEFAULT_TENANT_ID, FINANCIAL_TYPES } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, TrendingUp, TrendingDown, Minus } from "lucide-react";
 
-type FinancialEntry = { id: number; type: string; description: string; amount: string; date: string; category?: string | null };
+type FinancialEntry = { id: number; type: string; description: string; amount: number; date: string; category?: string | null };
 const emptyForm = { type: "receita", description: "", amount: "", date: new Date().toISOString().substring(0, 10), category: "" };
 
 const typeColors: Record<string, string> = {
@@ -58,12 +59,26 @@ export default function Financeiro() {
 
   const handleSave = async () => {
     try {
-      const payload = { ...form, tenantId: DEFAULT_TENANT_ID, amount: form.amount, type: form.type as any };
       if (editing) {
-        await updateEntry.mutateAsync({ id: editing.id, data: payload });
+        const updatePayload = {
+          type: form.type as FinancialEntryUpdateType,
+          description: form.description,
+          amount: Number(form.amount),
+          date: form.date,
+          category: form.category || undefined,
+        };
+        await updateEntry.mutateAsync({ id: editing.id, data: updatePayload });
         toast({ title: "Lançamento atualizado!" });
       } else {
-        await createEntry.mutateAsync({ data: payload });
+        const createPayload = {
+          tenantId: DEFAULT_TENANT_ID,
+          type: form.type as FinancialEntryInputType,
+          description: form.description,
+          amount: Number(form.amount),
+          date: form.date,
+          category: form.category || undefined,
+        };
+        await createEntry.mutateAsync({ data: createPayload });
         toast({ title: "Lançamento criado!" });
       }
       setModalOpen(false);
