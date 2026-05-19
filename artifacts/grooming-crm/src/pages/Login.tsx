@@ -24,7 +24,6 @@ export default function Login() {
           Entrar
         </Button>
       </header>
-
       <main className="max-w-6xl mx-auto px-6 py-16 flex flex-col items-center gap-16">
         <section className="flex flex-col items-center gap-6 text-center max-w-2xl">
           <div className="bg-primary/10 rounded-full p-5">
@@ -33,10 +32,10 @@ export default function Login() {
           <div className="flex flex-col gap-3">
             <h1 className="text-4xl font-extrabold text-gray-900 leading-tight">
               O CRM feito para<br />
-              <span className="text-primary">pet shops de banho e tosa</span>
+              <span className="text-primary">Estética Animal</span>
             </h1>
             <p className="text-lg text-muted-foreground">
-              Gerencie agendamentos, clientes, pets, financeiro e muito mais — tudo em um só lugar.
+              Gerencie agendamentos, clientes, pets, financeiro e muito mais.<br />Tudo em um só lugar.
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
@@ -87,9 +86,8 @@ export default function Login() {
           </div>
         </section>
       </main>
-
       <footer className="text-center py-8 text-xs text-muted-foreground border-t mt-8">
-        © {new Date().getFullYear()} Pata Limpa — CRM para pet shops
+        © {new Date().getFullYear()} Pata Limpa — CRM para Banho e Tosa | Criado dentro de uma estética animal para você!
       </footer>
     </div>
   );
