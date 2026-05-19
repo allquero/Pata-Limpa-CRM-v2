@@ -15,7 +15,13 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 
 type Service = { id: number; name: string; size: string; price: number; durationMinutes: number | null };
-const emptyForm = { name: "", size: "mini_longo", price: "", durationMinutes: 60 };
+
+const ALL_SIZES = Object.entries(PORTE_SIZES) as [string, string][];
+
+type BulkPrices = Record<string, string>;
+
+const emptyBulkForm = { name: "", durationMinutes: 60, prices: {} as BulkPrices };
+const emptyEditForm = { name: "", size: "mini_longo", price: "", durationMinutes: 60 };
 
 export default function Servicos() {
   const { tenantId } = useAppAuth();
@@ -25,35 +31,83 @@ export default function Servicos() {
   const updateService = useUpdateService();
   const deleteService = useDeleteService();
 
-  const [modalOpen, setModalOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [bulkForm, setBulkForm] = useState(emptyBulkForm);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const [editOpen, setEditOpen] = useState(false);
   const [editing, setEditing] = useState<Service | null>(null);
-  const [form, setForm] = useState(emptyForm);
+  const [editForm, setEditForm] = useState(emptyEditForm);
+
   const [filterSize, setFilterSize] = useState("all");
 
-  const openCreate = () => { setEditing(null); setForm(emptyForm); setModalOpen(true); };
-  const openEdit = (s: Service) => {
-    setEditing(s);
-    setForm({ name: s.name, size: s.size, price: String(s.price), durationMinutes: s.durationMinutes ?? 60 });
-    setModalOpen(true);
+  const openCreate = () => {
+    setBulkForm(emptyBulkForm);
+    setCreateOpen(true);
   };
 
-  const handleSave = async () => {
+  const openEdit = (s: Service) => {
+    setEditing(s);
+    setEditForm({ name: s.name, size: s.size, price: String(s.price), durationMinutes: s.durationMinutes ?? 60 });
+    setEditOpen(true);
+  };
+
+  const setBulkPrice = (size: string, value: string) => {
+    setBulkForm(f => ({ ...f, prices: { ...f.prices, [size]: value } }));
+  };
+
+  const handleCreate = async () => {
+    if (!bulkForm.name.trim()) {
+      toast({ title: "Nome é obrigatório", variant: "destructive" });
+      return;
+    }
+    const toCreate = ALL_SIZES.filter(([size]) => {
+      const val = parseFloat(bulkForm.prices[size] ?? "");
+      return !isNaN(val) && val > 0;
+    });
+    if (toCreate.length === 0) {
+      toast({ title: "Informe o preço de pelo menos um porte", variant: "destructive" });
+      return;
+    }
+    setIsSaving(true);
     try {
-      const payload = {
-        tenantId: tenantId!,
-        name: form.name,
-        size: form.size as ServiceInputSize,
-        price: Number(form.price),
-        durationMinutes: Number(form.durationMinutes),
-      };
-      if (editing) {
-        await updateService.mutateAsync({ id: editing.id, data: payload });
-        toast({ title: "Serviço atualizado!" });
-      } else {
-        await createService.mutateAsync({ data: payload });
-        toast({ title: "Serviço criado!" });
-      }
-      setModalOpen(false);
+      await Promise.all(
+        toCreate.map(([size]) =>
+          createService.mutateAsync({
+            data: {
+              tenantId: tenantId!,
+              name: bulkForm.name.trim(),
+              size: size as ServiceInputSize,
+              price: parseFloat(bulkForm.prices[size]!),
+              durationMinutes: Number(bulkForm.durationMinutes),
+            },
+          })
+        )
+      );
+      toast({ title: `Serviço criado para ${toCreate.length} porte${toCreate.length !== 1 ? "s" : ""}!` });
+      setCreateOpen(false);
+      refetch();
+    } catch {
+      toast({ title: "Erro ao salvar serviço", variant: "destructive" });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleEdit = async () => {
+    if (!editing) return;
+    try {
+      await updateService.mutateAsync({
+        id: editing.id,
+        data: {
+          name: editForm.name,
+          size: editForm.size as ServiceInputSize,
+          price: Number(editForm.price),
+          durationMinutes: Number(editForm.durationMinutes),
+        },
+      });
+      toast({ title: "Serviço atualizado!" });
+      setEditOpen(false);
       refetch();
     } catch {
       toast({ title: "Erro ao salvar", variant: "destructive" });
@@ -67,7 +121,6 @@ export default function Servicos() {
   };
 
   const filtered = (services as Service[]).filter(s => filterSize === "all" || s.size === filterSize);
-
   const grouped = filtered.reduce((acc, s) => {
     if (!acc[s.name]) acc[s.name] = [];
     acc[s.name].push(s);
@@ -128,24 +181,97 @@ export default function Servicos() {
         </div>
       )}
 
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>{editing ? "Editar Serviço" : "Novo Serviço"}</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <div><Label>Nome do Serviço *</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Ex: Banho, Tosa..." /></div>
-            <div>
-              <Label>Porte / Pelagem *</Label>
-              <Select value={form.size} onValueChange={v => setForm(f => ({ ...f, size: v }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{Object.entries(PORTE_SIZES).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
-              </Select>
+      {/* Modal de Criação em Massa */}
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Novo Serviço</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label>Nome do Serviço *</Label>
+              <Input
+                placeholder="Ex: Banho, Tosa, Banho e Tosa..."
+                value={bulkForm.name}
+                onChange={e => setBulkForm(f => ({ ...f, name: e.target.value }))}
+              />
             </div>
-            <div><Label>Preço (R$) *</Label><Input type="number" step="0.01" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} /></div>
-            <div><Label>Duração (minutos)</Label><Input type="number" value={form.durationMinutes} onChange={e => setForm(f => ({ ...f, durationMinutes: Number(e.target.value) }))} /></div>
+            <div className="space-y-1.5">
+              <Label>Duração padrão (minutos)</Label>
+              <Input
+                type="number"
+                min={1}
+                value={bulkForm.durationMinutes}
+                onChange={e => setBulkForm(f => ({ ...f, durationMinutes: Number(e.target.value) }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Preço por porte *</Label>
+              <p className="text-xs text-muted-foreground">
+                Deixe em branco os portes que não se aplicam a este serviço.
+              </p>
+              <div className="rounded-lg border divide-y">
+                {ALL_SIZES.map(([size, label]) => (
+                  <div key={size} className="flex items-center justify-between px-3 py-2 gap-3">
+                    <span className="text-sm w-36 shrink-0">{label}</span>
+                    <div className="flex items-center gap-1.5 flex-1">
+                      <span className="text-sm text-muted-foreground">R$</span>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0,00"
+                        value={bulkForm.prices[size] ?? ""}
+                        onChange={e => setBulkPrice(size, e.target.value)}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setModalOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSave} disabled={!form.name || !form.price}>Salvar</Button>
+            <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancelar</Button>
+            <Button onClick={handleCreate} disabled={isSaving}>
+              {isSaving ? "Salvando..." : "Criar Serviço"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Edição Individual */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Serviço</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Nome do Serviço *</Label>
+              <Input value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} />
+            </div>
+            <div>
+              <Label>Porte / Pelagem *</Label>
+              <Select value={editForm.size} onValueChange={v => setEditForm(f => ({ ...f, size: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(PORTE_SIZES).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Preço (R$) *</Label>
+              <Input type="number" step="0.01" value={editForm.price} onChange={e => setEditForm(f => ({ ...f, price: e.target.value }))} />
+            </div>
+            <div>
+              <Label>Duração (minutos)</Label>
+              <Input type="number" value={editForm.durationMinutes} onChange={e => setEditForm(f => ({ ...f, durationMinutes: Number(e.target.value) }))} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOpen(false)}>Cancelar</Button>
+            <Button onClick={handleEdit} disabled={!editForm.name || !editForm.price}>Salvar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
