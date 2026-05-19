@@ -8,10 +8,10 @@ import {
   useListAppointments, useUpdateAppointment, useUpdateAppointmentStatus, useCreateAppointment,
   useDeleteAppointment, useListClients, useListPets, useListServices,
   useListPackages, useCreateClient, useCreatePet, useSellPackage,
-  getListPetsQueryKey,
+  getListPetsQueryKey, useListMessageTemplates,
 } from "@workspace/api-client-react";
 import type {
-  Client, Pet, Service, Package, SellPackageResult, PetInputSize,
+  Client, Pet, Service, Package, SellPackageResult, PetInputSize, MessageTemplate,
 } from "@workspace/api-client-react";
 import { DEFAULT_TENANT_ID, PORTE_SIZES } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,7 @@ import {
   Trash2, ChevronLeft, ChevronRight, Clock, PawPrint,
   MessageSquare, UserPlus, ShoppingCart, CalendarCheck,
   ChevronRight as ArrowNext, Search, X, CalendarDays,
+  Bell, ChevronDown, ChevronUp, CheckCheck,
 } from "lucide-react";
 import { format, addDays, startOfWeek, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -317,7 +318,30 @@ export default function Agendamentos() {
   const [editDate, setEditDate] = useState("");
   const [editTime, setEditTime] = useState("");
 
+  // Reminders panel
+  const tomorrow = addDays(new Date(), 1);
+  const tomorrowKey = format(tomorrow, "yyyy-MM-dd");
+  const [remindersOpen, setRemindersOpen] = useState(false);
+  const [reminderTemplateId, setReminderTemplateId] = useState<string>("default");
+  const [notifiedIds, setNotifiedIds] = useState<Set<number>>(() => {
+    try {
+      const raw = localStorage.getItem(`reminders_notified_${tomorrowKey}`);
+      return raw ? new Set<number>(JSON.parse(raw)) : new Set<number>();
+    } catch { return new Set<number>(); }
+  });
+
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  // Tomorrow's appointments for reminders
+  const tomorrowStart = new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate());
+  const tomorrowEnd = new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate(), 23, 59, 59);
+  const { data: tomorrowAppts = [] } = useListAppointments({
+    tenantId: DEFAULT_TENANT_ID,
+    startDate: tomorrowStart.toISOString(),
+    endDate: tomorrowEnd.toISOString(),
+  });
+  const { data: msgTemplates = [] } = useListMessageTemplates({ tenantId: DEFAULT_TENANT_ID });
+  const reminderTemplates = (msgTemplates as MessageTemplate[]).filter(t => t.type === "lembrete");
 
   const weekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
@@ -607,6 +631,74 @@ export default function Agendamentos() {
     }
   };
 
+  // ── Reminders helpers ─────────────────────────────────────────────────────
+  const markNotified = (apptId: number) => {
+    setNotifiedIds(prev => {
+      const next = new Set(prev);
+      next.add(apptId);
+      try { localStorage.setItem(`reminders_notified_${tomorrowKey}`, JSON.stringify([...next])); } catch {}
+      return next;
+    });
+  };
+
+  const fillReminderTemplate = (appt: Appointment): string => {
+    const pet = (allPets as Pet[]).find(p => p.id === appt.petId);
+    const client = (clients as Client[]).find(c => c.id === appt.clientId);
+    const service = (services as Service[]).find(s => s.id === appt.serviceId);
+    const pkg = (packages as Package[]).find(p => p.id === appt.packageId);
+    const apptTime = new Date(appt.scheduledDate).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    const apptDate = format(tomorrow, "dd/MM/yyyy");
+    const serviceName = service?.name ?? pkg?.name ?? "Serviço";
+
+    const selectedTmpl = reminderTemplateId !== "default"
+      ? reminderTemplates.find(t => String(t.id) === reminderTemplateId)
+      : null;
+
+    const content = selectedTmpl?.content
+      ?? `Olá {nome_cliente}! Lembramos que {nome_pet} tem agendamento amanhã, dia {data} às {horario}. Serviço: {servico}. Valor: {preco}. Aguardamos vocês! 🐾`;
+
+    return content
+      .replace(/\{nome_cliente\}/g, client?.name ?? "")
+      .replace(/\{nome_pet\}/g, pet?.name ?? "")
+      .replace(/\{data\}/g, apptDate)
+      .replace(/\{horario\}/g, apptTime)
+      .replace(/\{servico\}/g, serviceName)
+      .replace(/\{preco\}/g, formatBRL(Number(appt.totalPrice)));
+  };
+
+  const sendReminder = (appt: Appointment) => {
+    const client = (clients as Client[]).find(c => c.id === appt.clientId);
+    if (!client?.phone) {
+      toast({ title: "Cliente sem telefone cadastrado", variant: "destructive" });
+      return;
+    }
+    const message = fillReminderTemplate(appt);
+    const cleaned = client.phone.replace(/\D/g, "");
+    const number = cleaned.length === 11 ? `55${cleaned}` : cleaned;
+    window.open(`https://wa.me/${number}?text=${encodeURIComponent(message)}`, "_blank");
+    markNotified(appt.id);
+  };
+
+  const unmarkNotified = (apptId: number) => {
+    setNotifiedIds(prev => {
+      const next = new Set(prev);
+      next.delete(apptId);
+      try { localStorage.setItem(`reminders_notified_${tomorrowKey}`, JSON.stringify([...next])); } catch {}
+      return next;
+    });
+  };
+
+  // Sort: un-notified first, notified (faded) at the end — both groups sorted by time
+  const sortedTomorrowAppts = [
+    ...(tomorrowAppts as Appointment[]).filter(a => !notifiedIds.has(a.id)),
+    ...(tomorrowAppts as Appointment[]).filter(a => notifiedIds.has(a.id)),
+  ].sort((a, b) => {
+    const aN = notifiedIds.has(a.id) ? 1 : 0;
+    const bN = notifiedIds.has(b.id) ? 1 : 0;
+    if (aN !== bN) return aN - bN;
+    return new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime();
+  });
+
   // ── Kanban helpers ────────────────────────────────────────────────────────
   const activeAppt = activeId ? (appointments as Appointment[]).find(a => a.id === activeId) : null;
   const filterForDay = (day: Date) => (appointments as Appointment[]).filter(a => isSameDay(new Date(a.scheduledDate), day));
@@ -715,6 +807,141 @@ export default function Agendamentos() {
           )}
         </DragOverlay>
       </DndContext>
+      {/* ── Lembretes de amanhã ──────────────────────────────────────────── */}
+      <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+        <button
+          className="w-full flex items-center justify-between px-4 py-3 hover:bg-accent/30 transition-colors"
+          onClick={() => setRemindersOpen(o => !o)}
+        >
+          <div className="flex items-center gap-2">
+            <Bell className="h-4 w-4 text-amber-500" />
+            <span className="font-semibold text-sm">
+              Lembretes de amanhã
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {format(tomorrow, "EEEE, d 'de' MMMM", { locale: ptBR })}
+            </span>
+            {sortedTomorrowAppts.length > 0 && (
+              <Badge variant="secondary" className="text-xs">
+                {sortedTomorrowAppts.length - notifiedIds.size}/{sortedTomorrowAppts.length}
+              </Badge>
+            )}
+          </div>
+          {remindersOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+        </button>
+
+        {remindersOpen && (
+          <div className="border-t">
+            {/* Template selector */}
+            <div className="flex items-center gap-3 px-4 py-3 bg-muted/30 border-b flex-wrap">
+              <Label className="text-xs whitespace-nowrap shrink-0">Template de lembrete:</Label>
+              <Select value={reminderTemplateId} onValueChange={setReminderTemplateId}>
+                <SelectTrigger className="h-7 text-xs w-auto min-w-[200px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="default">Mensagem padrão</SelectItem>
+                  {reminderTemplates.map(t => (
+                    <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {notifiedIds.size > 0 && (
+                <span className="text-xs text-muted-foreground ml-auto">
+                  <CheckCheck className="h-3.5 w-3.5 inline mr-1 text-green-600" />
+                  {notifiedIds.size} notificado{notifiedIds.size !== 1 ? "s" : ""}
+                </span>
+              )}
+            </div>
+
+            {/* Appointments list */}
+            {sortedTomorrowAppts.length === 0 ? (
+              <div className="py-10 text-center text-sm text-muted-foreground">
+                Nenhum agendamento para amanhã 🎉
+              </div>
+            ) : (
+              <div className="divide-y">
+                {sortedTomorrowAppts.map(appt => {
+                  const pet = (allPets as Pet[]).find(p => p.id === appt.petId);
+                  const client = (clients as Client[]).find(c => c.id === appt.clientId);
+                  const service = (services as Service[]).find(s => s.id === appt.serviceId);
+                  const pkg = (packages as Package[]).find(p => p.id === appt.packageId);
+                  const apptTime = new Date(appt.scheduledDate).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+                  const isNotified = notifiedIds.has(appt.id);
+
+                  return (
+                    <div
+                      key={appt.id}
+                      className={`flex items-center gap-3 px-4 py-3 transition-all ${isNotified ? "opacity-40" : "hover:bg-accent/20"}`}
+                    >
+                      {/* Time */}
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground w-12 shrink-0">
+                        <Clock className="h-3 w-3" />
+                        {apptTime}
+                      </div>
+
+                      {/* Pet + client */}
+                      <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                        <PawPrint className="h-3.5 w-3.5 text-primary shrink-0" />
+                        <span className="font-semibold text-sm truncate">{pet?.name ?? "Pet"}</span>
+                        {pet?.size && (
+                          <Badge variant="outline" className="text-xs px-1 py-0 shrink-0">
+                            {PORTE_SIZES[pet.size as keyof typeof PORTE_SIZES] ?? pet.size}
+                          </Badge>
+                        )}
+                        <span className="text-xs text-muted-foreground truncate">· {client?.name ?? "Cliente"}</span>
+                      </div>
+
+                      {/* Service */}
+                      <span className="text-xs text-muted-foreground hidden sm:block truncate max-w-[120px]">
+                        {service?.name ?? pkg?.name ?? ""}
+                      </span>
+
+                      {/* Price */}
+                      <span className="text-xs font-semibold text-primary shrink-0">
+                        {formatBRL(Number(appt.totalPrice))}
+                      </span>
+
+                      {/* Phone warning */}
+                      {!client?.phone && (
+                        <span className="text-xs text-amber-600 shrink-0">sem telefone</span>
+                      )}
+
+                      {/* Actions */}
+                      {isNotified ? (
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span className="text-xs text-green-600 flex items-center gap-1">
+                            <CheckCheck className="h-3.5 w-3.5" />
+                            Enviado
+                          </span>
+                          <button
+                            onClick={() => unmarkNotified(appt.id)}
+                            className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 ml-1"
+                            title="Desmarcar como enviado"
+                          >
+                            desfazer
+                          </button>
+                        </div>
+                      ) : (
+                        <Button
+                          size="sm"
+                          className="bg-green-600 hover:bg-green-700 text-white gap-1.5 h-7 text-xs shrink-0"
+                          onClick={() => sendReminder(appt)}
+                          disabled={!client?.phone}
+                        >
+                          <MessageSquare className="h-3.5 w-3.5" />
+                          Lembrete
+                        </Button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* ── Modal: Cliente Casual ─────────────────────────────────────────── */}
       <Dialog open={casualOpen} onOpenChange={open => { if (!open) setCasualOpen(false); }}>
         <DialogContent className="max-w-md">
