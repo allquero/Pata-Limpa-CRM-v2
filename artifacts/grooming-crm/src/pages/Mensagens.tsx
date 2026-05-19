@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useListMessageTemplates, useCreateMessageTemplate, useUpdateMessageTemplate, useDeleteMessageTemplate } from "@workspace/api-client-react";
-import { DEFAULT_TENANT_ID, MESSAGE_TEMPLATE_TYPES } from "@/lib/constants";
+import { MESSAGE_TEMPLATE_TYPES } from "@/lib/constants";
+import { useAppAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,8 +27,9 @@ const typeColors: Record<string, string> = {
 const variables = ["{nome_cliente}", "{nome_pet}", "{data}", "{horario}", "{servico}", "{preco}", "{datas}"];
 
 export default function Mensagens() {
+  const { tenantId } = useAppAuth();
   const { toast } = useToast();
-  const { data: templates = [], isLoading, refetch } = useListMessageTemplates({ tenantId: DEFAULT_TENANT_ID });
+  const { data: templates = [], isLoading, refetch } = useListMessageTemplates({ tenantId: tenantId! });
   const createTemplate = useCreateMessageTemplate();
   const updateTemplate = useUpdateMessageTemplate();
   const deleteTemplate = useDeleteMessageTemplate();
@@ -41,7 +43,7 @@ export default function Mensagens() {
 
   const handleSave = async () => {
     try {
-      const payload = { ...form, tenantId: DEFAULT_TENANT_ID, type: form.type as any };
+      const payload = { ...form, tenantId: tenantId!, type: form.type as any };
       if (editing) {
         await updateTemplate.mutateAsync({ id: editing.id, data: payload });
         toast({ title: "Template atualizado!" });

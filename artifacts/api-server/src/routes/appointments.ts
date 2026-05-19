@@ -13,8 +13,45 @@ import {
   UpdateAppointmentStatusBody,
 } from "@workspace/api-zod";
 import { randomUUID } from "crypto";
+import { requireTenant } from "../middlewares/requireTenant";
+
+async function verifyEntitiesBelongToTenant(
+  tenantId: number,
+  refs: { clientId?: number; petId?: number; serviceId?: number | null; packageId?: number | null },
+): Promise<string | null> {
+  const { clientId, petId, serviceId, packageId } = refs;
+
+  if (clientId != null) {
+    const [c] = await db.select({ id: clientsTable.id }).from(clientsTable)
+      .where(and(eq(clientsTable.id, clientId), eq(clientsTable.tenantId, tenantId)));
+    if (!c) return "clientId não pertence a este tenant";
+  }
+
+  if (petId != null) {
+    const rows = await db.select({ id: petsTable.id }).from(petsTable)
+      .innerJoin(clientsTable, and(eq(petsTable.clientId, clientsTable.id), eq(clientsTable.tenantId, tenantId)))
+      .where(eq(petsTable.id, petId));
+    if (!rows[0]) return "petId não pertence a este tenant";
+  }
+
+  if (serviceId != null) {
+    const [s] = await db.select({ id: servicesTable.id }).from(servicesTable)
+      .where(and(eq(servicesTable.id, serviceId), eq(servicesTable.tenantId, tenantId)));
+    if (!s) return "serviceId não pertence a este tenant";
+  }
+
+  if (packageId != null) {
+    const [p] = await db.select({ id: packagesTable.id }).from(packagesTable)
+      .where(and(eq(packagesTable.id, packageId), eq(packagesTable.tenantId, tenantId)));
+    if (!p) return "packageId não pertence a este tenant";
+  }
+
+  return null;
+}
 
 const router: IRouter = Router();
+
+router.use(requireTenant);
 
 async function getFullAppointment(id: number) {
   const rows = await db
@@ -46,7 +83,6 @@ async function getFullAppointment(id: number) {
 
 router.get("/appointments", async (req, res): Promise<void> => {
   const rawQuery = req.query as Record<string, string>;
-  const tenantId = rawQuery.tenantId ? Number(rawQuery.tenantId) : undefined;
   const petId = rawQuery.petId ? Number(rawQuery.petId) : undefined;
   const clientId = rawQuery.clientId ? Number(rawQuery.clientId) : undefined;
   const status = rawQuery.status as AppointmentStatus | undefined;
@@ -54,8 +90,7 @@ router.get("/appointments", async (req, res): Promise<void> => {
   const startDate = rawQuery.startDate ? new Date(rawQuery.startDate) : undefined;
   const endDate = rawQuery.endDate ? new Date(rawQuery.endDate) : undefined;
 
-  const conditions = [];
-  if (tenantId) conditions.push(eq(appointmentsTable.tenantId, tenantId));
+  const conditions = [eq(appointmentsTable.tenantId, req.tenantId!)];
   if (status) conditions.push(eq(appointmentsTable.status, status as AppointmentStatus));
   if (petId) conditions.push(eq(appointmentsTable.petId, petId));
   if (clientId) conditions.push(eq(appointmentsTable.clientId, clientId));
@@ -93,7 +128,7 @@ router.get("/appointments", async (req, res): Promise<void> => {
     .leftJoin(clientsTable, eq(appointmentsTable.clientId, clientsTable.id))
     .leftJoin(servicesTable, eq(appointmentsTable.serviceId, servicesTable.id))
     .leftJoin(packagesTable, eq(appointmentsTable.packageId, packagesTable.id))
-    .where(conditions.length > 0 ? and(...conditions) : undefined)
+    .where(and(...conditions))
     .orderBy(appointmentsTable.scheduledDate);
 
   const result = rows.map(row => ({
@@ -116,6 +151,18 @@ router.post("/appointments", async (req, res): Promise<void> => {
   }
 
   const { recurringWeeks, ...baseData } = parsed.data;
+
+  const ownershipError = await verifyEntitiesBelongToTenant(req.tenantId!, {
+    clientId: baseData.clientId,
+    petId: baseData.petId,
+    serviceId: baseData.serviceId,
+    packageId: baseData.packageId,
+  });
+  if (ownershipError) {
+    res.status(403).json({ error: ownershipError });
+    return;
+  }
+
   const weeks = recurringWeeks && recurringWeeks > 1 ? recurringWeeks : 1;
   const groupId = weeks > 1 ? randomUUID() : null;
   const baseDate = new Date(baseData.scheduledDate);
@@ -128,6 +175,7 @@ router.post("/appointments", async (req, res): Promise<void> => {
 
     const [appt] = await db.insert(appointmentsTable).values({
       ...baseData,
+      tenantId: req.tenantId!,
       totalPrice: String(baseData.totalPrice),
       scheduledDate,
       recurringWeeks: weeks > 1 ? weeks : null,
@@ -147,8 +195,8 @@ router.get("/appointments/:id", async (req, res): Promise<void> => {
     return;
   }
   const appt = await getFullAppointment(params.data.id);
-  if (!appt) {
-    res.status(404).json({ error: "Appointment not found" });
+  if (!appt || appt.tenantId !== req.tenantId!) {
+    res.status(404).json({ error: "Agendamento não encontrado" });
     return;
   }
   res.json(appt);
@@ -165,13 +213,32 @@ router.patch("/appointments/:id", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
+  const [existing] = await db
+    .select({ id: appointmentsTable.id })
+    .from(appointmentsTable)
+    .where(and(eq(appointmentsTable.id, params.data.id), eq(appointmentsTable.tenantId, req.tenantId!)));
+  if (!existing) {
+    res.status(404).json({ error: "Agendamento não encontrado" });
+    return;
+  }
+
+  const ownershipError = await verifyEntitiesBelongToTenant(req.tenantId!, {
+    petId: parsed.data.petId ?? undefined,
+    serviceId: parsed.data.serviceId,
+    packageId: parsed.data.packageId,
+  });
+  if (ownershipError) {
+    res.status(403).json({ error: ownershipError });
+    return;
+  }
+
   const updateData: Record<string, unknown> = { ...parsed.data };
   if (parsed.data.totalPrice !== undefined) updateData.totalPrice = String(parsed.data.totalPrice);
   if (parsed.data.scheduledDate !== undefined) updateData.scheduledDate = new Date(parsed.data.scheduledDate);
   await db.update(appointmentsTable).set(updateData).where(eq(appointmentsTable.id, params.data.id));
   const appt = await getFullAppointment(params.data.id);
   if (!appt) {
-    res.status(404).json({ error: "Appointment not found" });
+    res.status(404).json({ error: "Agendamento não encontrado" });
     return;
   }
   res.json(appt);
@@ -183,9 +250,12 @@ router.delete("/appointments/:id", async (req, res): Promise<void> => {
     res.status(400).json({ error: params.error.message });
     return;
   }
-  const [appt] = await db.delete(appointmentsTable).where(eq(appointmentsTable.id, params.data.id)).returning();
+  const [appt] = await db
+    .delete(appointmentsTable)
+    .where(and(eq(appointmentsTable.id, params.data.id), eq(appointmentsTable.tenantId, req.tenantId!)))
+    .returning();
   if (!appt) {
-    res.status(404).json({ error: "Appointment not found" });
+    res.status(404).json({ error: "Agendamento não encontrado" });
     return;
   }
   res.sendStatus(204);
@@ -202,10 +272,18 @@ router.patch("/appointments/:id/status", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
+  const [existing] = await db
+    .select({ id: appointmentsTable.id })
+    .from(appointmentsTable)
+    .where(and(eq(appointmentsTable.id, params.data.id), eq(appointmentsTable.tenantId, req.tenantId!)));
+  if (!existing) {
+    res.status(404).json({ error: "Agendamento não encontrado" });
+    return;
+  }
   await db.update(appointmentsTable).set({ status: parsed.data.status }).where(eq(appointmentsTable.id, params.data.id));
   const appt = await getFullAppointment(params.data.id);
   if (!appt) {
-    res.status(404).json({ error: "Appointment not found" });
+    res.status(404).json({ error: "Agendamento não encontrado" });
     return;
   }
   res.json(appt);

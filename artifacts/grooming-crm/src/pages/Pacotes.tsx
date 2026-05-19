@@ -4,7 +4,8 @@ import {
   useListServices, useListClients, useListPets, useSellPackage,
   getListPetsQueryKey,
 } from "@workspace/api-client-react";
-import { DEFAULT_TENANT_ID, PORTE_SIZES } from "@/lib/constants";
+import { PORTE_SIZES } from "@/lib/constants";
+import { useAppAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -55,10 +56,11 @@ function formatBRL(v: number) {
 }
 
 export default function Pacotes() {
+  const { tenantId } = useAppAuth();
   const { toast } = useToast();
-  const { data: packages = [], isLoading, refetch } = useListPackages({ tenantId: DEFAULT_TENANT_ID });
-  const { data: services = [] } = useListServices({ tenantId: DEFAULT_TENANT_ID });
-  const { data: clients = [] } = useListClients({ tenantId: DEFAULT_TENANT_ID });
+  const { data: packages = [], isLoading, refetch } = useListPackages({ tenantId: tenantId! });
+  const { data: services = [] } = useListServices({ tenantId: tenantId! });
+  const { data: clients = [] } = useListClients({ tenantId: tenantId! });
   const createPackage = useCreatePackage();
   const updatePackage = useUpdatePackage();
   const deletePackage = useDeletePackage();
@@ -167,7 +169,7 @@ export default function Pacotes() {
     if (!hasAnyPrice) { toast({ title: "Defina ao menos um preço por porte", variant: "destructive" }); return; }
     try {
       const payload = {
-        tenantId: DEFAULT_TENANT_ID,
+        tenantId: tenantId!,
         name: form.name.trim(),
         description: form.description.trim() || undefined,
         serviceItems: form.serviceItems,
@@ -211,7 +213,7 @@ export default function Pacotes() {
       const result = await sellPackage.mutateAsync({
         id: sellTarget.id,
         data: {
-          tenantId: DEFAULT_TENANT_ID,
+          tenantId: tenantId!,
           clientId: Number(sellForm.clientId),
           petId: Number(sellForm.petId),
           startDate: sellForm.startDate,

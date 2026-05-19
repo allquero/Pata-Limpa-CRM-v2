@@ -1,22 +1,20 @@
 import { Router, type IRouter } from "express";
-import { eq, sql, desc } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { db, clientsTable, appointmentsTable, petsTable } from "@workspace/db";
-import { ListLeadsQueryParams } from "@workspace/api-zod";
+import { requireTenant } from "../middlewares/requireTenant";
 
 const router: IRouter = Router();
 
+router.use(requireTenant);
+
 router.get("/leads", async (req, res): Promise<void> => {
-  const query = ListLeadsQueryParams.safeParse(req.query);
-  if (!query.success) {
-    res.status(400).json({ error: query.error.message });
-    return;
-  }
-  const { tenantId, minDaysSince } = query.data;
+  const raw = req.query as Record<string, string>;
+  const minDaysSince = raw.minDaysSince ? Number(raw.minDaysSince) : undefined;
 
   const clients = await db
     .select()
     .from(clientsTable)
-    .where(tenantId ? eq(clientsTable.tenantId, tenantId) : undefined);
+    .where(eq(clientsTable.tenantId, req.tenantId!));
 
   const leads = await Promise.all(clients.map(async (client) => {
     const appointments = await db
@@ -26,37 +24,31 @@ router.get("/leads", async (req, res): Promise<void> => {
       .orderBy(desc(appointmentsTable.scheduledDate));
 
     const pets = await db
-      .select()
+      .select({ id: petsTable.id, name: petsTable.name, size: petsTable.size })
       .from(petsTable)
       .where(eq(petsTable.clientId, client.id));
 
     const lastAppt = appointments[0];
-    let daysSince: number | null = null;
+    let daysSinceLastAppointment: number | null = null;
     if (lastAppt) {
       const diff = Date.now() - new Date(lastAppt.scheduledDate).getTime();
-      daysSince = Math.floor(diff / (1000 * 60 * 60 * 24));
+      daysSinceLastAppointment = Math.floor(diff / (1000 * 60 * 60 * 24));
     }
 
     return {
       clientId: client.id,
       clientName: client.name,
-      phone: client.phone,
-      daysSinceLastAppointment: daysSince,
-      lastAppointmentDate: lastAppt ? lastAppt.scheduledDate.toISOString() : null,
+      phone: client.phone ?? null,
+      daysSinceLastAppointment,
+      lastAppointmentDate: lastAppt?.scheduledDate?.toISOString() ?? null,
       totalAppointments: appointments.length,
-      pets: pets.map(p => ({ id: p.id, name: p.name, size: p.size })),
+      pets,
     };
   }));
 
-  const filtered = minDaysSince
-    ? leads.filter(l => l.daysSinceLastAppointment === null || l.daysSinceLastAppointment >= minDaysSince)
+  const filtered = minDaysSince != null
+    ? leads.filter(l => l.daysSinceLastAppointment == null || l.daysSinceLastAppointment >= minDaysSince)
     : leads;
-
-  filtered.sort((a, b) => {
-    if (a.daysSinceLastAppointment === null) return -1;
-    if (b.daysSinceLastAppointment === null) return 1;
-    return b.daysSinceLastAppointment - a.daysSinceLastAppointment;
-  });
 
   res.json(filtered);
 });

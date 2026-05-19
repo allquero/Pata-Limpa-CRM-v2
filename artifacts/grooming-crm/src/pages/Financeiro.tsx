@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useListFinancialEntries, useGetFinancialSummary, useCreateFinancialEntry, useUpdateFinancialEntry, useDeleteFinancialEntry } from "@workspace/api-client-react";
 import type { FinancialEntryInputType, FinancialEntryUpdateType } from "@workspace/api-client-react";
-import { DEFAULT_TENANT_ID, FINANCIAL_TYPES } from "@/lib/constants";
+import { FINANCIAL_TYPES } from "@/lib/constants";
+import { useAppAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,6 +25,7 @@ const typeColors: Record<string, string> = {
 };
 
 export default function Financeiro() {
+  const { tenantId } = useAppAuth();
   const { toast } = useToast();
   const today = new Date();
   const monthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().substring(0, 10);
@@ -34,14 +36,14 @@ export default function Financeiro() {
   const [typeFilter, setTypeFilter] = useState("all");
 
   const queryParams = {
-    tenantId: DEFAULT_TENANT_ID,
+    tenantId: tenantId!,
     startDate,
     endDate,
     ...(typeFilter !== "all" ? { type: typeFilter as any } : {}),
   };
 
   const { data: entries = [], isLoading, refetch } = useListFinancialEntries(queryParams);
-  const { data: summary } = useGetFinancialSummary({ tenantId: DEFAULT_TENANT_ID, startDate, endDate });
+  const { data: summary } = useGetFinancialSummary({ tenantId: tenantId!, startDate, endDate });
   const createEntry = useCreateFinancialEntry();
   const updateEntry = useUpdateFinancialEntry();
   const deleteEntry = useDeleteFinancialEntry();
@@ -71,7 +73,7 @@ export default function Financeiro() {
         toast({ title: "Lançamento atualizado!" });
       } else {
         const createPayload = {
-          tenantId: DEFAULT_TENANT_ID,
+          tenantId: tenantId!,
           type: form.type as FinancialEntryInputType,
           description: form.description,
           amount: Number(form.amount),

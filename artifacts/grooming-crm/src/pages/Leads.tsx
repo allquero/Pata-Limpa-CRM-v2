@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useListLeads, useListMessageTemplates } from "@workspace/api-client-react";
 import type { Lead, MessageTemplate } from "@workspace/api-client-react";
-import { DEFAULT_TENANT_ID } from "@/lib/constants";
+import { useAppAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,12 +13,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { MessageSquare, Clock, PawPrint, ExternalLink } from "lucide-react";
 
 export default function Leads() {
+  const { tenantId } = useAppAuth();
   const [minDays, setMinDays] = useState(30);
   const [whatsappModal, setWhatsappModal] = useState<{ lead: Lead; message: string } | null>(null);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("none");
 
-  const { data: leads = [], isLoading } = useListLeads({ tenantId: DEFAULT_TENANT_ID, minDaysSince: minDays });
-  const { data: templates = [] } = useListMessageTemplates({ tenantId: DEFAULT_TENANT_ID });
+  const { data: leads = [], isLoading } = useListLeads({ tenantId: tenantId!, minDaysSince: minDays });
+  const { data: templates = [] } = useListMessageTemplates({ tenantId: tenantId! });
 
   const leadsTemplates = (templates as MessageTemplate[]).filter(t => t.type === "leads");
 

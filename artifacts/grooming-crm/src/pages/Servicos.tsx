@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useListServices, useCreateService, useUpdateService, useDeleteService } from "@workspace/api-client-react";
 import type { ServiceInputSize } from "@workspace/api-client-react";
-import { DEFAULT_TENANT_ID, PORTE_SIZES } from "@/lib/constants";
+import { PORTE_SIZES } from "@/lib/constants";
+import { useAppAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,8 +18,9 @@ type Service = { id: number; name: string; size: string; price: number; duration
 const emptyForm = { name: "", size: "mini_longo", price: "", durationMinutes: 60 };
 
 export default function Servicos() {
+  const { tenantId } = useAppAuth();
   const { toast } = useToast();
-  const { data: services = [], isLoading, refetch } = useListServices({ tenantId: DEFAULT_TENANT_ID });
+  const { data: services = [], isLoading, refetch } = useListServices({ tenantId: tenantId! });
   const createService = useCreateService();
   const updateService = useUpdateService();
   const deleteService = useDeleteService();
@@ -38,7 +40,7 @@ export default function Servicos() {
   const handleSave = async () => {
     try {
       const payload = {
-        tenantId: DEFAULT_TENANT_ID,
+        tenantId: tenantId!,
         name: form.name,
         size: form.size as ServiceInputSize,
         price: Number(form.price),

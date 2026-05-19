@@ -14,7 +14,8 @@ import {
 import type {
   Client, Pet, Service, Package, SellPackageResult, PetInputSize, MessageTemplate, AppointmentFull,
 } from "@workspace/api-client-react";
-import { DEFAULT_TENANT_ID, PORTE_SIZES } from "@/lib/constants";
+import { PORTE_SIZES } from "@/lib/constants";
+import { useAppAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -266,7 +267,7 @@ function KanbanColumn({ status, label, color, bg, appointments, clients, pets, s
 type ConfirmacaoMode = "agradecimento" | "conclusao";
 
 function ConfirmacaoWhatsAppModal({
-  appt, clients, pets, services, packages, mode = "conclusao", overridePrice, onClose,
+  appt, clients, pets, services, packages, mode = "conclusao", overridePrice, onClose, tenantId,
 }: {
   appt: Appointment | null;
   clients: Client[];
@@ -276,6 +277,7 @@ function ConfirmacaoWhatsAppModal({
   mode?: ConfirmacaoMode;
   overridePrice?: number;
   onClose: () => void;
+  tenantId: number;
 }) {
   const [templateId, setTemplateId] = useState("default");
 
@@ -290,13 +292,13 @@ function ConfirmacaoWhatsAppModal({
   todayStart.setHours(0, 0, 0, 0);
 
   const clientApptParams = appt
-    ? { tenantId: DEFAULT_TENANT_ID, clientId: appt.clientId, startDate: todayStart.toISOString() }
+    ? { tenantId: tenantId!, clientId: appt.clientId, startDate: todayStart.toISOString() }
     : undefined;
   const { data: clientAppts = [] } = useListAppointments(
     clientApptParams,
     { query: { queryKey: getListAppointmentsQueryKey(clientApptParams), enabled: !!appt } }
   );
-  const tmplParams = { tenantId: DEFAULT_TENANT_ID };
+  const tmplParams = { tenantId: tenantId! };
   const { data: msgTemplates = [] } = useListMessageTemplates(
     tmplParams,
     { query: { queryKey: getListMessageTemplatesQueryKey(tmplParams), enabled: !!appt } }
@@ -475,6 +477,7 @@ function StepDots({ step, total }: { step: number; total: number }) {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function Agendamentos() {
+  const { tenantId } = useAppAuth();
   const { toast } = useToast();
   const [view, setView] = useState<"day" | "week">("day");
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -525,11 +528,11 @@ export default function Agendamentos() {
   const tomorrowStart = new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate());
   const tomorrowEnd = new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate(), 23, 59, 59);
   const { data: tomorrowAppts = [] } = useListAppointments({
-    tenantId: DEFAULT_TENANT_ID,
+    tenantId: tenantId!,
     startDate: tomorrowStart.toISOString(),
     endDate: tomorrowEnd.toISOString(),
   });
-  const { data: msgTemplates = [] } = useListMessageTemplates({ tenantId: DEFAULT_TENANT_ID });
+  const { data: msgTemplates = [] } = useListMessageTemplates({ tenantId: tenantId! });
   const reminderTemplates = (msgTemplates as MessageTemplate[]).filter(t => t.type === "lembrete");
 
   const weekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
@@ -538,15 +541,15 @@ export default function Agendamentos() {
   const queryEnd = view === "day" ? selectedDate : addDays(weekStart, 6);
 
   const { data: appointments = [], refetch } = useListAppointments({
-    tenantId: DEFAULT_TENANT_ID,
+    tenantId: tenantId!,
     startDate: queryStart.toISOString(),
     endDate: new Date(queryEnd.getFullYear(), queryEnd.getMonth(), queryEnd.getDate(), 23, 59, 59).toISOString(),
   });
 
-  const { data: clients = [] } = useListClients({ tenantId: DEFAULT_TENANT_ID });
+  const { data: clients = [] } = useListClients({ tenantId: tenantId! });
   const { data: allPets = [] } = useListPets({});
-  const { data: services = [] } = useListServices({ tenantId: DEFAULT_TENANT_ID });
-  const { data: packages = [] } = useListPackages({ tenantId: DEFAULT_TENANT_ID });
+  const { data: services = [] } = useListServices({ tenantId: tenantId! });
+  const { data: packages = [] } = useListPackages({ tenantId: tenantId! });
 
   // Pets for sell modal — only fetched when a client is selected
   const sellPetParams = sell.clientId ? { clientId: Number(sell.clientId) } : undefined;
@@ -743,7 +746,7 @@ export default function Agendamentos() {
       } else {
         const newClient: Client = await createClient.mutateAsync({
           data: {
-            tenantId: DEFAULT_TENANT_ID,
+            tenantId: tenantId!,
             name: casual.clientName.trim(),
             phone: casual.clientPhone.trim(),
           },
@@ -763,7 +766,7 @@ export default function Agendamentos() {
       const dt = new Date(`${casual.scheduledDate}T${casual.scheduledTime}:00`);
       const createdAppts = await createAppointment.mutateAsync({
         data: {
-          tenantId: DEFAULT_TENANT_ID,
+          tenantId: tenantId!,
           clientId: resolvedClientId,
           petId: resolvedPetId,
           serviceId: Number(casual.serviceId),
@@ -808,7 +811,7 @@ export default function Agendamentos() {
       const result: SellPackageResult = await sellPackage.mutateAsync({
         id: Number(sell.packageId),
         data: {
-          tenantId: DEFAULT_TENANT_ID,
+          tenantId: tenantId!,
           clientId: Number(sell.clientId),
           petId: Number(sell.petId),
           startDate: sell.startDate,
@@ -1157,6 +1160,7 @@ export default function Agendamentos() {
         mode={confirmacaoMode}
         overridePrice={confirmacaoOverridePrice}
         onClose={() => setConfirmacaoAppt(null)}
+        tenantId={tenantId!}
       />
 
       {/* ── Modal: Cliente Casual ─────────────────────────────────────────── */}

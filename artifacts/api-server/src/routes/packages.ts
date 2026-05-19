@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import {
   db,
@@ -11,8 +11,11 @@ import {
   clientsTable,
 } from "@workspace/db";
 import type { ServiceItem, PriceBySize } from "@workspace/db";
+import { requireTenant } from "../middlewares/requireTenant";
 
 const router: IRouter = Router();
+
+router.use(requireTenant);
 
 const parsePackage = (pkg: typeof packagesTable.$inferSelect) => ({
   ...pkg,
@@ -49,20 +52,18 @@ async function getFullAppointment(id: number) {
 }
 
 router.get("/packages", async (req, res): Promise<void> => {
-  const raw = req.query as Record<string, string>;
-  const tenantId = raw.tenantId ? Number(raw.tenantId) : undefined;
   const pkgs = await db
     .select()
     .from(packagesTable)
-    .where(tenantId ? eq(packagesTable.tenantId, tenantId) : undefined)
+    .where(eq(packagesTable.tenantId, req.tenantId!))
     .orderBy(packagesTable.name);
   res.json(pkgs.map(parsePackage));
 });
 
 router.post("/packages", async (req, res): Promise<void> => {
   const body = req.body as Record<string, unknown>;
-  if (!body.tenantId || !body.name) {
-    res.status(400).json({ error: "tenantId e name são obrigatórios" });
+  if (!body.name) {
+    res.status(400).json({ error: "name é obrigatório" });
     return;
   }
   const serviceItems: ServiceItem[] = Array.isArray(body.serviceItems) ? body.serviceItems : [];
@@ -70,7 +71,7 @@ router.post("/packages", async (req, res): Promise<void> => {
   const [pkg] = await db
     .insert(packagesTable)
     .values({
-      tenantId: Number(body.tenantId),
+      tenantId: req.tenantId!,
       name: String(body.name),
       description: body.description ? String(body.description) : null,
       serviceItems,
@@ -83,7 +84,10 @@ router.post("/packages", async (req, res): Promise<void> => {
 router.get("/packages/:id", async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   if (isNaN(id)) { res.status(400).json({ error: "ID inválido" }); return; }
-  const [pkg] = await db.select().from(packagesTable).where(eq(packagesTable.id, id));
+  const [pkg] = await db
+    .select()
+    .from(packagesTable)
+    .where(and(eq(packagesTable.id, id), eq(packagesTable.tenantId, req.tenantId!)));
   if (!pkg) { res.status(404).json({ error: "Pacote não encontrado" }); return; }
   res.json(parsePackage(pkg));
 });
@@ -97,7 +101,11 @@ router.patch("/packages/:id", async (req, res): Promise<void> => {
   if (body.description !== undefined) updateData.description = body.description ? String(body.description) : null;
   if (body.serviceItems !== undefined) updateData.serviceItems = Array.isArray(body.serviceItems) ? body.serviceItems : [];
   if (body.priceBySizes !== undefined) updateData.priceBySizes = Array.isArray(body.priceBySizes) ? body.priceBySizes : [];
-  const [pkg] = await db.update(packagesTable).set(updateData).where(eq(packagesTable.id, id)).returning();
+  const [pkg] = await db
+    .update(packagesTable)
+    .set(updateData)
+    .where(and(eq(packagesTable.id, id), eq(packagesTable.tenantId, req.tenantId!)))
+    .returning();
   if (!pkg) { res.status(404).json({ error: "Pacote não encontrado" }); return; }
   res.json(parsePackage(pkg));
 });
@@ -105,7 +113,10 @@ router.patch("/packages/:id", async (req, res): Promise<void> => {
 router.delete("/packages/:id", async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   if (isNaN(id)) { res.status(400).json({ error: "ID inválido" }); return; }
-  const [pkg] = await db.delete(packagesTable).where(eq(packagesTable.id, id)).returning();
+  const [pkg] = await db
+    .delete(packagesTable)
+    .where(and(eq(packagesTable.id, id), eq(packagesTable.tenantId, req.tenantId!)))
+    .returning();
   if (!pkg) { res.status(404).json({ error: "Pacote não encontrado" }); return; }
   res.sendStatus(204);
 });
@@ -115,18 +126,30 @@ router.post("/packages/:id/sell", async (req, res): Promise<void> => {
   if (isNaN(id)) { res.status(400).json({ error: "ID inválido" }); return; }
 
   const body = req.body as Record<string, unknown>;
-  const { tenantId, clientId, petId, startDate, startTime, notes } = body;
+  const { clientId, petId, startDate, startTime, notes } = body;
 
-  if (!tenantId || !clientId || !petId || !startDate || !startTime) {
-    res.status(400).json({ error: "tenantId, clientId, petId, startDate e startTime são obrigatórios" });
+  if (!clientId || !petId || !startDate || !startTime) {
+    res.status(400).json({ error: "clientId, petId, startDate e startTime são obrigatórios" });
     return;
   }
 
-  const [pkg] = await db.select().from(packagesTable).where(eq(packagesTable.id, id));
+  const [pkg] = await db
+    .select()
+    .from(packagesTable)
+    .where(and(eq(packagesTable.id, id), eq(packagesTable.tenantId, req.tenantId!)));
   if (!pkg) { res.status(404).json({ error: "Pacote não encontrado" }); return; }
 
-  const [pet] = await db.select().from(petsTable).where(eq(petsTable.id, Number(petId)));
-  if (!pet) { res.status(404).json({ error: "Pet não encontrado" }); return; }
+  const [ownerClientRow] = await db
+    .select({ id: clientsTable.id })
+    .from(clientsTable)
+    .where(and(eq(clientsTable.id, Number(clientId)), eq(clientsTable.tenantId, req.tenantId!)));
+  if (!ownerClientRow) { res.status(403).json({ error: "Acesso negado" }); return; }
+
+  const [pet] = await db
+    .select()
+    .from(petsTable)
+    .where(and(eq(petsTable.id, Number(petId)), eq(petsTable.clientId, Number(clientId))));
+  if (!pet) { res.status(404).json({ error: "Pet não encontrado ou não pertence a este cliente" }); return; }
 
   const serviceItems = (pkg.serviceItems as ServiceItem[]) ?? [];
   const priceBySizes = (pkg.priceBySizes as PriceBySize[]) ?? [];
@@ -139,21 +162,18 @@ router.post("/packages/:id/sell", async (req, res): Promise<void> => {
   const priceEntry = priceBySizes.find(p => p.size === pet.size);
   const packagePrice = priceEntry ? priceEntry.price : 0;
 
-  // Main item = highest quantity (usually the bath service)
   const sortedItems = [...serviceItems].sort((a, b) => b.quantity - a.quantity);
   const mainItem = sortedItems[0]!;
   const extraItems = sortedItems.slice(1);
   const numSessions = mainItem.quantity;
 
-  // Look up serviceId for the main service by name
   const allServices = await db
     .select()
     .from(servicesTable)
-    .where(eq(servicesTable.tenantId, Number(tenantId)));
+    .where(eq(servicesTable.tenantId, req.tenantId!));
   const mainService = allServices.find(s => s.name === mainItem.serviceName);
   const mainServiceId = mainService?.id ?? null;
 
-  // Build base datetime from "YYYY-MM-DD" + "HH:MM"
   const [year, month, day] = (startDate as string).split("-").map(Number);
   const [hour, minute] = (startTime as string).split(":").map(Number);
   const baseDate = new Date(year!, month! - 1, day!, hour!, minute!, 0, 0);
@@ -175,7 +195,7 @@ router.post("/packages/:id/sell", async (req, res): Promise<void> => {
     const [appt] = await db
       .insert(appointmentsTable)
       .values({
-        tenantId: Number(tenantId),
+        tenantId: req.tenantId!,
         clientId: Number(clientId),
         petId: Number(petId),
         serviceId: mainServiceId,
@@ -195,7 +215,7 @@ router.post("/packages/:id/sell", async (req, res): Promise<void> => {
   const [financialEntry] = await db
     .insert(financialEntriesTable)
     .values({
-      tenantId: Number(tenantId),
+      tenantId: req.tenantId!,
       type: "receita",
       description: `Venda de pacote: ${pkg.name} — ${pet.name}`,
       amount: String(packagePrice),

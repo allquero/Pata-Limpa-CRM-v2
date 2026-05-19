@@ -1,5 +1,6 @@
 import { useGetDashboard } from "@workspace/api-client-react";
-import { DEFAULT_TENANT_ID, APPOINTMENT_STATUSES } from "@/lib/constants";
+import { APPOINTMENT_STATUSES } from "@/lib/constants";
+import { useAppAuth } from "@/lib/auth-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,7 +14,8 @@ const statusColors: Record<string, string> = {
 };
 
 export default function Dashboard() {
-  const { data, isLoading } = useGetDashboard({ tenantId: DEFAULT_TENANT_ID });
+  const { tenantId } = useAppAuth();
+  const { data, isLoading } = useGetDashboard({ tenantId: tenantId! });
 
   const formatCurrency = (v: number) =>
     v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });

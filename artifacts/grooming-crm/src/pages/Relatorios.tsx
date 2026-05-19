@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useGetRevenueReport, useGetAppointmentsReport, useGetTopClientsReport } from "@workspace/api-client-react";
-import { DEFAULT_TENANT_ID } from "@/lib/constants";
+import { useAppAuth } from "@/lib/auth-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,14 +14,15 @@ const COLORS = ["#7c3aed", "#06b6d4", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 export default function Relatorios() {
+  const { tenantId } = useAppAuth();
   const today = new Date();
   const [startDate, setStartDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1).toISOString().substring(0, 10));
   const [endDate, setEndDate] = useState(new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().substring(0, 10));
 
-  const params = { tenantId: DEFAULT_TENANT_ID, startDate, endDate };
+  const params = { tenantId: tenantId!, startDate, endDate };
   const { data: revenue, isLoading: revLoading } = useGetRevenueReport(params);
   const { data: appointments, isLoading: apptLoading } = useGetAppointmentsReport(params);
-  const { data: topClients, isLoading: topLoading } = useGetTopClientsReport({ tenantId: DEFAULT_TENANT_ID, limit: 10 });
+  const { data: topClients, isLoading: topLoading } = useGetTopClientsReport({ tenantId: tenantId!, limit: 10 });
 
   return (
     <div className="p-6 space-y-6">

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useGetTenant, useUpdateTenant } from "@workspace/api-client-react";
-import { DEFAULT_TENANT_ID } from "@/lib/constants";
+import { useAppAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,8 +10,9 @@ import { useToast } from "@/hooks/use-toast";
 import { Building2, Save } from "lucide-react";
 
 export default function Empresas() {
+  const { tenantId } = useAppAuth();
   const { toast } = useToast();
-  const { data: tenant, isLoading, refetch } = useGetTenant(DEFAULT_TENANT_ID);
+  const { data: tenant, isLoading, refetch } = useGetTenant(tenantId!);
   const updateTenant = useUpdateTenant();
 
   const [form, setForm] = useState({ name: "", phone: "", email: "", address: "" });
@@ -29,7 +30,7 @@ export default function Empresas() {
 
   const handleSave = async () => {
     try {
-      await updateTenant.mutateAsync({ id: DEFAULT_TENANT_ID, data: form });
+      await updateTenant.mutateAsync({ id: tenantId!, data: form });
       toast({ title: "Dados da empresa atualizados!" });
       refetch();
     } catch {

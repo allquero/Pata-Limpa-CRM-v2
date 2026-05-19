@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useListClients, useCreateClient, useUpdateClient, useDeleteClient, useListPets, useCreatePet, useDeletePet, getListPetsQueryKey } from "@workspace/api-client-react";
 import type { PetInputSize } from "@workspace/api-client-react";
-import { DEFAULT_TENANT_ID, PORTE_SIZES } from "@/lib/constants";
+import { PORTE_SIZES } from "@/lib/constants";
+import { useAppAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,8 +22,9 @@ const emptyClient = { name: "", phone: "", email: "", address: "", notes: "" };
 const emptyPet = { name: "", breed: "", size: "mini_longo", notes: "" };
 
 export default function Clientes() {
+  const { tenantId } = useAppAuth();
   const { toast } = useToast();
-  const { data: clients = [], isLoading, refetch } = useListClients({ tenantId: DEFAULT_TENANT_ID });
+  const { data: clients = [], isLoading, refetch } = useListClients({ tenantId: tenantId! });
   const createClient = useCreateClient();
   const updateClient = useUpdateClient();
   const deleteClient = useDeleteClient();
@@ -57,7 +59,7 @@ export default function Clientes() {
         await updateClient.mutateAsync({ id: editingClient.id, data: form });
         toast({ title: "Cliente atualizado!" });
       } else {
-        await createClient.mutateAsync({ data: { ...form, tenantId: DEFAULT_TENANT_ID } });
+        await createClient.mutateAsync({ data: { ...form, tenantId: tenantId! } });
         toast({ title: "Cliente criado!" });
       }
       setModalOpen(false);

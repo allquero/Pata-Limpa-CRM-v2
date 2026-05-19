@@ -2,19 +2,23 @@ import { Router, type IRouter } from "express";
 import { eq, and, gte, lte, desc } from "drizzle-orm";
 import { db, appointmentsTable, clientsTable, financialEntriesTable, petsTable, servicesTable, packagesTable } from "@workspace/db";
 import type { FinancialType } from "@workspace/db";
+import { requireTenant } from "../middlewares/requireTenant";
 
 const router: IRouter = Router();
+
+router.use(requireTenant);
 
 const toDateStr = (d: string): string => d.substring(0, 10);
 
 router.get("/reports/revenue", async (req, res): Promise<void> => {
   const raw = req.query as Record<string, string>;
-  const tenantId = raw.tenantId ? Number(raw.tenantId) : undefined;
   const startDate = raw.startDate ? toDateStr(raw.startDate) : undefined;
   const endDate = raw.endDate ? toDateStr(raw.endDate) : undefined;
 
-  const conditions: ReturnType<typeof eq>[] = [eq(financialEntriesTable.type, "receita" as FinancialType)];
-  if (tenantId) conditions.push(eq(financialEntriesTable.tenantId, tenantId) as any);
+  const conditions = [
+    eq(financialEntriesTable.type, "receita" as FinancialType),
+    eq(financialEntriesTable.tenantId, req.tenantId!),
+  ];
   if (startDate) conditions.push(gte(financialEntriesTable.date, startDate) as any);
   if (endDate) conditions.push(lte(financialEntriesTable.date, endDate) as any);
 
@@ -47,12 +51,10 @@ router.get("/reports/revenue", async (req, res): Promise<void> => {
 
 router.get("/reports/appointments", async (req, res): Promise<void> => {
   const raw = req.query as Record<string, string>;
-  const tenantId = raw.tenantId ? Number(raw.tenantId) : undefined;
   const startDate = raw.startDate ? new Date(raw.startDate) : undefined;
   const endDate = raw.endDate ? new Date(raw.endDate) : undefined;
 
-  const apptConditions = [];
-  if (tenantId) apptConditions.push(eq(appointmentsTable.tenantId, tenantId));
+  const apptConditions = [eq(appointmentsTable.tenantId, req.tenantId!)];
   if (startDate) {
     const s = new Date(startDate); s.setHours(0, 0, 0, 0);
     apptConditions.push(gte(appointmentsTable.scheduledDate, s));
@@ -66,7 +68,7 @@ router.get("/reports/appointments", async (req, res): Promise<void> => {
     .select({ appointment: appointmentsTable, pet: petsTable })
     .from(appointmentsTable)
     .leftJoin(petsTable, eq(appointmentsTable.petId, petsTable.id))
-    .where(apptConditions.length > 0 ? and(...apptConditions) : undefined);
+    .where(and(...apptConditions));
 
   const total = rows.length;
   const statusCounts: Record<string, number> = {};
@@ -89,17 +91,13 @@ router.get("/reports/appointments", async (req, res): Promise<void> => {
 
 router.get("/reports/top-clients", async (req, res): Promise<void> => {
   const raw = req.query as Record<string, string>;
-  const tenantId = raw.tenantId ? Number(raw.tenantId) : undefined;
   const maxLimit = raw.limit ? Number(raw.limit) : 10;
-
-  const conditions = [];
-  if (tenantId) conditions.push(eq(appointmentsTable.tenantId, tenantId));
 
   const appts = await db
     .select({ appointment: appointmentsTable, client: clientsTable })
     .from(appointmentsTable)
     .leftJoin(clientsTable, eq(appointmentsTable.clientId, clientsTable.id))
-    .where(conditions.length > 0 ? and(...conditions) : undefined)
+    .where(eq(appointmentsTable.tenantId, req.tenantId!))
     .orderBy(desc(appointmentsTable.scheduledDate));
 
   const byClient: Record<number, { clientId: number; clientName: string; totalRevenue: number; totalAppointments: number; lastAppointmentDate: string | null }> = {};
@@ -118,9 +116,6 @@ router.get("/reports/top-clients", async (req, res): Promise<void> => {
 });
 
 router.get("/dashboard", async (req, res): Promise<void> => {
-  const raw = req.query as Record<string, string>;
-  const tenantId = raw.tenantId ? Number(raw.tenantId) : undefined;
-
   const now = new Date();
   const todayStart = new Date(now); todayStart.setHours(0, 0, 0, 0);
   const todayEnd = new Date(now); todayEnd.setHours(23, 59, 59, 999);
@@ -129,13 +124,13 @@ router.get("/dashboard", async (req, res): Promise<void> => {
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0); monthEnd.setHours(23, 59, 59, 999);
 
-  const baseConditions = tenantId ? [eq(appointmentsTable.tenantId, tenantId)] : [];
+  const tenantFilter = eq(appointmentsTable.tenantId, req.tenantId!);
 
   const [todayAppts, weekAppts, allClients, pendingAppts] = await Promise.all([
-    db.select().from(appointmentsTable).where(and(...baseConditions, gte(appointmentsTable.scheduledDate, todayStart), lte(appointmentsTable.scheduledDate, todayEnd))),
-    db.select().from(appointmentsTable).where(and(...baseConditions, gte(appointmentsTable.scheduledDate, weekStart), lte(appointmentsTable.scheduledDate, weekEnd))),
-    tenantId ? db.select().from(clientsTable).where(eq(clientsTable.tenantId, tenantId)) : db.select().from(clientsTable),
-    db.select().from(appointmentsTable).where(and(...baseConditions, eq(appointmentsTable.status, "aguardando"))),
+    db.select().from(appointmentsTable).where(and(tenantFilter, gte(appointmentsTable.scheduledDate, todayStart), lte(appointmentsTable.scheduledDate, todayEnd))),
+    db.select().from(appointmentsTable).where(and(tenantFilter, gte(appointmentsTable.scheduledDate, weekStart), lte(appointmentsTable.scheduledDate, weekEnd))),
+    db.select().from(clientsTable).where(eq(clientsTable.tenantId, req.tenantId!)),
+    db.select().from(appointmentsTable).where(and(tenantFilter, eq(appointmentsTable.status, "aguardando"))),
   ]);
 
   const monthStartStr = monthStart.toISOString().substring(0, 10);
@@ -144,7 +139,7 @@ router.get("/dashboard", async (req, res): Promise<void> => {
     eq(financialEntriesTable.type, "receita" as FinancialType),
     gte(financialEntriesTable.date, monthStartStr),
     lte(financialEntriesTable.date, monthEndStr),
-    ...(tenantId ? [eq(financialEntriesTable.tenantId, tenantId)] : []),
+    eq(financialEntriesTable.tenantId, req.tenantId!),
   ];
 
   const monthEntries = await db.select().from(financialEntriesTable).where(and(...financialConditions));
@@ -163,7 +158,7 @@ router.get("/dashboard", async (req, res): Promise<void> => {
     .leftJoin(clientsTable, eq(appointmentsTable.clientId, clientsTable.id))
     .leftJoin(servicesTable, eq(appointmentsTable.serviceId, servicesTable.id))
     .leftJoin(packagesTable, eq(appointmentsTable.packageId, packagesTable.id))
-    .where(baseConditions.length > 0 ? and(...baseConditions) : undefined)
+    .where(tenantFilter)
     .orderBy(desc(appointmentsTable.scheduledDate))
     .limit(5);
 

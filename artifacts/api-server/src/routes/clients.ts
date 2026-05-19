@@ -9,8 +9,11 @@ import {
   DeleteClientParams,
   ListClientsQueryParams,
 } from "@workspace/api-zod";
+import { requireTenant } from "../middlewares/requireTenant";
 
 const router: IRouter = Router();
+
+router.use(requireTenant);
 
 router.get("/clients", async (req, res): Promise<void> => {
   const query = ListClientsQueryParams.safeParse(req.query);
@@ -18,16 +21,15 @@ router.get("/clients", async (req, res): Promise<void> => {
     res.status(400).json({ error: query.error.message });
     return;
   }
-  const { tenantId, search } = query.data;
+  const { search } = query.data;
 
-  const conditions = [];
-  if (tenantId) conditions.push(eq(clientsTable.tenantId, tenantId));
+  const conditions = [eq(clientsTable.tenantId, req.tenantId!)];
   if (search) conditions.push(ilike(clientsTable.name, `%${search}%`));
 
   const clients = await db
     .select()
     .from(clientsTable)
-    .where(conditions.length > 0 ? and(...conditions) : undefined)
+    .where(and(...conditions))
     .orderBy(clientsTable.name);
 
   res.json(clients);
@@ -39,7 +41,10 @@ router.post("/clients", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const [client] = await db.insert(clientsTable).values(parsed.data).returning();
+  const [client] = await db
+    .insert(clientsTable)
+    .values({ ...parsed.data, tenantId: req.tenantId! })
+    .returning();
   res.status(201).json(client);
 });
 
@@ -49,9 +54,12 @@ router.get("/clients/:id", async (req, res): Promise<void> => {
     res.status(400).json({ error: params.error.message });
     return;
   }
-  const [client] = await db.select().from(clientsTable).where(eq(clientsTable.id, params.data.id));
+  const [client] = await db
+    .select()
+    .from(clientsTable)
+    .where(and(eq(clientsTable.id, params.data.id), eq(clientsTable.tenantId, req.tenantId!)));
   if (!client) {
-    res.status(404).json({ error: "Client not found" });
+    res.status(404).json({ error: "Cliente não encontrado" });
     return;
   }
   const pets = await db.select().from(petsTable).where(eq(petsTable.clientId, params.data.id));
@@ -69,9 +77,13 @@ router.patch("/clients/:id", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const [client] = await db.update(clientsTable).set(parsed.data).where(eq(clientsTable.id, params.data.id)).returning();
+  const [client] = await db
+    .update(clientsTable)
+    .set(parsed.data)
+    .where(and(eq(clientsTable.id, params.data.id), eq(clientsTable.tenantId, req.tenantId!)))
+    .returning();
   if (!client) {
-    res.status(404).json({ error: "Client not found" });
+    res.status(404).json({ error: "Cliente não encontrado" });
     return;
   }
   res.json(client);
@@ -83,9 +95,12 @@ router.delete("/clients/:id", async (req, res): Promise<void> => {
     res.status(400).json({ error: params.error.message });
     return;
   }
-  const [client] = await db.delete(clientsTable).where(eq(clientsTable.id, params.data.id)).returning();
+  const [client] = await db
+    .delete(clientsTable)
+    .where(and(eq(clientsTable.id, params.data.id), eq(clientsTable.tenantId, req.tenantId!)))
+    .returning();
   if (!client) {
-    res.status(404).json({ error: "Client not found" });
+    res.status(404).json({ error: "Cliente não encontrado" });
     return;
   }
   res.sendStatus(204);

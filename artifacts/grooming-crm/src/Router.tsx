@@ -11,8 +11,29 @@ import Mensagens from "@/pages/Mensagens";
 import Leads from "@/pages/Leads";
 import Empresas from "@/pages/Empresas";
 import NotFound from "@/pages/not-found";
+import Login from "@/pages/Login";
+import CadastroEmpresa from "@/pages/CadastroEmpresa";
+import { useAppAuth } from "@/lib/auth-context";
+import { Scissors } from "lucide-react";
+
+function LoadingScreen() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="flex flex-col items-center gap-3 text-primary">
+        <Scissors className="h-10 w-10 animate-pulse" />
+        <p className="text-sm text-muted-foreground">Carregando...</p>
+      </div>
+    </div>
+  );
+}
 
 export function Router() {
+  const { isLoading, isAuthenticated, hasTenant } = useAppAuth();
+
+  if (isLoading) return <LoadingScreen />;
+  if (!isAuthenticated) return <Login />;
+  if (!hasTenant) return <CadastroEmpresa />;
+
   return (
     <AppLayout>
       <Switch>
