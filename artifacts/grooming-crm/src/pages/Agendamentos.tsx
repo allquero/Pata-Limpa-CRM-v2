@@ -147,10 +147,10 @@ function AppointmentCard({ appt, clients, pets, services, packages, onDelete, on
         <div className="flex items-center gap-1">
           <span className="text-xs font-semibold text-primary">{formatBRL(price)}</span>
           <button
-            onClick={e => { e.stopPropagation(); onWhatsapp?.(appt); }}
+            onClick={e => { e.stopPropagation(); if (client?.phone) onWhatsapp?.(appt); }}
             className={`p-1 rounded transition-colors ${client?.phone ? "hover:bg-green-50 text-green-600" : "text-muted-foreground/40 cursor-not-allowed"}`}
-            title={client?.phone ? "Enviar confirmação WhatsApp" : "Cliente sem telefone"}
-            disabled={!onWhatsapp}
+            title={client?.phone ? "Enviar confirmação WhatsApp" : "Cliente sem telefone cadastrado"}
+            disabled={!client?.phone || !onWhatsapp}
           >
             <MessageSquare className="h-3.5 w-3.5" />
           </button>
