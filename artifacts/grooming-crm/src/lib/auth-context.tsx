@@ -16,7 +16,7 @@ export type AccessStatus = "active" | "pending" | "expired" | "not_started" | nu
 function computeAccessStatus(tenant: Tenant | null): AccessStatus {
   if (!tenant) return null;
   const t = tenant as Tenant & { accessStart?: string | null; accessEnd?: string | null };
-  if (!t.accessStart || !t.accessEnd) return "pending";
+  if (!t.accessStart || !t.accessEnd) return "active";
   const today = new Date().toISOString().slice(0, 10);
   if (today < t.accessStart) return "not_started";
   if (today > t.accessEnd) return "expired";
