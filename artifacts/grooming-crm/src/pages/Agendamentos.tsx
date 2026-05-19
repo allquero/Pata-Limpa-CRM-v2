@@ -6,9 +6,10 @@ import {
 import { useDroppable, useDraggable } from "@dnd-kit/core";
 import {
   useListAppointments, useUpdateAppointmentStatus, useCreateAppointment,
-  useDeleteAppointment, useListClients, useListPets, useListServices, useListPackages
+  useDeleteAppointment, useListClients, useListPets, useListServices,
+  useListPackages, useCreateClient, useCreatePet, useSellPackage,
 } from "@workspace/api-client-react";
-import { DEFAULT_TENANT_ID, APPOINTMENT_STATUSES, PORTE_SIZES } from "@/lib/constants";
+import { DEFAULT_TENANT_ID, PORTE_SIZES } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,10 +19,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2, ChevronLeft, ChevronRight, Clock, PawPrint, MessageSquare } from "lucide-react";
+import {
+  Plus, Trash2, ChevronLeft, ChevronRight, Clock, PawPrint,
+  MessageSquare, UserPlus, ShoppingCart, CalendarCheck, ChevronRight as Next,
+} from "lucide-react";
 import { format, addDays, startOfWeek, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useQueryClient } from "@tanstack/react-query";
@@ -40,6 +43,13 @@ type Appointment = {
   notes?: string | null;
 };
 
+type Pkg = {
+  id: number;
+  name: string;
+  serviceItems: { serviceName: string; quantity: number }[];
+  priceBySizes: { size: string; price: number }[];
+};
+
 const COLUMNS: { id: AppStatus; label: string; color: string; bg: string }[] = [
   { id: "aguardando", label: "Aguardando", color: "text-yellow-700", bg: "bg-yellow-50 border-yellow-200" },
   { id: "em_atendimento", label: "Em Atendimento", color: "text-blue-700", bg: "bg-blue-50 border-blue-200" },
@@ -47,12 +57,9 @@ const COLUMNS: { id: AppStatus; label: string; color: string; bg: string }[] = [
   { id: "cancelado", label: "Cancelado", color: "text-red-700", bg: "bg-red-50 border-red-200" },
 ];
 
-const statusDot: Record<string, string> = {
-  aguardando: "bg-yellow-400",
-  em_atendimento: "bg-blue-500",
-  concluido: "bg-green-500",
-  cancelado: "bg-red-400",
-};
+function formatBRL(v: number) {
+  return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
 
 function AppointmentCard({ appt, clients, pets, services, packages, onDelete, isDragging = false }: {
   appt: Appointment;
@@ -145,7 +152,7 @@ function KanbanColumn({ status, label, color, bg, appointments, clients, pets, s
   const { setNodeRef, isOver } = useDroppable({ id: status });
   return (
     <div className={`flex flex-col rounded-xl border-2 ${bg} ${isOver ? "ring-2 ring-primary ring-offset-1" : ""} transition-all min-h-[400px]`}>
-      <div className={`flex items-center justify-between px-3 py-2.5 border-b border-current/10`}>
+      <div className="flex items-center justify-between px-3 py-2.5 border-b border-current/10">
         <span className={`font-semibold text-sm ${color}`}>{label}</span>
         <Badge variant="secondary" className="text-xs">{appointments.length}</Badge>
       </div>
@@ -161,34 +168,65 @@ function KanbanColumn({ status, label, color, bg, appointments, clients, pets, s
   );
 }
 
-const emptyForm = {
-  petId: "",
-  clientId: "",
+// ─── Casual form state ────────────────────────────────────────────────────────
+const emptyCasual = {
+  clientName: "",
+  clientPhone: "",
+  petName: "",
+  petBreed: "",
+  petSize: "",
   serviceId: "",
-  packageId: "",
   scheduledDate: new Date().toISOString().substring(0, 10),
   scheduledTime: "09:00",
   totalPrice: "",
   notes: "",
-  recurringWeeks: "0",
-  status: "aguardando" as AppStatus,
 };
 
+// ─── Sell-package form state ──────────────────────────────────────────────────
+const emptySell = {
+  packageId: "",
+  clientId: "",
+  petId: "",
+  startDate: new Date().toISOString().substring(0, 10),
+  startTime: "09:00",
+  notes: "",
+};
+
+// ─── Step indicator ───────────────────────────────────────────────────────────
+function StepDots({ step, total }: { step: number; total: number }) {
+  return (
+    <div className="flex items-center gap-1.5 mb-4">
+      {Array.from({ length: total }, (_, i) => (
+        <div
+          key={i}
+          className={`h-1.5 rounded-full transition-all ${i < step ? "bg-primary flex-1" : i === step ? "bg-primary flex-1" : "bg-muted flex-[0.4]"}`}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
 export default function Agendamentos() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [view, setView] = useState<"day" | "week">("day");
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [modalOpen, setModalOpen] = useState(false);
-  const [form, setForm] = useState(emptyForm);
   const [activeId, setActiveId] = useState<number | null>(null);
-  const [usePackage, setUsePackage] = useState(false);
+
+  // Casual modal
+  const [casualOpen, setCasualOpen] = useState(false);
+  const [casualStep, setCasualStep] = useState(0); // 0=cliente 1=pet 2=agendamento
+  const [casual, setCasual] = useState(emptyCasual);
+
+  // Sell package modal
+  const [sellOpen, setSellOpen] = useState(false);
+  const [sell, setSell] = useState(emptySell);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const weekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
-
   const queryStart = view === "day" ? selectedDate : weekStart;
   const queryEnd = view === "day" ? selectedDate : addDays(weekStart, 6);
 
@@ -203,19 +241,49 @@ export default function Agendamentos() {
   const { data: services = [] } = useListServices({ tenantId: DEFAULT_TENANT_ID });
   const { data: packages = [] } = useListPackages({ tenantId: DEFAULT_TENANT_ID });
 
+  // Pets for sell modal (filtered by selected client)
+  const { data: sellClientPets = [] } = useListPets(
+    sell.clientId ? { clientId: Number(sell.clientId) } : { clientId: 0 },
+    { enabled: !!sell.clientId }
+  );
+
   const updateStatus = useUpdateAppointmentStatus();
   const createAppointment = useCreateAppointment();
   const deleteAppointment = useDeleteAppointment();
+  const createClient = useCreateClient();
+  const createPet = useCreatePet();
+  const sellPackage = useSellPackage();
 
-  const clientPets = (allPets as any[]).filter(p => p.clientId === Number(form.clientId));
-  const selectedPet = (allPets as any[]).find(p => p.id === Number(form.petId));
-  const petSize = selectedPet?.size ?? null;
-
-  // Only show services that match the pet's size; if no pet selected, show all
-  const filteredServices = petSize
-    ? (services as any[]).filter(s => s.size === petSize)
+  // ── Casual: services filtered by pet size ──────────────────────────────────
+  const casualFilteredServices = casual.petSize
+    ? (services as any[]).filter(s => s.size === casual.petSize)
     : (services as any[]);
 
+  // ── Sell: selected package & price for pet ────────────────────────────────
+  const selectedPkg = (packages as Pkg[]).find(p => p.id === Number(sell.packageId));
+  const sellPet = (sellClientPets as any[]).find(p => p.id === Number(sell.petId));
+  const sellPetSize = sellPet?.size as string | undefined;
+  const priceForPet = sellPetSize && selectedPkg
+    ? (selectedPkg.priceBySizes.find(p => p.size === sellPetSize)?.price ?? null)
+    : null;
+
+  // ── Sell: sessions preview ────────────────────────────────────────────────
+  const sellSessions = (() => {
+    if (!selectedPkg) return [];
+    const items = [...(selectedPkg.serviceItems ?? [])].sort((a, b) => b.quantity - a.quantity);
+    const main = items[0];
+    const extras = items.slice(1);
+    if (!main) return [];
+    return Array.from({ length: main.quantity }, (_, i) => ({
+      index: i + 1,
+      label: i === main.quantity - 1 && extras.length > 0
+        ? `${main.serviceName} + ${extras.map(e => e.serviceName).join(" + ")}`
+        : main.serviceName,
+      hasExtra: i === main.quantity - 1 && extras.length > 0,
+    }));
+  })();
+
+  // ── DnD ──────────────────────────────────────────────────────────────────
   const handleDragStart = (event: DragStartEvent) => setActiveId(event.active.id as number);
 
   const handleDragEnd = useCallback(async (event: DragEndEvent) => {
@@ -233,72 +301,143 @@ export default function Agendamentos() {
     }
   }, [appointments, updateStatus, refetch, toast]);
 
-  const handleSave = async () => {
-    try {
-      const dt = new Date(`${form.scheduledDate}T${form.scheduledTime}:00`);
-      const payload: any = {
-        tenantId: DEFAULT_TENANT_ID,
-        petId: Number(form.petId),
-        clientId: Number(form.clientId),
-        scheduledDate: dt.toISOString(),
-        status: form.status,
-        totalPrice: form.totalPrice,
-        notes: form.notes || undefined,
-        recurringWeeks: Number(form.recurringWeeks) || undefined,
-      };
-      if (usePackage && form.packageId) payload.packageId = Number(form.packageId);
-      else if (!usePackage && form.serviceId) payload.serviceId = Number(form.serviceId);
-
-      await createAppointment.mutateAsync({ data: payload });
-      toast({ title: Number(form.recurringWeeks) > 0 ? `${Number(form.recurringWeeks) + 1} agendamentos criados!` : "Agendamento criado!" });
-      setModalOpen(false);
-      setForm(emptyForm);
-      refetch();
-    } catch {
-      toast({ title: "Erro ao salvar", variant: "destructive" });
-    }
-  };
-
   const handleDelete = async (id: number) => {
     if (!confirm("Excluir este agendamento?")) return;
     await deleteAppointment.mutateAsync({ id });
     refetch();
   };
 
-  const activeAppt = activeId ? (appointments as Appointment[]).find(a => a.id === activeId) : null;
+  // ── Casual: open / close ──────────────────────────────────────────────────
+  const openCasual = () => {
+    setCasual(emptyCasual);
+    setCasualStep(0);
+    setCasualOpen(true);
+  };
 
-  const filterForDay = (day: Date) =>
-    (appointments as Appointment[]).filter(a => isSameDay(new Date(a.scheduledDate), day));
+  const closeCasual = () => setCasualOpen(false);
 
-  const filterByStatus = (status: AppStatus) =>
-    (view === "day"
-      ? filterForDay(selectedDate)
-      : (appointments as Appointment[])
-    ).filter(a => a.status === status);
+  const casualNextStep = () => {
+    if (casualStep === 0) {
+      if (!casual.clientName.trim()) { toast({ title: "Nome do cliente é obrigatório", variant: "destructive" }); return; }
+      if (!casual.clientPhone.trim()) { toast({ title: "Telefone é obrigatório", variant: "destructive" }); return; }
+    }
+    if (casualStep === 1) {
+      if (!casual.petName.trim()) { toast({ title: "Nome do pet é obrigatório", variant: "destructive" }); return; }
+      if (!casual.petSize) { toast({ title: "Porte do pet é obrigatório", variant: "destructive" }); return; }
+    }
+    setCasualStep(s => s + 1);
+  };
 
-  const autoFillPrice = (serviceId: string, packageId: string) => {
-    if (usePackage && packageId) {
-      const pkg = (packages as any[]).find(p => p.id === Number(packageId));
-      if (pkg && petSize && Array.isArray(pkg.priceBySizes)) {
-        const entry = pkg.priceBySizes.find((e: any) => e.size === petSize);
-        if (entry) setForm(f => ({ ...f, totalPrice: String(entry.price) }));
-      }
-    } else if (!usePackage && serviceId) {
-      const svc = (services as any[]).find(s => s.id === Number(serviceId));
-      if (svc) setForm(f => ({ ...f, totalPrice: String(svc.price) }));
+  // ── Casual: submit ────────────────────────────────────────────────────────
+  const handleCasualSave = async () => {
+    if (!casual.serviceId) { toast({ title: "Selecione um serviço", variant: "destructive" }); return; }
+    if (!casual.scheduledDate || !casual.scheduledTime) { toast({ title: "Data e horário são obrigatórios", variant: "destructive" }); return; }
+    if (!casual.totalPrice) { toast({ title: "Informe o valor", variant: "destructive" }); return; }
+    try {
+      const newClient = await createClient.mutateAsync({
+        data: {
+          tenantId: DEFAULT_TENANT_ID,
+          name: casual.clientName.trim(),
+          phone: casual.clientPhone.trim(),
+        },
+      });
+      const newPet = await createPet.mutateAsync({
+        data: {
+          clientId: (newClient as any).id,
+          name: casual.petName.trim(),
+          breed: casual.petBreed.trim() || undefined,
+          size: casual.petSize as any,
+        },
+      });
+      const dt = new Date(`${casual.scheduledDate}T${casual.scheduledTime}:00`);
+      await createAppointment.mutateAsync({
+        data: {
+          tenantId: DEFAULT_TENANT_ID,
+          clientId: (newClient as any).id,
+          petId: (newPet as any).id,
+          serviceId: Number(casual.serviceId),
+          scheduledDate: dt.toISOString(),
+          status: "aguardando",
+          totalPrice: Number(casual.totalPrice),
+          notes: casual.notes || undefined,
+        },
+      });
+      toast({ title: "Agendamento criado!", description: `${casual.clientName} · ${casual.petName}` });
+      closeCasual();
+      refetch();
+    } catch {
+      toast({ title: "Erro ao criar agendamento", variant: "destructive" });
     }
   };
 
+  const isCasualSaving = createClient.isPending || createPet.isPending || createAppointment.isPending;
+
+  // ── Sell package: open / close ────────────────────────────────────────────
+  const openSell = () => {
+    setSell(emptySell);
+    setSellOpen(true);
+  };
+
+  // ── Sell package: submit ──────────────────────────────────────────────────
+  const handleSellSave = async () => {
+    if (!sell.packageId) { toast({ title: "Selecione o pacote", variant: "destructive" }); return; }
+    if (!sell.clientId) { toast({ title: "Selecione o cliente", variant: "destructive" }); return; }
+    if (!sell.petId) { toast({ title: "Selecione o pet", variant: "destructive" }); return; }
+    if (!sell.startDate || !sell.startTime) { toast({ title: "Data e horário são obrigatórios", variant: "destructive" }); return; }
+    try {
+      const result = await sellPackage.mutateAsync({
+        id: Number(sell.packageId),
+        data: {
+          tenantId: DEFAULT_TENANT_ID,
+          clientId: Number(sell.clientId),
+          petId: Number(sell.petId),
+          startDate: sell.startDate,
+          startTime: sell.startTime,
+          notes: sell.notes || null,
+        },
+      });
+      const count = (result as any).appointments?.length ?? 0;
+      const price = (result as any).financialEntry?.amount ?? 0;
+      toast({
+        title: "Pacote vendido com sucesso!",
+        description: `${count} agendamento${count !== 1 ? "s" : ""} criado${count !== 1 ? "s" : ""} · Receita: ${formatBRL(price)}`,
+      });
+      setSellOpen(false);
+      refetch();
+    } catch {
+      toast({ title: "Erro ao vender pacote", variant: "destructive" });
+    }
+  };
+
+  // ── Kanban helpers ────────────────────────────────────────────────────────
+  const activeAppt = activeId ? (appointments as Appointment[]).find(a => a.id === activeId) : null;
+  const filterForDay = (day: Date) => (appointments as Appointment[]).filter(a => isSameDay(new Date(a.scheduledDate), day));
+  const filterByStatus = (status: AppStatus) =>
+    (view === "day" ? filterForDay(selectedDate) : (appointments as Appointment[])).filter(a => a.status === status);
+
+  const STEP_LABELS = ["Cliente", "Pet", "Agendamento"];
+
   return (
     <div className="p-6 space-y-4">
+      {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold">Agendamentos</h1>
           <p className="text-muted-foreground">Kanban de atendimentos</p>
         </div>
-        <Button onClick={() => setModalOpen(true)}><Plus className="h-4 w-4 mr-2" />Novo Agendamento</Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={openCasual} className="gap-2">
+            <UserPlus className="h-4 w-4" />
+            Cliente Casual
+          </Button>
+          <Button onClick={openSell} className="gap-2">
+            <ShoppingCart className="h-4 w-4" />
+            Vender Pacote
+          </Button>
+        </div>
       </div>
 
+      {/* Date navigation */}
       <div className="flex items-center gap-4 flex-wrap">
         <Tabs value={view} onValueChange={v => setView(v as "day" | "week")}>
           <TabsList>
@@ -323,6 +462,7 @@ export default function Agendamentos() {
         </div>
       </div>
 
+      {/* Week strip */}
       {view === "week" && (
         <div className="flex gap-1 overflow-x-auto pb-1">
           {weekDays.map(d => (
@@ -339,6 +479,7 @@ export default function Agendamentos() {
         </div>
       )}
 
+      {/* Kanban */}
       <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {COLUMNS.map(col => (
@@ -373,97 +514,316 @@ export default function Agendamentos() {
         </DragOverlay>
       </DndContext>
 
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>Novo Agendamento</DialogTitle></DialogHeader>
-          <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-1">
-            <div>
-              <Label>Cliente *</Label>
-              <Select value={form.clientId} onValueChange={v => setForm(f => ({ ...f, clientId: v, petId: "" }))}>
-                <SelectTrigger><SelectValue placeholder="Selecionar cliente" /></SelectTrigger>
+      {/* ── Modal: Cliente Casual ─────────────────────────────────────────── */}
+      <Dialog open={casualOpen} onOpenChange={o => { if (!o) closeCasual(); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5" />
+              Novo Agendamento — Cliente Casual
+            </DialogTitle>
+          </DialogHeader>
+
+          {/* Step labels */}
+          <div className="flex items-center gap-0 text-xs font-medium mb-1">
+            {STEP_LABELS.map((lbl, i) => (
+              <div key={i} className="flex items-center gap-0">
+                <span className={`px-2 py-0.5 rounded-full text-xs ${i === casualStep ? "bg-primary text-primary-foreground" : i < casualStep ? "text-primary" : "text-muted-foreground"}`}>
+                  {lbl}
+                </span>
+                {i < STEP_LABELS.length - 1 && <span className="text-muted-foreground mx-0.5">›</span>}
+              </div>
+            ))}
+          </div>
+          <StepDots step={casualStep} total={3} />
+
+          <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+
+            {/* Step 0: Cliente */}
+            {casualStep === 0 && (
+              <>
+                <div className="space-y-1.5">
+                  <Label>Nome do cliente *</Label>
+                  <Input
+                    placeholder="Ex: Maria Silva"
+                    value={casual.clientName}
+                    onChange={e => setCasual(f => ({ ...f, clientName: e.target.value }))}
+                    autoFocus
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Telefone / WhatsApp *</Label>
+                  <Input
+                    placeholder="Ex: 11 99999-0000"
+                    value={casual.clientPhone}
+                    onChange={e => setCasual(f => ({ ...f, clientPhone: e.target.value }))}
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Step 1: Pet */}
+            {casualStep === 1 && (
+              <>
+                <div className="space-y-1.5">
+                  <Label>Nome do pet *</Label>
+                  <Input
+                    placeholder="Ex: Thor"
+                    value={casual.petName}
+                    onChange={e => setCasual(f => ({ ...f, petName: e.target.value }))}
+                    autoFocus
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Raça</Label>
+                  <Input
+                    placeholder="Ex: Labrador"
+                    value={casual.petBreed}
+                    onChange={e => setCasual(f => ({ ...f, petBreed: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Porte *</Label>
+                  <Select value={casual.petSize} onValueChange={v => setCasual(f => ({ ...f, petSize: v, serviceId: "", totalPrice: "" }))}>
+                    <SelectTrigger><SelectValue placeholder="Selecione o porte" /></SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(PORTE_SIZES).map(([val, lbl]) => (
+                        <SelectItem key={val} value={val}>{lbl}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            )}
+
+            {/* Step 2: Agendamento */}
+            {casualStep === 2 && (
+              <>
+                <div className="space-y-1.5">
+                  <Label>Serviço *</Label>
+                  <Select
+                    value={casual.serviceId}
+                    onValueChange={v => {
+                      const svc = (services as any[]).find(s => s.id === Number(v));
+                      setCasual(f => ({ ...f, serviceId: v, totalPrice: svc ? String(svc.price) : f.totalPrice }));
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={casual.petSize ? "Selecione o serviço" : "Selecione o porte primeiro"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {casualFilteredServices.length === 0 && (
+                        <SelectItem value="_none" disabled>Nenhum serviço para este porte</SelectItem>
+                      )}
+                      {casualFilteredServices.map((s: any) => (
+                        <SelectItem key={s.id} value={String(s.id)}>
+                          {s.name} — {formatBRL(Number(s.price))}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {casual.petSize && (
+                    <p className="text-xs text-muted-foreground">
+                      Serviços filtrados para porte: <span className="font-medium">{PORTE_SIZES[casual.petSize as keyof typeof PORTE_SIZES]}</span>
+                    </p>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label>Data *</Label>
+                    <Input type="date" value={casual.scheduledDate} onChange={e => setCasual(f => ({ ...f, scheduledDate: e.target.value }))} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Horário *</Label>
+                    <Input type="time" value={casual.scheduledTime} onChange={e => setCasual(f => ({ ...f, scheduledTime: e.target.value }))} />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Valor (R$) *</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0,00"
+                    value={casual.totalPrice}
+                    onChange={e => setCasual(f => ({ ...f, totalPrice: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Observações</Label>
+                  <Textarea
+                    placeholder="Observações adicionais"
+                    value={casual.notes}
+                    onChange={e => setCasual(f => ({ ...f, notes: e.target.value }))}
+                    rows={2}
+                  />
+                </div>
+              </>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2">
+            {casualStep > 0 && (
+              <Button variant="outline" onClick={() => setCasualStep(s => s - 1)}>Voltar</Button>
+            )}
+            <Button variant="outline" onClick={closeCasual}>Cancelar</Button>
+            {casualStep < 2 ? (
+              <Button onClick={casualNextStep}>
+                Próximo <Next className="h-4 w-4 ml-1" />
+              </Button>
+            ) : (
+              <Button onClick={handleCasualSave} disabled={isCasualSaving}>
+                {isCasualSaving ? "Salvando..." : "Confirmar Agendamento"}
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Modal: Vender Pacote ──────────────────────────────────────────── */}
+      <Dialog open={sellOpen} onOpenChange={o => { if (!o) setSellOpen(false); }}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ShoppingCart className="h-5 w-5" />
+              Vender Pacote
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-1">
+            {/* Pacote */}
+            <div className="space-y-1.5">
+              <Label>Pacote *</Label>
+              <Select value={sell.packageId} onValueChange={v => setSell(f => ({ ...f, packageId: v, petId: "" }))}>
+                <SelectTrigger><SelectValue placeholder="Selecione o pacote" /></SelectTrigger>
                 <SelectContent>
-                  {(clients as any[]).map(c => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
+                  {(packages as Pkg[]).map(p => {
+                    const prices = p.priceBySizes.map(x => x.price).filter(x => x > 0);
+                    const min = prices.length ? Math.min(...prices) : 0;
+                    const max = prices.length ? Math.max(...prices) : 0;
+                    const range = min === max ? formatBRL(min) : `${formatBRL(min)} – ${formatBRL(max)}`;
+                    return (
+                      <SelectItem key={p.id} value={String(p.id)}>
+                        {p.name} ({range})
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+              {selectedPkg && (
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {selectedPkg.serviceItems.map((item, i) => (
+                    <Badge key={i} variant="outline" className="text-xs">{item.quantity}× {item.serviceName}</Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Cliente */}
+            <div className="space-y-1.5">
+              <Label>Cliente *</Label>
+              <Select value={sell.clientId} onValueChange={v => setSell(f => ({ ...f, clientId: v, petId: "" }))}>
+                <SelectTrigger><SelectValue placeholder="Selecione o cliente" /></SelectTrigger>
+                <SelectContent>
+                  {(clients as any[]).map((c: any) => (
+                    <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
-            <div>
+
+            {/* Pet */}
+            <div className="space-y-1.5">
               <Label>Pet *</Label>
               <Select
-                value={form.petId}
-                onValueChange={v => setForm(f => ({ ...f, petId: v, serviceId: "", totalPrice: "" }))}
+                value={sell.petId}
+                onValueChange={v => setSell(f => ({ ...f, petId: v }))}
+                disabled={!sell.clientId}
               >
-                <SelectTrigger><SelectValue placeholder="Selecionar pet" /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue placeholder={sell.clientId ? "Selecione o pet" : "Selecione um cliente primeiro"} />
+                </SelectTrigger>
                 <SelectContent>
-                  {clientPets.length === 0 && <SelectItem value="_none" disabled>Selecione um cliente primeiro</SelectItem>}
-                  {clientPets.map(p => (
+                  {(sellClientPets as any[]).map((p: any) => (
                     <SelectItem key={p.id} value={String(p.id)}>
-                      {p.name}
-                      {p.size && <span className="text-muted-foreground"> · {PORTE_SIZES[p.size as keyof typeof PORTE_SIZES] ?? p.size}</span>}
+                      {p.name} — {PORTE_SIZES[p.size as keyof typeof PORTE_SIZES] ?? p.size}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              {petSize && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Porte: <span className="font-medium text-foreground">{PORTE_SIZES[petSize as keyof typeof PORTE_SIZES] ?? petSize}</span> — serviços filtrados automaticamente
-                </p>
-              )}
             </div>
-            <div className="flex items-center gap-3">
-              <Switch checked={usePackage} onCheckedChange={setUsePackage} id="use-package" />
-              <Label htmlFor="use-package">{usePackage ? "Usar pacote" : "Usar serviço avulso"}</Label>
-            </div>
-            {!usePackage ? (
-              <div>
-                <Label>Serviço *</Label>
-                <Select
-                  value={form.serviceId}
-                  onValueChange={v => { setForm(f => ({ ...f, serviceId: v })); autoFillPrice(v, form.packageId); }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={form.petId ? "Selecionar serviço" : "Selecione um pet primeiro"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {filteredServices.length === 0 && (
-                      <SelectItem value="_none" disabled>Nenhum serviço para este porte</SelectItem>
-                    )}
-                    {filteredServices.map(s => (
-                      <SelectItem key={s.id} value={String(s.id)}>
-                        {s.name} — R$ {Number(s.price).toFixed(2)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            ) : (
-              <div>
-                <Label>Pacote *</Label>
-                <Select value={form.packageId} onValueChange={v => { setForm(f => ({ ...f, packageId: v })); autoFillPrice(form.serviceId, v); }}>
-                  <SelectTrigger><SelectValue placeholder="Selecionar pacote" /></SelectTrigger>
-                  <SelectContent>
-                    {(packages as any[]).map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name} — R$ {Number(p.price).toFixed(2)}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+
+            {/* Price preview */}
+            {sell.petId && sell.packageId && (
+              <div className="rounded-lg bg-muted/40 border px-4 py-3 flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Valor do pacote</span>
+                {priceForPet !== null ? (
+                  <span className="text-lg font-bold text-primary">{formatBRL(priceForPet)}</span>
+                ) : (
+                  <span className="text-sm text-amber-600">Sem preço para este porte</span>
+                )}
               </div>
             )}
+
+            {/* Data e hora */}
             <div className="grid grid-cols-2 gap-3">
-              <div><Label>Data *</Label><Input type="date" value={form.scheduledDate} onChange={e => setForm(f => ({ ...f, scheduledDate: e.target.value }))} /></div>
-              <div><Label>Horário *</Label><Input type="time" value={form.scheduledTime} onChange={e => setForm(f => ({ ...f, scheduledTime: e.target.value }))} /></div>
+              <div className="space-y-1.5">
+                <Label>Data do 1º agend. *</Label>
+                <Input type="date" value={sell.startDate} onChange={e => setSell(f => ({ ...f, startDate: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Horário *</Label>
+                <Input type="time" value={sell.startTime} onChange={e => setSell(f => ({ ...f, startTime: e.target.value }))} />
+              </div>
             </div>
-            <div><Label>Valor Total (R$) *</Label><Input type="number" step="0.01" value={form.totalPrice} onChange={e => setForm(f => ({ ...f, totalPrice: e.target.value }))} /></div>
-            <div>
-              <Label>Repetir por quantas semanas? <span className="text-muted-foreground text-xs">(0 = sem recorrência)</span></Label>
-              <Input type="number" min="0" max="52" value={form.recurringWeeks} onChange={e => setForm(f => ({ ...f, recurringWeeks: e.target.value }))} className="w-32" />
-              {Number(form.recurringWeeks) > 0 && (
-                <p className="text-xs text-primary mt-1">Serão criados {Number(form.recurringWeeks) + 1} agendamentos (1 hoje + {form.recurringWeeks} repetições semanais)</p>
-              )}
+
+            {/* Sessions preview */}
+            {sellSessions.length > 0 && sell.startDate && (
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                  <CalendarCheck className="h-3.5 w-3.5" />
+                  Agendamentos que serão criados
+                </p>
+                <div className="rounded-lg border divide-y text-sm">
+                  {sellSessions.map((s, i) => {
+                    const d = new Date(`${sell.startDate}T${sell.startTime}`);
+                    d.setDate(d.getDate() + i * 7);
+                    return (
+                      <div key={s.index} className="flex items-center justify-between px-3 py-2">
+                        <span className="text-muted-foreground">
+                          {d.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" })} às {sell.startTime}
+                        </span>
+                        <span className={s.hasExtra ? "font-medium text-primary text-xs" : "text-xs"}>
+                          {s.label}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Notes */}
+            <div className="space-y-1.5">
+              <Label>Observações</Label>
+              <Textarea
+                placeholder="Observações para todos os agendamentos"
+                value={sell.notes}
+                onChange={e => setSell(f => ({ ...f, notes: e.target.value }))}
+                rows={2}
+              />
             </div>
-            <div><Label>Observações</Label><Textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} /></div>
           </div>
+
           <DialogFooter>
-            <Button variant="outline" onClick={() => setModalOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSave} disabled={!form.clientId || !form.petId || !form.totalPrice}>
-              {Number(form.recurringWeeks) > 0 ? `Criar ${Number(form.recurringWeeks) + 1} agendamentos` : "Criar Agendamento"}
+            <Button variant="outline" onClick={() => setSellOpen(false)}>Cancelar</Button>
+            <Button onClick={handleSellSave} disabled={sellPackage.isPending} className="gap-2">
+              <ShoppingCart className="h-4 w-4" />
+              {sellPackage.isPending
+                ? "Criando..."
+                : sellSessions.length > 0
+                  ? `Confirmar Venda (${sellSessions.length} agend.)`
+                  : "Confirmar Venda"}
             </Button>
           </DialogFooter>
         </DialogContent>
