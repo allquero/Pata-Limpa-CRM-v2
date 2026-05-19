@@ -8,6 +8,7 @@ import {
   useListAppointments, useUpdateAppointmentStatus, useCreateAppointment,
   useDeleteAppointment, useListClients, useListPets, useListServices,
   useListPackages, useCreateClient, useCreatePet, useSellPackage,
+  getListPetsQueryKey,
 } from "@workspace/api-client-react";
 import type {
   Client, Pet, Service, Package, SellPackageResult, PetInputSize,
@@ -239,10 +240,11 @@ export default function Agendamentos() {
   const { data: services = [] } = useListServices({ tenantId: DEFAULT_TENANT_ID });
   const { data: packages = [] } = useListPackages({ tenantId: DEFAULT_TENANT_ID });
 
-  // Pets for sell modal (filtered by selected client; clientId: 0 returns empty)
-  const { data: sellClientPets = [] } = useListPets(
-    sell.clientId ? { clientId: Number(sell.clientId) } : { clientId: 0 }
-  );
+  // Pets for sell modal — only fetched when a client is selected
+  const sellPetParams = sell.clientId ? { clientId: Number(sell.clientId) } : undefined;
+  const { data: sellClientPets = [] } = useListPets(sellPetParams, {
+    query: { queryKey: getListPetsQueryKey(sellPetParams), enabled: !!sell.clientId },
+  });
 
   const updateStatus = useUpdateAppointmentStatus();
   const createAppointment = useCreateAppointment();
