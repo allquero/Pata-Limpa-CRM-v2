@@ -91,7 +91,7 @@ function AppointmentCard({ appt, clients, pets, services, packages, onDelete, is
   };
 
   return (
-    <div className={`bg-white rounded-lg border shadow-sm p-3 cursor-grab active:cursor-grabbing select-none ${isDragging ? "opacity-50" : "hover:shadow-md"} transition-shadow`}>
+    <div className="bg-white rounded-lg border shadow-sm p-3 cursor-grab active:cursor-grabbing select-none hover:shadow-md transition-shadow pl-[5px] pr-[5px] pt-[5px] pb-[5px]">
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 mb-1">
@@ -222,11 +222,11 @@ function KanbanColumn({ status, label, color, bg, appointments, clients, pets, s
   const { setNodeRef, isOver } = useDroppable({ id: status });
   return (
     <div className={`flex flex-col rounded-xl border-2 ${bg} ${isOver ? "ring-2 ring-primary ring-offset-1" : ""} transition-all min-h-[400px]`}>
-      <div className="flex items-center justify-between px-3 py-2.5 border-b border-current/10">
+      <div className="flex items-center justify-between px-3 py-2.5 border-b border-current/10 pt-[4px] pb-[4px] pl-[6px] pr-[6px]">
         <span className={`font-semibold text-sm ${color}`}>{label}</span>
         <Badge variant="secondary" className="text-xs">{appointments.length}</Badge>
       </div>
-      <div ref={setNodeRef} className="flex-1 p-2 space-y-2 overflow-y-auto">
+      <div ref={setNodeRef} className="flex-1 p-2 space-y-2 overflow-y-auto pt-[3px] pb-[3px] pl-[3px] pr-[3px]">
         {appointments.length === 0 && (
           <div className="flex items-center justify-center h-24 text-xs text-muted-foreground">Nenhum agendamento</div>
         )}
@@ -616,9 +616,9 @@ export default function Agendamentos() {
   const STEP_LABELS = ["Cliente", "Pet", "Agendamento"];
 
   return (
-    <div className="p-6 space-y-4">
+    <div className="p-6 space-y-4 pl-[12px] pr-[12px] pt-[12px] pb-[12px]">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
+      <div className="flex items-center justify-between flex-wrap gap-3 mb-[8px]">
         <div>
           <h1 className="text-2xl font-bold">Agendamentos</h1>
           <p className="text-muted-foreground">Kanban de atendimentos</p>
@@ -634,9 +634,8 @@ export default function Agendamentos() {
           </Button>
         </div>
       </div>
-
       {/* Date navigation */}
-      <div className="flex items-center gap-4 flex-wrap">
+      <div className="flex items-center gap-4 flex-wrap mb-[8px]">
         <Tabs value={view} onValueChange={v => setView(v as "day" | "week")}>
           <TabsList>
             <TabsTrigger value="day">Dia</TabsTrigger>
@@ -659,7 +658,6 @@ export default function Agendamentos() {
           <Button variant="outline" size="sm" onClick={() => setSelectedDate(new Date())}>Hoje</Button>
         </div>
       </div>
-
       {/* Week strip */}
       {view === "week" && (
         <div className="flex gap-1 overflow-x-auto pb-1">
@@ -676,7 +674,6 @@ export default function Agendamentos() {
           ))}
         </div>
       )}
-
       {/* Kanban */}
       <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -718,7 +715,6 @@ export default function Agendamentos() {
           )}
         </DragOverlay>
       </DndContext>
-
       {/* ── Modal: Cliente Casual ─────────────────────────────────────────── */}
       <Dialog open={casualOpen} onOpenChange={open => { if (!open) setCasualOpen(false); }}>
         <DialogContent className="max-w-md">
@@ -1015,7 +1011,6 @@ export default function Agendamentos() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
       {/* ── Modal: Vender Pacote ──────────────────────────────────────────── */}
       <Dialog open={sellOpen} onOpenChange={open => { if (!open) setSellOpen(false); }}>
         <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
