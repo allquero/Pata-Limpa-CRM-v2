@@ -16,7 +16,7 @@ function isOptionalString(v: unknown): v is string | undefined | null {
   return v === undefined || v === null || typeof v === "string";
 }
 
-router.get("/admin/pending-users", async (_req, res): Promise<void> => {
+router.get("/pending-users", async (_req, res): Promise<void> => {
   const rows = await db
     .select({
       id: tenantsTable.id,
@@ -32,7 +32,7 @@ router.get("/admin/pending-users", async (_req, res): Promise<void> => {
   res.json(pending);
 });
 
-router.get("/admin/tenants", async (_req, res): Promise<void> => {
+router.get("/tenants", async (_req, res): Promise<void> => {
   const tenants = await db
     .select({
       id: tenantsTable.id,
@@ -52,7 +52,7 @@ router.get("/admin/tenants", async (_req, res): Promise<void> => {
   res.json(tenants);
 });
 
-router.post("/admin/tenants", async (req, res): Promise<void> => {
+router.post("/tenants", async (req, res): Promise<void> => {
   const body = req.body as Record<string, unknown>;
 
   if (
@@ -126,7 +126,7 @@ router.post("/admin/tenants", async (req, res): Promise<void> => {
   res.status(201).json({ ...tenant, loginEmail });
 });
 
-router.patch("/admin/tenants/:id", async (req, res): Promise<void> => {
+router.patch("/tenants/:id", async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   if (isNaN(id)) {
     res.status(400).json({ error: "ID inválido" });
@@ -155,7 +155,7 @@ router.patch("/admin/tenants/:id", async (req, res): Promise<void> => {
   res.json(tenant);
 });
 
-router.patch("/admin/tenants/:id/password", async (req, res): Promise<void> => {
+router.patch("/tenants/:id/password", async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   if (isNaN(id)) {
     res.status(400).json({ error: "ID inválido" });
@@ -189,7 +189,7 @@ router.patch("/admin/tenants/:id/password", async (req, res): Promise<void> => {
   res.json({ ok: true });
 });
 
-router.delete("/admin/tenants/:id", async (req, res): Promise<void> => {
+router.delete("/tenants/:id", async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   if (isNaN(id)) {
     res.status(400).json({ error: "ID inválido" });
@@ -199,7 +199,7 @@ router.delete("/admin/tenants/:id", async (req, res): Promise<void> => {
   res.status(204).end();
 });
 
-router.get("/admin/sales", async (_req, res): Promise<void> => {
+router.get("/sales", async (_req, res): Promise<void> => {
   const sales = await db
     .select()
     .from(adminSalesTable)
@@ -228,7 +228,7 @@ router.get("/admin/sales", async (_req, res): Promise<void> => {
   res.json({ sales, monthTotal, yearTotal, allTimeTotal });
 });
 
-router.post("/admin/sales", async (req, res): Promise<void> => {
+router.post("/sales", async (req, res): Promise<void> => {
   const body = req.body as Record<string, unknown>;
   const tenantId = Number(body.tenantId);
   const amount = Number(body.amount);
@@ -321,7 +321,7 @@ router.post("/admin/sales", async (req, res): Promise<void> => {
   res.status(201).json(sale);
 });
 
-router.delete("/admin/sales/:id", async (req, res): Promise<void> => {
+router.delete("/sales/:id", async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   if (isNaN(id)) {
     res.status(400).json({ error: "ID inválido" });

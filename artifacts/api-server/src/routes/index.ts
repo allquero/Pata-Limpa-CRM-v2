@@ -17,7 +17,7 @@ const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use(authRouter);
-router.use(adminRouter);
+router.use("/admin", adminRouter);
 router.use(tenantsRouter);
 router.use(clientsRouter);
 router.use(petsRouter);
