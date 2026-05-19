@@ -9,25 +9,26 @@ import {
   useDeleteAppointment, useListClients, useListPets, useListServices,
   useListPackages, useCreateClient, useCreatePet, useSellPackage,
 } from "@workspace/api-client-react";
+import type {
+  Client, Pet, Service, Package, SellPackageResult, PetInputSize,
+} from "@workspace/api-client-react";
 import { DEFAULT_TENANT_ID, PORTE_SIZES } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Plus, Trash2, ChevronLeft, ChevronRight, Clock, PawPrint,
-  MessageSquare, UserPlus, ShoppingCart, CalendarCheck, ChevronRight as Next,
+  Trash2, ChevronLeft, ChevronRight, Clock, PawPrint,
+  MessageSquare, UserPlus, ShoppingCart, CalendarCheck,
+  ChevronRight as ArrowNext,
 } from "lucide-react";
 import { format, addDays, startOfWeek, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { useQueryClient } from "@tanstack/react-query";
 
 type AppStatus = "aguardando" | "em_atendimento" | "concluido" | "cancelado";
 
@@ -39,15 +40,8 @@ type Appointment = {
   packageId?: number | null;
   scheduledDate: string;
   status: AppStatus;
-  totalPrice: string;
+  totalPrice: string | number;
   notes?: string | null;
-};
-
-type Pkg = {
-  id: number;
-  name: string;
-  serviceItems: { serviceName: string; quantity: number }[];
-  priceBySizes: { size: string; price: number }[];
 };
 
 const COLUMNS: { id: AppStatus; label: string; color: string; bg: string }[] = [
@@ -61,12 +55,14 @@ function formatBRL(v: number) {
   return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
+// ─── Card components ──────────────────────────────────────────────────────────
+
 function AppointmentCard({ appt, clients, pets, services, packages, onDelete, isDragging = false }: {
   appt: Appointment;
-  clients: any[];
-  pets: any[];
-  services: any[];
-  packages: any[];
+  clients: Client[];
+  pets: Pet[];
+  services: Service[];
+  packages: Package[];
   onDelete: (id: number) => void;
   isDragging?: boolean;
 }) {
@@ -75,11 +71,12 @@ function AppointmentCard({ appt, clients, pets, services, packages, onDelete, is
   const service = services.find(s => s.id === appt.serviceId);
   const pkg = packages.find(p => p.id === appt.packageId);
   const time = new Date(appt.scheduledDate).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  const price = Number(appt.totalPrice);
 
   const openWhatsapp = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!client?.phone) return;
-    const msg = `Olá ${client.name}! Confirmamos o agendamento de ${pet?.name ?? "seu pet"} para ${format(new Date(appt.scheduledDate), "dd/MM 'às' HH:mm")}. Serviço: ${service?.name ?? pkg?.name ?? "Serviço"}. Valor: R$ ${Number(appt.totalPrice).toFixed(2)}.`;
+    const msg = `Olá ${client.name}! Confirmamos o agendamento de ${pet?.name ?? "seu pet"} para ${format(new Date(appt.scheduledDate), "dd/MM 'às' HH:mm")}. Serviço: ${service?.name ?? pkg?.name ?? "Serviço"}. Valor: ${formatBRL(price)}.`;
     const cleaned = client.phone.replace(/\D/g, "");
     window.open(`https://wa.me/55${cleaned}?text=${encodeURIComponent(msg)}`, "_blank");
   };
@@ -91,7 +88,7 @@ function AppointmentCard({ appt, clients, pets, services, packages, onDelete, is
           <div className="flex items-center gap-1.5 mb-1">
             <PawPrint className="h-3.5 w-3.5 text-primary shrink-0" />
             <span className="font-semibold text-sm truncate">{pet?.name ?? "Pet"}</span>
-            {pet?.size && <Badge variant="secondary" className="text-xs px-1 py-0">{PORTE_SIZES[pet.size as keyof typeof PORTE_SIZES] ?? pet.size}</Badge>}
+            {pet?.size && <Badge variant="secondary" className="text-xs px-1 py-0">{PORTE_SIZES[pet.size] ?? pet.size}</Badge>}
           </div>
           <p className="text-xs text-muted-foreground truncate">{client?.name ?? "Cliente"}</p>
           <p className="text-xs text-muted-foreground">{service?.name ?? pkg?.name ?? "Serviço"}</p>
@@ -109,7 +106,7 @@ function AppointmentCard({ appt, clients, pets, services, packages, onDelete, is
           {time}
         </div>
         <div className="flex items-center gap-1">
-          <span className="text-xs font-semibold text-primary">R$ {Number(appt.totalPrice).toFixed(2)}</span>
+          <span className="text-xs font-semibold text-primary">{formatBRL(price)}</span>
           {client?.phone && (
             <button onClick={openWhatsapp} className="p-1 rounded hover:bg-green-50 text-green-600 transition-colors" title="Enviar WhatsApp">
               <MessageSquare className="h-3.5 w-3.5" />
@@ -123,10 +120,10 @@ function AppointmentCard({ appt, clients, pets, services, packages, onDelete, is
 
 function DraggableCard({ appt, clients, pets, services, packages, onDelete }: {
   appt: Appointment;
-  clients: any[];
-  pets: any[];
-  services: any[];
-  packages: any[];
+  clients: Client[];
+  pets: Pet[];
+  services: Service[];
+  packages: Package[];
   onDelete: (id: number) => void;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: appt.id });
@@ -143,10 +140,10 @@ function KanbanColumn({ status, label, color, bg, appointments, clients, pets, s
   color: string;
   bg: string;
   appointments: Appointment[];
-  clients: any[];
-  pets: any[];
-  services: any[];
-  packages: any[];
+  clients: Client[];
+  pets: Pet[];
+  services: Service[];
+  packages: Package[];
   onDelete: (id: number) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
@@ -168,13 +165,14 @@ function KanbanColumn({ status, label, color, bg, appointments, clients, pets, s
   );
 }
 
-// ─── Casual form state ────────────────────────────────────────────────────────
+// ─── Form state ───────────────────────────────────────────────────────────────
+
 const emptyCasual = {
   clientName: "",
   clientPhone: "",
   petName: "",
   petBreed: "",
-  petSize: "",
+  petSize: "" as PetInputSize | "",
   serviceId: "",
   scheduledDate: new Date().toISOString().substring(0, 10),
   scheduledTime: "09:00",
@@ -182,7 +180,6 @@ const emptyCasual = {
   notes: "",
 };
 
-// ─── Sell-package form state ──────────────────────────────────────────────────
 const emptySell = {
   packageId: "",
   clientId: "",
@@ -193,13 +190,14 @@ const emptySell = {
 };
 
 // ─── Step indicator ───────────────────────────────────────────────────────────
+
 function StepDots({ step, total }: { step: number; total: number }) {
   return (
     <div className="flex items-center gap-1.5 mb-4">
       {Array.from({ length: total }, (_, i) => (
         <div
           key={i}
-          className={`h-1.5 rounded-full transition-all ${i < step ? "bg-primary flex-1" : i === step ? "bg-primary flex-1" : "bg-muted flex-[0.4]"}`}
+          className={`h-1.5 rounded-full transition-all ${i <= step ? "bg-primary flex-1" : "bg-muted flex-[0.4]"}`}
         />
       ))}
     </div>
@@ -207,16 +205,16 @@ function StepDots({ step, total }: { step: number; total: number }) {
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
+
 export default function Agendamentos() {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const [view, setView] = useState<"day" | "week">("day");
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [activeId, setActiveId] = useState<number | null>(null);
 
   // Casual modal
   const [casualOpen, setCasualOpen] = useState(false);
-  const [casualStep, setCasualStep] = useState(0); // 0=cliente 1=pet 2=agendamento
+  const [casualStep, setCasualStep] = useState(0);
   const [casual, setCasual] = useState(emptyCasual);
 
   // Sell package modal
@@ -241,10 +239,9 @@ export default function Agendamentos() {
   const { data: services = [] } = useListServices({ tenantId: DEFAULT_TENANT_ID });
   const { data: packages = [] } = useListPackages({ tenantId: DEFAULT_TENANT_ID });
 
-  // Pets for sell modal (filtered by selected client)
+  // Pets for sell modal (filtered by selected client; clientId: 0 returns empty)
   const { data: sellClientPets = [] } = useListPets(
-    sell.clientId ? { clientId: Number(sell.clientId) } : { clientId: 0 },
-    { enabled: !!sell.clientId }
+    sell.clientId ? { clientId: Number(sell.clientId) } : { clientId: 0 }
   );
 
   const updateStatus = useUpdateAppointmentStatus();
@@ -256,13 +253,13 @@ export default function Agendamentos() {
 
   // ── Casual: services filtered by pet size ──────────────────────────────────
   const casualFilteredServices = casual.petSize
-    ? (services as any[]).filter(s => s.size === casual.petSize)
-    : (services as any[]);
+    ? (services as Service[]).filter(s => s.size === casual.petSize)
+    : (services as Service[]);
 
   // ── Sell: selected package & price for pet ────────────────────────────────
-  const selectedPkg = (packages as Pkg[]).find(p => p.id === Number(sell.packageId));
-  const sellPet = (sellClientPets as any[]).find(p => p.id === Number(sell.petId));
-  const sellPetSize = sellPet?.size as string | undefined;
+  const selectedPkg = (packages as Package[]).find(p => p.id === Number(sell.packageId));
+  const sellPet = (sellClientPets as Pet[]).find(p => p.id === Number(sell.petId));
+  const sellPetSize = sellPet?.size;
   const priceForPet = sellPetSize && selectedPkg
     ? (selectedPkg.priceBySizes.find(p => p.size === sellPetSize)?.price ?? null)
     : null;
@@ -307,14 +304,12 @@ export default function Agendamentos() {
     refetch();
   };
 
-  // ── Casual: open / close ──────────────────────────────────────────────────
+  // ── Casual modal ──────────────────────────────────────────────────────────
   const openCasual = () => {
     setCasual(emptyCasual);
     setCasualStep(0);
     setCasualOpen(true);
   };
-
-  const closeCasual = () => setCasualOpen(false);
 
   const casualNextStep = () => {
     if (casualStep === 0) {
@@ -328,42 +323,41 @@ export default function Agendamentos() {
     setCasualStep(s => s + 1);
   };
 
-  // ── Casual: submit ────────────────────────────────────────────────────────
   const handleCasualSave = async () => {
     if (!casual.serviceId) { toast({ title: "Selecione um serviço", variant: "destructive" }); return; }
     if (!casual.scheduledDate || !casual.scheduledTime) { toast({ title: "Data e horário são obrigatórios", variant: "destructive" }); return; }
     if (!casual.totalPrice) { toast({ title: "Informe o valor", variant: "destructive" }); return; }
+    if (!casual.petSize) { toast({ title: "Porte do pet é obrigatório", variant: "destructive" }); return; }
     try {
-      const newClient = await createClient.mutateAsync({
+      const newClient: Client = await createClient.mutateAsync({
         data: {
           tenantId: DEFAULT_TENANT_ID,
           name: casual.clientName.trim(),
           phone: casual.clientPhone.trim(),
         },
       });
-      const newPet = await createPet.mutateAsync({
+      const newPet: Pet = await createPet.mutateAsync({
         data: {
-          clientId: (newClient as any).id,
+          clientId: newClient.id,
           name: casual.petName.trim(),
           breed: casual.petBreed.trim() || undefined,
-          size: casual.petSize as any,
+          size: casual.petSize,
         },
       });
       const dt = new Date(`${casual.scheduledDate}T${casual.scheduledTime}:00`);
       await createAppointment.mutateAsync({
         data: {
           tenantId: DEFAULT_TENANT_ID,
-          clientId: (newClient as any).id,
-          petId: (newPet as any).id,
+          clientId: newClient.id,
+          petId: newPet.id,
           serviceId: Number(casual.serviceId),
           scheduledDate: dt.toISOString(),
-          status: "aguardando",
           totalPrice: Number(casual.totalPrice),
           notes: casual.notes || undefined,
         },
       });
       toast({ title: "Agendamento criado!", description: `${casual.clientName} · ${casual.petName}` });
-      closeCasual();
+      setCasualOpen(false);
       refetch();
     } catch {
       toast({ title: "Erro ao criar agendamento", variant: "destructive" });
@@ -372,20 +366,19 @@ export default function Agendamentos() {
 
   const isCasualSaving = createClient.isPending || createPet.isPending || createAppointment.isPending;
 
-  // ── Sell package: open / close ────────────────────────────────────────────
+  // ── Sell package modal ────────────────────────────────────────────────────
   const openSell = () => {
     setSell(emptySell);
     setSellOpen(true);
   };
 
-  // ── Sell package: submit ──────────────────────────────────────────────────
   const handleSellSave = async () => {
     if (!sell.packageId) { toast({ title: "Selecione o pacote", variant: "destructive" }); return; }
     if (!sell.clientId) { toast({ title: "Selecione o cliente", variant: "destructive" }); return; }
     if (!sell.petId) { toast({ title: "Selecione o pet", variant: "destructive" }); return; }
     if (!sell.startDate || !sell.startTime) { toast({ title: "Data e horário são obrigatórios", variant: "destructive" }); return; }
     try {
-      const result = await sellPackage.mutateAsync({
+      const result: SellPackageResult = await sellPackage.mutateAsync({
         id: Number(sell.packageId),
         data: {
           tenantId: DEFAULT_TENANT_ID,
@@ -396,8 +389,8 @@ export default function Agendamentos() {
           notes: sell.notes || null,
         },
       });
-      const count = (result as any).appointments?.length ?? 0;
-      const price = (result as any).financialEntry?.amount ?? 0;
+      const count = result.appointments.length;
+      const price = result.financialEntry.amount;
       toast({
         title: "Pacote vendido com sucesso!",
         description: `${count} agendamento${count !== 1 ? "s" : ""} criado${count !== 1 ? "s" : ""} · Receita: ${formatBRL(price)}`,
@@ -490,10 +483,10 @@ export default function Agendamentos() {
               color={col.color}
               bg={col.bg}
               appointments={filterByStatus(col.id).sort((a, b) => new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime())}
-              clients={clients as any[]}
-              pets={allPets as any[]}
-              services={services as any[]}
-              packages={packages as any[]}
+              clients={clients as Client[]}
+              pets={allPets as Pet[]}
+              services={services as Service[]}
+              packages={packages as Package[]}
               onDelete={handleDelete}
             />
           ))}
@@ -503,10 +496,10 @@ export default function Agendamentos() {
             <div className="shadow-2xl rotate-1 scale-105">
               <AppointmentCard
                 appt={activeAppt}
-                clients={clients as any[]}
-                pets={allPets as any[]}
-                services={services as any[]}
-                packages={packages as any[]}
+                clients={clients as Client[]}
+                pets={allPets as Pet[]}
+                services={services as Service[]}
+                packages={packages as Package[]}
                 onDelete={() => {}}
               />
             </div>
@@ -515,7 +508,7 @@ export default function Agendamentos() {
       </DndContext>
 
       {/* ── Modal: Cliente Casual ─────────────────────────────────────────── */}
-      <Dialog open={casualOpen} onOpenChange={o => { if (!o) closeCasual(); }}>
+      <Dialog open={casualOpen} onOpenChange={open => { if (!open) setCasualOpen(false); }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -538,7 +531,6 @@ export default function Agendamentos() {
           <StepDots step={casualStep} total={3} />
 
           <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
-
             {/* Step 0: Cliente */}
             {casualStep === 0 && (
               <>
@@ -584,10 +576,13 @@ export default function Agendamentos() {
                 </div>
                 <div className="space-y-1.5">
                   <Label>Porte *</Label>
-                  <Select value={casual.petSize} onValueChange={v => setCasual(f => ({ ...f, petSize: v, serviceId: "", totalPrice: "" }))}>
+                  <Select
+                    value={casual.petSize}
+                    onValueChange={v => setCasual(f => ({ ...f, petSize: v as PetInputSize, serviceId: "", totalPrice: "" }))}
+                  >
                     <SelectTrigger><SelectValue placeholder="Selecione o porte" /></SelectTrigger>
                     <SelectContent>
-                      {Object.entries(PORTE_SIZES).map(([val, lbl]) => (
+                      {(Object.entries(PORTE_SIZES) as [PetInputSize, string][]).map(([val, lbl]) => (
                         <SelectItem key={val} value={val}>{lbl}</SelectItem>
                       ))}
                     </SelectContent>
@@ -604,7 +599,7 @@ export default function Agendamentos() {
                   <Select
                     value={casual.serviceId}
                     onValueChange={v => {
-                      const svc = (services as any[]).find(s => s.id === Number(v));
+                      const svc = (services as Service[]).find(s => s.id === Number(v));
                       setCasual(f => ({ ...f, serviceId: v, totalPrice: svc ? String(svc.price) : f.totalPrice }));
                     }}
                   >
@@ -615,16 +610,16 @@ export default function Agendamentos() {
                       {casualFilteredServices.length === 0 && (
                         <SelectItem value="_none" disabled>Nenhum serviço para este porte</SelectItem>
                       )}
-                      {casualFilteredServices.map((s: any) => (
+                      {casualFilteredServices.map(s => (
                         <SelectItem key={s.id} value={String(s.id)}>
-                          {s.name} — {formatBRL(Number(s.price))}
+                          {s.name} — {formatBRL(s.price)}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                   {casual.petSize && (
                     <p className="text-xs text-muted-foreground">
-                      Serviços filtrados para porte: <span className="font-medium">{PORTE_SIZES[casual.petSize as keyof typeof PORTE_SIZES]}</span>
+                      Serviços filtrados para porte: <span className="font-medium">{PORTE_SIZES[casual.petSize]}</span>
                     </p>
                   )}
                 </div>
@@ -666,10 +661,10 @@ export default function Agendamentos() {
             {casualStep > 0 && (
               <Button variant="outline" onClick={() => setCasualStep(s => s - 1)}>Voltar</Button>
             )}
-            <Button variant="outline" onClick={closeCasual}>Cancelar</Button>
+            <Button variant="outline" onClick={() => setCasualOpen(false)}>Cancelar</Button>
             {casualStep < 2 ? (
               <Button onClick={casualNextStep}>
-                Próximo <Next className="h-4 w-4 ml-1" />
+                Próximo <ArrowNext className="h-4 w-4 ml-1" />
               </Button>
             ) : (
               <Button onClick={handleCasualSave} disabled={isCasualSaving}>
@@ -681,7 +676,7 @@ export default function Agendamentos() {
       </Dialog>
 
       {/* ── Modal: Vender Pacote ──────────────────────────────────────────── */}
-      <Dialog open={sellOpen} onOpenChange={o => { if (!o) setSellOpen(false); }}>
+      <Dialog open={sellOpen} onOpenChange={open => { if (!open) setSellOpen(false); }}>
         <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -697,7 +692,7 @@ export default function Agendamentos() {
               <Select value={sell.packageId} onValueChange={v => setSell(f => ({ ...f, packageId: v, petId: "" }))}>
                 <SelectTrigger><SelectValue placeholder="Selecione o pacote" /></SelectTrigger>
                 <SelectContent>
-                  {(packages as Pkg[]).map(p => {
+                  {(packages as Package[]).map(p => {
                     const prices = p.priceBySizes.map(x => x.price).filter(x => x > 0);
                     const min = prices.length ? Math.min(...prices) : 0;
                     const max = prices.length ? Math.max(...prices) : 0;
@@ -725,7 +720,7 @@ export default function Agendamentos() {
               <Select value={sell.clientId} onValueChange={v => setSell(f => ({ ...f, clientId: v, petId: "" }))}>
                 <SelectTrigger><SelectValue placeholder="Selecione o cliente" /></SelectTrigger>
                 <SelectContent>
-                  {(clients as any[]).map((c: any) => (
+                  {(clients as Client[]).map(c => (
                     <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
                   ))}
                 </SelectContent>
@@ -744,9 +739,9 @@ export default function Agendamentos() {
                   <SelectValue placeholder={sell.clientId ? "Selecione o pet" : "Selecione um cliente primeiro"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {(sellClientPets as any[]).map((p: any) => (
+                  {(sellClientPets as Pet[]).map(p => (
                     <SelectItem key={p.id} value={String(p.id)}>
-                      {p.name} — {PORTE_SIZES[p.size as keyof typeof PORTE_SIZES] ?? p.size}
+                      {p.name} — {PORTE_SIZES[p.size] ?? p.size}
                     </SelectItem>
                   ))}
                 </SelectContent>
