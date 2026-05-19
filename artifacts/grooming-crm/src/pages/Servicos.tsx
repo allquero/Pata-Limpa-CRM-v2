@@ -61,6 +61,11 @@ export default function Servicos() {
       toast({ title: "Nome é obrigatório", variant: "destructive" });
       return;
     }
+    const duration = Number(bulkForm.durationMinutes);
+    if (!duration || !isFinite(duration) || duration <= 0) {
+      toast({ title: "Duração deve ser maior que zero", variant: "destructive" });
+      return;
+    }
     const toCreate = ALL_SIZES.filter(([size]) => {
       const val = parseFloat(bulkForm.prices[size] ?? "");
       return !isNaN(val) && val > 0;
@@ -70,32 +75,45 @@ export default function Servicos() {
       return;
     }
     setIsSaving(true);
-    try {
-      await Promise.all(
-        toCreate.map(([size]) =>
-          createService.mutateAsync({
-            data: {
-              tenantId: tenantId!,
-              name: bulkForm.name.trim(),
-              size: size as ServiceInputSize,
-              price: parseFloat(bulkForm.prices[size]!),
-              durationMinutes: Number(bulkForm.durationMinutes),
-            },
-          })
-        )
-      );
-      toast({ title: `Serviço criado para ${toCreate.length} porte${toCreate.length !== 1 ? "s" : ""}!` });
+    const results = await Promise.allSettled(
+      toCreate.map(([size]) =>
+        createService.mutateAsync({
+          data: {
+            tenantId: tenantId!,
+            name: bulkForm.name.trim(),
+            size: size as ServiceInputSize,
+            price: parseFloat(bulkForm.prices[size]!),
+            durationMinutes: duration,
+          },
+        })
+      )
+    );
+    setIsSaving(false);
+    const succeeded = results.filter(r => r.status === "fulfilled").length;
+    const failed = results.filter(r => r.status === "rejected").length;
+    if (failed === 0) {
+      toast({ title: `Serviço criado para ${succeeded} porte${succeeded !== 1 ? "s" : ""}!` });
       setCreateOpen(false);
-      refetch();
-    } catch {
-      toast({ title: "Erro ao salvar serviço", variant: "destructive" });
-    } finally {
-      setIsSaving(false);
+    } else if (succeeded === 0) {
+      toast({ title: "Erro ao salvar os portes", variant: "destructive" });
+    } else {
+      toast({
+        title: `${succeeded} porte${succeeded !== 1 ? "s" : ""} criado${succeeded !== 1 ? "s" : ""}`,
+        description: `${failed} porte${failed !== 1 ? "s" : ""} não foi salvo. Tente novamente.`,
+        variant: "destructive",
+      });
+      setCreateOpen(false);
     }
+    refetch();
   };
 
   const handleEdit = async () => {
     if (!editing) return;
+    const duration = Number(editForm.durationMinutes);
+    if (!duration || !isFinite(duration) || duration <= 0) {
+      toast({ title: "Duração deve ser maior que zero", variant: "destructive" });
+      return;
+    }
     try {
       await updateService.mutateAsync({
         id: editing.id,
@@ -103,7 +121,7 @@ export default function Servicos() {
           name: editForm.name,
           size: editForm.size as ServiceInputSize,
           price: Number(editForm.price),
-          durationMinutes: Number(editForm.durationMinutes),
+          durationMinutes: duration,
         },
       });
       toast({ title: "Serviço atualizado!" });
