@@ -11,6 +11,8 @@ export interface HealthStatus {
 
 export interface Tenant {
   id: number;
+  /** @nullable */
+  userId?: string | null;
   name: string;
   /** @nullable */
   phone?: string | null;
@@ -18,6 +20,10 @@ export interface Tenant {
   email?: string | null;
   /** @nullable */
   address?: string | null;
+  /** @nullable */
+  accessStart?: string | null;
+  /** @nullable */
+  accessEnd?: string | null;
   createdAt: string;
 }
 
@@ -583,6 +589,7 @@ export interface AuthUser {
 
 export interface AuthUserEnvelope {
   user: AuthUser | null;
+  isAdmin: boolean;
 }
 
 export interface MyTenantEnvelope {

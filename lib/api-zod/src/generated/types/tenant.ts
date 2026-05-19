@@ -8,6 +8,8 @@
 
 export interface Tenant {
   id: number;
+  /** @nullable */
+  userId?: string | null;
   name: string;
   /** @nullable */
   phone?: string | null;
@@ -15,5 +17,9 @@ export interface Tenant {
   email?: string | null;
   /** @nullable */
   address?: string | null;
+  /** @nullable */
+  accessStart?: Date | null;
+  /** @nullable */
+  accessEnd?: Date | null;
   createdAt: Date;
 }

@@ -1,4 +1,4 @@
-import { pgTable, serial, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, timestamp, uniqueIndex, varchar, date } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -9,6 +9,8 @@ export const tenantsTable = pgTable("tenants", {
   phone: text("phone"),
   email: text("email"),
   address: text("address"),
+  accessStart: date("access_start"),
+  accessEnd: date("access_end"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (table) => [

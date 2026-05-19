@@ -12,7 +12,10 @@ import Leads from "@/pages/Leads";
 import Empresas from "@/pages/Empresas";
 import NotFound from "@/pages/not-found";
 import Login from "@/pages/Login";
-import CadastroEmpresa from "@/pages/CadastroEmpresa";
+import Admin from "@/pages/Admin";
+import AguardandoAprovacao from "@/pages/AguardandoAprovacao";
+import AcessoExpirado from "@/pages/AcessoExpirado";
+import AcessoNaoIniciado from "@/pages/AcessoNaoIniciado";
 import { useAppAuth } from "@/lib/auth-context";
 import { Scissors } from "lucide-react";
 
@@ -28,11 +31,18 @@ function LoadingScreen() {
 }
 
 export function Router() {
-  const { isLoading, isAuthenticated, hasTenant } = useAppAuth();
+  const { isLoading, isAuthenticated, isAdmin, hasTenant, accessStatus } = useAppAuth();
 
   if (isLoading) return <LoadingScreen />;
   if (!isAuthenticated) return <Login />;
-  if (!hasTenant) return <CadastroEmpresa />;
+
+  if (isAdmin) {
+    return <Admin />;
+  }
+
+  if (!hasTenant || accessStatus === "pending") return <AguardandoAprovacao />;
+  if (accessStatus === "not_started") return <AcessoNaoIniciado />;
+  if (accessStatus === "expired") return <AcessoExpirado />;
 
   return (
     <AppLayout>

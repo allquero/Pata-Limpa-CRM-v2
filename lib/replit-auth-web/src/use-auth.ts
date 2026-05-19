@@ -5,6 +5,7 @@ export type { AuthUser };
 
 interface AuthState {
   user: AuthUser | null;
+  isAdmin: boolean;
   isLoading: boolean;
   isAuthenticated: boolean;
   login: () => void;
@@ -13,6 +14,7 @@ interface AuthState {
 
 export function useAuth(): AuthState {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -21,17 +23,19 @@ export function useAuth(): AuthState {
     fetch("/api/auth/user", { credentials: "include" })
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json() as Promise<{ user: AuthUser | null }>;
+        return res.json() as Promise<{ user: AuthUser | null; isAdmin?: boolean }>;
       })
       .then((data) => {
         if (!cancelled) {
           setUser(data.user ?? null);
+          setIsAdmin(data.isAdmin ?? false);
           setIsLoading(false);
         }
       })
       .catch(() => {
         if (!cancelled) {
           setUser(null);
+          setIsAdmin(false);
           setIsLoading(false);
         }
       });
@@ -52,6 +56,7 @@ export function useAuth(): AuthState {
 
   return {
     user,
+    isAdmin,
     isLoading,
     isAuthenticated: !!user,
     login,

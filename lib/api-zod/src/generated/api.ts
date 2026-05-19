@@ -28,6 +28,7 @@ export const GetCurrentAuthUserResponse = zod.object({
     }),
     zod.null(),
   ]),
+  isAdmin: zod.boolean(),
 });
 
 /**
@@ -44,10 +45,13 @@ export const GetMyTenantResponse = zod.object({
   tenant: zod.union([
     zod.object({
       id: zod.number(),
+      userId: zod.string().nullish(),
       name: zod.string(),
       phone: zod.string().nullish(),
       email: zod.string().nullish(),
       address: zod.string().nullish(),
+      accessStart: zod.coerce.date().nullish(),
+      accessEnd: zod.coerce.date().nullish(),
       createdAt: zod.coerce.date(),
     }),
     zod.null(),
@@ -144,10 +148,13 @@ export const HealthCheckResponse = zod.object({
  */
 export const ListTenantsResponseItem = zod.object({
   id: zod.number(),
+  userId: zod.string().nullish(),
   name: zod.string(),
   phone: zod.string().nullish(),
   email: zod.string().nullish(),
   address: zod.string().nullish(),
+  accessStart: zod.coerce.date().nullish(),
+  accessEnd: zod.coerce.date().nullish(),
   createdAt: zod.coerce.date(),
 });
 export const ListTenantsResponse = zod.array(ListTenantsResponseItem);
@@ -171,10 +178,13 @@ export const GetTenantParams = zod.object({
 
 export const GetTenantResponse = zod.object({
   id: zod.number(),
+  userId: zod.string().nullish(),
   name: zod.string(),
   phone: zod.string().nullish(),
   email: zod.string().nullish(),
   address: zod.string().nullish(),
+  accessStart: zod.coerce.date().nullish(),
+  accessEnd: zod.coerce.date().nullish(),
   createdAt: zod.coerce.date(),
 });
 
@@ -194,10 +204,13 @@ export const UpdateTenantBody = zod.object({
 
 export const UpdateTenantResponse = zod.object({
   id: zod.number(),
+  userId: zod.string().nullish(),
   name: zod.string(),
   phone: zod.string().nullish(),
   email: zod.string().nullish(),
   address: zod.string().nullish(),
+  accessStart: zod.coerce.date().nullish(),
+  accessEnd: zod.coerce.date().nullish(),
   createdAt: zod.coerce.date(),
 });
 

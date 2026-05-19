@@ -84,11 +84,13 @@ async function upsertUser(claims: Record<string, unknown>) {
 }
 
 router.get("/auth/user", (req: Request, res: Response) => {
-  res.json(
-    GetCurrentAuthUserResponse.parse({
-      user: req.isAuthenticated() ? req.user : null,
-    }),
-  );
+  const adminId = process.env.ADMIN_REPLIT_USER_ID;
+  const isAdmin = req.isAuthenticated() && !!adminId && req.user.id === adminId;
+  const parsed = GetCurrentAuthUserResponse.parse({
+    user: req.isAuthenticated() ? req.user : null,
+    isAdmin,
+  });
+  res.json(parsed);
 });
 
 router.get("/auth/me/tenant", async (req: Request, res: Response) => {
@@ -104,28 +106,7 @@ router.get("/auth/me/tenant", async (req: Request, res: Response) => {
 });
 
 router.post("/auth/me/tenant", async (req: Request, res: Response) => {
-  if (!req.isAuthenticated()) {
-    res.status(401).json({ error: "Não autenticado" });
-    return;
-  }
-  const existing = await db
-    .select()
-    .from(tenantsTable)
-    .where(eq(tenantsTable.userId, req.user.id));
-  if (existing.length > 0) {
-    res.status(400).json({ error: "Empresa já cadastrada para este usuário" });
-    return;
-  }
-  const parsed = insertTenantSchema.omit({ userId: true }).safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message });
-    return;
-  }
-  const [tenant] = await db
-    .insert(tenantsTable)
-    .values({ ...parsed.data, userId: req.user.id })
-    .returning();
-  res.status(201).json(tenant);
+  res.status(403).json({ error: "Cadastro de empresas é feito pelo administrador. Entre em contato com o suporte." });
 });
 
 router.get("/login", async (req: Request, res: Response) => {

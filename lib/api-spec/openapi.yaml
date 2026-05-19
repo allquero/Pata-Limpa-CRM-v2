@@ -12,6 +12,8 @@ tags:
     description: Browser and mobile authentication endpoints.
   - name: health
     description: Health operations
+  - name: admin
+    description: Admin panel for managing pet shop registrations and access
   - name: tenants
     description: Grooming business tenants
   - name: clients
@@ -1255,6 +1257,8 @@ components:
       properties:
         id:
           type: integer
+        userId:
+          type: ["string", "null"]
         name:
           type: string
         phone:
@@ -1263,6 +1267,12 @@ components:
           type: ["string", "null"]
         address:
           type: ["string", "null"]
+        accessStart:
+          type: ["string", "null"]
+          format: date
+        accessEnd:
+          type: ["string", "null"]
+          format: date
         createdAt:
           type: string
           format: date-time
@@ -2013,12 +2023,14 @@ components:
 
     AuthUserEnvelope:
       type: object
-      required: [user]
+      required: [user, isAdmin]
       properties:
         user:
           oneOf:
             - $ref: '#/components/schemas/AuthUser'
             - type: 'null'
+        isAdmin:
+          type: boolean
 
     MyTenantEnvelope:
       type: object
