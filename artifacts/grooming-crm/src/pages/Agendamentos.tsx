@@ -75,7 +75,7 @@ function formatBRL(v: number) {
 
 // ─── Card components ──────────────────────────────────────────────────────────
 
-function AppointmentCard({ appt, clients, pets, services, packages, onDelete, onWhatsapp, onEditService, isDragging = false, isEditingDate, editDate, editTime, onStartEditDate, onChangeEditDate, onSaveEditDate, onCancelEditDate }: {
+function AppointmentCard({ appt, clients, pets, services, packages, onDelete, onWhatsapp, onEditService, onChangeStatus, isDragging = false, isEditingDate, editDate, editTime, onStartEditDate, onChangeEditDate, onSaveEditDate, onCancelEditDate }: {
   appt: Appointment;
   clients: Client[];
   pets: Pet[];
@@ -84,6 +84,7 @@ function AppointmentCard({ appt, clients, pets, services, packages, onDelete, on
   onDelete: (id: number) => void;
   onWhatsapp?: (appt: Appointment) => void;
   onEditService?: (appt: Appointment) => void;
+  onChangeStatus?: (appt: Appointment, newStatus: AppStatus) => void;
   isDragging?: boolean;
   isEditingDate?: boolean;
   editDate?: string;
@@ -175,11 +176,38 @@ function AppointmentCard({ appt, clients, pets, services, packages, onDelete, on
           <span className="text-xs font-semibold text-primary">{formatBRL(price)}</span>
         </div>
       </div>
+      {/* Status buttons — always visible on mobile, hidden on desktop */}
+      {onChangeStatus && appt.status !== "concluido" && appt.status !== "cancelado" && (
+        <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-dashed md:hidden" onClick={e => e.stopPropagation()}>
+          {appt.status === "aguardando" && (
+            <button
+              onClick={e => { e.stopPropagation(); onChangeStatus(appt, "em_atendimento"); }}
+              className="flex-1 flex items-center justify-center gap-1 text-xs py-1 px-2 rounded bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
+            >
+              <ChevronRight className="h-3 w-3" /> Em Atendimento
+            </button>
+          )}
+          {appt.status === "em_atendimento" && (
+            <button
+              onClick={e => { e.stopPropagation(); onChangeStatus(appt, "concluido"); }}
+              className="flex-1 flex items-center justify-center gap-1 text-xs py-1 px-2 rounded bg-green-50 text-green-700 hover:bg-green-100 transition-colors"
+            >
+              <CheckCheck className="h-3 w-3" /> Concluído
+            </button>
+          )}
+          <button
+            onClick={e => { e.stopPropagation(); onChangeStatus(appt, "cancelado"); }}
+            className="flex items-center justify-center gap-1 text-xs py-1 px-2 rounded bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+          >
+            <X className="h-3 w-3" /> Cancelar
+          </button>
+        </div>
+      )}
     </div>
   );
 }
 
-function DraggableCard({ appt, clients, pets, services, packages, onDelete, onWhatsapp, onEditService, isEditingDate, editDate, editTime, onStartEditDate, onChangeEditDate, onSaveEditDate, onCancelEditDate }: {
+function DraggableCard({ appt, clients, pets, services, packages, onDelete, onWhatsapp, onEditService, onChangeStatus, isEditingDate, editDate, editTime, onStartEditDate, onChangeEditDate, onSaveEditDate, onCancelEditDate }: {
   appt: Appointment;
   clients: Client[];
   pets: Pet[];
@@ -188,6 +216,7 @@ function DraggableCard({ appt, clients, pets, services, packages, onDelete, onWh
   onDelete: (id: number) => void;
   onWhatsapp?: (appt: Appointment) => void;
   onEditService?: (appt: Appointment) => void;
+  onChangeStatus?: (appt: Appointment, newStatus: AppStatus) => void;
   isEditingDate?: boolean;
   editDate?: string;
   editTime?: string;
@@ -208,6 +237,7 @@ function DraggableCard({ appt, clients, pets, services, packages, onDelete, onWh
         onDelete={onDelete}
         onWhatsapp={onWhatsapp}
         onEditService={onEditService}
+        onChangeStatus={onChangeStatus}
         isDragging={isDragging}
         isEditingDate={isEditingDate}
         editDate={editDate}
@@ -221,7 +251,7 @@ function DraggableCard({ appt, clients, pets, services, packages, onDelete, onWh
   );
 }
 
-function KanbanColumn({ status, label, color, bg, appointments, clients, pets, services, packages, onDelete, onWhatsapp, onEditService, editingApptId, editDate, editTime, onStartEditDate, onChangeEditDate, onSaveEditDate, onCancelEditDate }: {
+function KanbanColumn({ status, label, color, bg, appointments, clients, pets, services, packages, onDelete, onWhatsapp, onEditService, onChangeStatus, editingApptId, editDate, editTime, onStartEditDate, onChangeEditDate, onSaveEditDate, onCancelEditDate }: {
   status: AppStatus;
   label: string;
   color: string;
@@ -234,6 +264,7 @@ function KanbanColumn({ status, label, color, bg, appointments, clients, pets, s
   onDelete: (id: number) => void;
   onWhatsapp: (appt: Appointment) => void;
   onEditService: (appt: Appointment) => void;
+  onChangeStatus: (appt: Appointment, newStatus: AppStatus) => void;
   editingApptId: number | null;
   editDate: string;
   editTime: string;
@@ -264,6 +295,7 @@ function KanbanColumn({ status, label, color, bg, appointments, clients, pets, s
             onDelete={onDelete}
             onWhatsapp={onWhatsapp}
             onEditService={onEditService}
+            onChangeStatus={onChangeStatus}
             isEditingDate={editingApptId === appt.id}
             editDate={editDate}
             editTime={editTime}
@@ -792,13 +824,8 @@ export default function Agendamentos() {
   // ── DnD ──────────────────────────────────────────────────────────────────
   const handleDragStart = (event: DragStartEvent) => setActiveId(event.active.id as number);
 
-  const handleDragEnd = useCallback(async (event: DragEndEvent) => {
-    setActiveId(null);
-    const { active, over } = event;
-    if (!over) return;
-    const newStatus = over.id as AppStatus;
-    const appt = (appointments as Appointment[]).find(a => a.id === active.id);
-    if (!appt || appt.status === newStatus) return;
+  const handleStatusChange = useCallback(async (appt: Appointment, newStatus: AppStatus) => {
+    if (appt.status === newStatus) return;
     try {
       await updateStatus.mutateAsync({ id: appt.id, data: { status: newStatus } });
       refetch();
@@ -806,9 +833,19 @@ export default function Agendamentos() {
         openConfirmacao(appt);
       }
     } catch {
-      toast({ title: "Erro ao mover card", variant: "destructive" });
+      toast({ title: "Erro ao atualizar status", variant: "destructive" });
     }
-  }, [appointments, updateStatus, refetch, toast]);
+  }, [updateStatus, refetch, toast]);
+
+  const handleDragEnd = useCallback(async (event: DragEndEvent) => {
+    setActiveId(null);
+    const { active, over } = event;
+    if (!over) return;
+    const newStatus = over.id as AppStatus;
+    const appt = (appointments as Appointment[]).find(a => a.id === active.id);
+    if (!appt) return;
+    await handleStatusChange(appt, newStatus);
+  }, [appointments, handleStatusChange]);
 
   const handleDelete = async (id: number) => {
     if (!confirm("Excluir este agendamento?")) return;
@@ -1139,6 +1176,7 @@ export default function Agendamentos() {
               onDelete={handleDelete}
               onWhatsapp={openConfirmacao}
               onEditService={setEditServicoAppt}
+              onChangeStatus={handleStatusChange}
               editingApptId={editingApptId}
               editDate={editDate}
               editTime={editTime}
