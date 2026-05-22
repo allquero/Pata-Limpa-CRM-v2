@@ -26,6 +26,8 @@ export interface AppointmentFull {
   /** @nullable */
   notes?: string | null;
   /** @nullable */
+  extraServiceIds?: number[] | null;
+  /** @nullable */
   recurringWeeks?: number | null;
   /** @nullable */
   recurringGroupId?: string | null;

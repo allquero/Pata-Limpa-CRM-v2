@@ -12,6 +12,7 @@ export interface AppointmentInput {
   clientId: number;
   serviceId?: number;
   packageId?: number;
+  extraServiceIds?: number[];
   scheduledDate: Date;
   totalPrice: number;
   notes?: string;

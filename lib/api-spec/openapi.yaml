@@ -1946,6 +1946,10 @@ components:
           type: number
         notes:
           type: ["string", "null"]
+        extraServiceIds:
+          type: ["array", "null"]
+          items:
+            type: integer
         recurringWeeks:
           type: ["integer", "null"]
         recurringGroupId:
@@ -1990,6 +1994,10 @@ components:
           type: integer
         packageId:
           type: integer
+        extraServiceIds:
+          type: array
+          items:
+            type: integer
         scheduledDate:
           type: string
           format: date-time
@@ -2011,6 +2019,10 @@ components:
           type: integer
         packageId:
           type: integer
+        extraServiceIds:
+          type: array
+          items:
+            type: integer
         scheduledDate:
           type: string
           format: date-time

@@ -30,6 +30,7 @@ import {
   MessageSquare, UserPlus, ShoppingCart, CalendarCheck,
   ChevronRight as ArrowNext, Search, X, CalendarDays,
   Bell, ChevronDown, ChevronUp, CheckCheck, Pencil,
+  Scissors, Plus,
 } from "lucide-react";
 import { format, addDays, startOfWeek, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -56,6 +57,7 @@ type Appointment = {
   clientId: number;
   serviceId?: number | null;
   packageId?: number | null;
+  extraServiceIds?: number[] | null;
   scheduledDate: string;
   status: AppStatus;
   totalPrice: string | number;
@@ -112,7 +114,12 @@ function AppointmentCard({ appt, clients, pets, services, packages, onDelete, on
             {pet?.size && <Badge variant="secondary" className="text-xs px-1 py-0">{PORTE_SIZES[pet.size] ?? pet.size}</Badge>}
           </div>
           <p className="text-xs text-muted-foreground truncate">{client?.name ?? "Cliente"}</p>
-          <p className="text-xs text-muted-foreground">{service?.name ?? pkg?.name ?? "Serviço"}</p>
+          <p className="text-xs text-muted-foreground">
+            {[
+              service?.name ?? pkg?.name ?? "Serviço",
+              ...(appt.extraServiceIds ?? []).map(id => services.find(s => s.id === id)?.name).filter(Boolean),
+            ].join(" + ")}
+          </p>
         </div>
         <div className="flex items-center gap-0.5">
           {onEditService && (
@@ -312,46 +319,79 @@ function KanbanColumn({ status, label, color, bg, appointments, clients, pets, s
 
 // ─── EditServicoModal ─────────────────────────────────────────────────────────
 
-function EditServicoModal({
+function GerenciarServicosModal({
   appt, services, pets, isSaving, onSave, onClose,
 }: {
   appt: Appointment | null;
   services: Service[];
   pets: Pet[];
   isSaving: boolean;
-  onSave: (serviceId: number | undefined, totalPrice: number, notes: string) => void;
+  onSave: (serviceId: number | undefined, extraServiceIds: number[], totalPrice: number, notes: string) => void;
   onClose: () => void;
 }) {
   const pet = appt ? pets.find(p => p.id === appt.petId) : null;
-  const filteredServices = pet?.size
-    ? services.filter(s => s.size === pet.size)
-    : services;
+  const filteredServices = pet?.size ? services.filter(s => s.size === pet.size) : services;
 
-  const [serviceId, setServiceId] = useState<string>("");
+  const [primaryServiceId, setPrimaryServiceId] = useState<string>("");
+  const [extraServiceIds, setExtraServiceIds] = useState<number[]>([]);
   const [price, setPrice] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
+  const [addingExtra, setAddingExtra] = useState(false);
+  const [newExtraId, setNewExtraId] = useState<string>("");
 
   useEffect(() => {
     if (appt) {
-      setServiceId(appt.serviceId != null ? String(appt.serviceId) : "");
+      setPrimaryServiceId(appt.serviceId != null ? String(appt.serviceId) : "");
+      setExtraServiceIds(appt.extraServiceIds ?? []);
       setPrice(String(Number(appt.totalPrice)));
       setNotes(appt.notes ?? "");
+      setAddingExtra(false);
+      setNewExtraId("");
     }
   }, [appt?.id]);
 
-  const handleServiceChange = (v: string) => {
-    setServiceId(v);
-    const svc = services.find(s => s.id === Number(v));
-    if (svc) setPrice(String(svc.price));
+  const calcAutoPrice = (primaryId: string, extras: number[]) => {
+    let total = 0;
+    const primary = services.find(s => s.id === Number(primaryId));
+    if (primary) total += Number(primary.price);
+    extras.forEach(id => { const svc = services.find(s => s.id === id); if (svc) total += Number(svc.price); });
+    return total > 0 ? String(total) : "";
   };
+
+  const handlePrimaryChange = (v: string) => {
+    setPrimaryServiceId(v);
+    const autoPrice = calcAutoPrice(v, extraServiceIds);
+    if (autoPrice) setPrice(autoPrice);
+  };
+
+  const addExtra = () => {
+    if (!newExtraId || extraServiceIds.includes(Number(newExtraId))) return;
+    const updated = [...extraServiceIds, Number(newExtraId)];
+    setExtraServiceIds(updated);
+    const autoPrice = calcAutoPrice(primaryServiceId, updated);
+    if (autoPrice) setPrice(autoPrice);
+    setNewExtraId("");
+    setAddingExtra(false);
+  };
+
+  const removeExtra = (id: number) => {
+    const updated = extraServiceIds.filter(x => x !== id);
+    setExtraServiceIds(updated);
+    const autoPrice = calcAutoPrice(primaryServiceId, updated);
+    if (autoPrice) setPrice(autoPrice);
+  };
+
+  const availableForExtra = filteredServices.filter(
+    s => s.id !== Number(primaryServiceId) && !extraServiceIds.includes(s.id),
+  );
 
   return (
     <Dialog open={!!appt} onOpenChange={open => { if (!open) onClose(); }}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Pencil className="h-4 w-4 text-primary" />
-            Editar Serviço
+            <Scissors className="h-4 w-4 text-primary" />
+            Gerenciar Serviços
           </DialogTitle>
         </DialogHeader>
         {appt && (
@@ -361,9 +401,11 @@ function EditServicoModal({
               <span className="font-medium">{pet?.name ?? "Pet"}</span>
               {pet?.size && <span className="text-xs text-muted-foreground">({PORTE_SIZES[pet.size] ?? pet.size})</span>}
             </div>
+
+            {/* Serviço principal */}
             <div>
-              <Label className="text-xs">Serviço</Label>
-              <Select value={serviceId} onValueChange={handleServiceChange}>
+              <Label className="text-xs">Serviço principal</Label>
+              <Select value={primaryServiceId} onValueChange={handlePrimaryChange}>
                 <SelectTrigger className="h-8 text-sm mt-1">
                   <SelectValue placeholder="Selecione um serviço" />
                 </SelectTrigger>
@@ -372,30 +414,69 @@ function EditServicoModal({
                     <SelectItem key={s.id} value={String(s.id)}>{s.name} — {formatBRL(s.price)}</SelectItem>
                   ))}
                   {filteredServices.length === 0 && (
-                    <SelectItem value="" disabled>Nenhum serviço para este porte</SelectItem>
+                    <SelectItem value="_none" disabled>Nenhum serviço para este porte</SelectItem>
                   )}
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Serviços adicionais já selecionados */}
+            {extraServiceIds.length > 0 && (
+              <div className="space-y-1.5">
+                <Label className="text-xs">Serviços adicionais</Label>
+                {extraServiceIds.map(id => {
+                  const svc = services.find(s => s.id === id);
+                  return (
+                    <div key={id} className="flex items-center justify-between bg-muted/30 rounded px-2 py-1.5 text-xs">
+                      <span>{svc?.name ?? `#${id}`}{svc ? ` — ${formatBRL(svc.price)}` : ""}</span>
+                      <button onClick={() => removeExtra(id)} className="text-red-500 hover:text-red-700 ml-2">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Adicionar serviço extra */}
+            {addingExtra ? (
+              <div className="flex gap-2 items-center">
+                <Select value={newExtraId} onValueChange={setNewExtraId}>
+                  <SelectTrigger className="h-8 text-sm flex-1">
+                    <SelectValue placeholder="Selecione serviço adicional" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableForExtra.map(s => (
+                      <SelectItem key={s.id} value={String(s.id)}>{s.name} — {formatBRL(s.price)}</SelectItem>
+                    ))}
+                    {availableForExtra.length === 0 && (
+                      <SelectItem value="_none" disabled>Nenhum serviço disponível</SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+                <Button size="sm" variant="default" onClick={addExtra} disabled={!newExtraId} className="h-8">OK</Button>
+                <button onClick={() => { setAddingExtra(false); setNewExtraId(""); }} className="text-muted-foreground hover:text-foreground">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              availableForExtra.length > 0 && (
+                <Button type="button" variant="outline" size="sm" className="w-full h-7 text-xs" onClick={() => setAddingExtra(true)}>
+                  <Plus className="h-3 w-3 mr-1" /> Adicionar serviço
+                </Button>
+              )
+            )}
+
+            {/* Valor total */}
             <div>
-              <Label className="text-xs">Valor (R$)</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={price}
-                onChange={e => setPrice(e.target.value)}
-                className="h-8 text-sm mt-1"
-              />
+              <Label className="text-xs">Valor total (R$)</Label>
+              <Input type="number" step="0.01" value={price} onChange={e => setPrice(e.target.value)} className="h-8 text-sm mt-1" />
             </div>
+
+            {/* Observações */}
             <div>
               <Label className="text-xs">Observações</Label>
-              <Textarea
-                value={notes}
-                onChange={e => setNotes(e.target.value)}
-                rows={2}
-                placeholder="Observações opcionais..."
-                className="text-sm mt-1"
-              />
+              <Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Observações opcionais..." className="text-sm mt-1" />
             </div>
           </div>
         )}
@@ -404,7 +485,7 @@ function EditServicoModal({
           <Button
             size="sm"
             disabled={isSaving || !price || Number(price) <= 0}
-            onClick={() => onSave(serviceId ? Number(serviceId) : undefined, Number(price), notes)}
+            onClick={() => onSave(primaryServiceId ? Number(primaryServiceId) : undefined, extraServiceIds, Number(price), notes)}
           >
             {isSaving ? "Salvando…" : "Salvar"}
           </Button>
@@ -457,7 +538,7 @@ function ConfirmacaoWhatsAppModal({
     { query: { queryKey: getListMessageTemplatesQueryKey(tmplParams), enabled: !!appt } }
   );
 
-  const templateType = mode === "agradecimento" ? "agradecimento" : "confirmacao";
+  const templateType = (mode === "agradecimento" || mode === "conclusao") ? "agradecimento" : "confirmacao";
   const filteredTemplates = (msgTemplates as MessageTemplate[]).filter(t => t.type === templateType);
 
   const buildMessage = (): string => {
@@ -486,7 +567,7 @@ function ConfirmacaoWhatsAppModal({
 
     const defaultContent = mode === "agradecimento"
       ? `Olá {nome_cliente}! Obrigado por agendar com a gente! 🐾\n\n{nome_pet} está agendado nas seguintes datas:\n{datas}\n\nServiço: {servico}\nValor: {preco}\n\nQualquer dúvida, estamos à disposição!`
-      : `Olá {nome_cliente}! Obrigado pela visita de {nome_pet} hoje! Serviço: {servico}. Valor pago: {preco}.`;
+      : `Olá {nome_cliente}! Obrigado pela visita de {nome_pet} hoje! 🐾✨\n\nEsperamos que tenham gostado do serviço. Até a próxima! 😊`;
 
     const baseContent = selectedTmpl?.content ?? defaultContent;
 
@@ -519,8 +600,8 @@ function ConfirmacaoWhatsAppModal({
     onClose();
   };
 
-  const modalTitle = mode === "agradecimento" ? "Agradecimento via WhatsApp" : "Confirmação de Presença via WhatsApp";
-  const templateLabel = mode === "agradecimento" ? "Template de agradecimento" : "Template de confirmação de presença";
+  const modalTitle = mode === "agradecimento" ? "Agradecimento via WhatsApp" : mode === "conclusao" ? "Agradecimento após Atendimento" : "Confirmação de Presença via WhatsApp";
+  const templateLabel = (mode === "agradecimento" || mode === "conclusao") ? "Template de agradecimento" : "Template de confirmação de presença";
 
   return (
     <Dialog open={!!appt} onOpenChange={open => { if (!open) onClose(); }}>
@@ -597,6 +678,7 @@ const emptyCasual = {
   petBreed: "",
   petSize: "" as PetInputSize | "",
   serviceId: "",
+  extraServiceIds: [] as number[],
   scheduledDate: new Date().toISOString().substring(0, 10),
   scheduledTime: "09:00",
   totalPrice: "",
@@ -656,12 +738,12 @@ export default function Agendamentos() {
   // Edit service modal
   const [editServicoAppt, setEditServicoAppt] = useState<Appointment | null>(null);
 
-  const handleEditServicoSave = async (serviceId: number | undefined, totalPrice: number, notes: string) => {
+  const handleEditServicoSave = async (serviceId: number | undefined, extraServiceIds: number[], totalPrice: number, notes: string) => {
     if (!editServicoAppt) return;
     try {
       await updateAppointment.mutateAsync({
         id: editServicoAppt.id,
-        data: { serviceId, totalPrice, notes: notes || undefined },
+        data: { serviceId, extraServiceIds: extraServiceIds.length > 0 ? extraServiceIds : undefined, totalPrice, notes: notes || undefined },
       });
       setEditServicoAppt(null);
       refetch();
@@ -796,6 +878,9 @@ export default function Agendamentos() {
   const casualFilteredServices = casual.petSize
     ? (services as Service[]).filter(s => s.size === casual.petSize)
     : (services as Service[]);
+  const casualExtraAvailable = casualFilteredServices.filter(
+    s => s.id !== Number(casual.serviceId) && !casual.extraServiceIds.includes(s.id),
+  );
 
   // ── Sell: selected package & price for pet ────────────────────────────────
   const selectedPkg = (packages as Package[]).find(p => p.id === Number(sell.packageId));
@@ -954,6 +1039,7 @@ export default function Agendamentos() {
           clientId: resolvedClientId,
           petId: resolvedPetId,
           serviceId: Number(casual.serviceId),
+          extraServiceIds: casual.extraServiceIds.length > 0 ? casual.extraServiceIds : undefined,
           scheduledDate: dt.toISOString(),
           totalPrice: Number(casual.totalPrice),
           notes: casual.notes || undefined,
@@ -1337,8 +1423,8 @@ export default function Agendamentos() {
         )}
       </div>
 
-      {/* ── Modal: Editar Serviço ─────────────────────────────────────────── */}
-      <EditServicoModal
+      {/* ── Modal: Gerenciar Serviços ─────────────────────────────────────── */}
+      <GerenciarServicosModal
         appt={editServicoAppt}
         services={services as Service[]}
         pets={allPets as Pet[]}
@@ -1606,6 +1692,55 @@ export default function Agendamentos() {
                     </p>
                   )}
                 </div>
+
+                {/* Serviços adicionais */}
+                {casual.serviceId && (
+                  <div className="space-y-1.5">
+                    <Label>Serviços adicionais</Label>
+                    {casual.extraServiceIds.map(id => {
+                      const svc = (services as Service[]).find(s => s.id === id);
+                      return (
+                        <div key={id} className="flex items-center justify-between bg-muted/30 rounded px-2 py-1.5 text-xs">
+                          <span>{svc?.name ?? `#${id}`}{svc ? ` — ${formatBRL(svc.price)}` : ""}</span>
+                          <button
+                            onClick={() => {
+                              const updated = casual.extraServiceIds.filter(x => x !== id);
+                              const allSvcs = [Number(casual.serviceId), ...updated].map(sid => (services as Service[]).find(s => s.id === sid));
+                              const total = allSvcs.reduce((sum, s) => sum + (s ? Number(s.price) : 0), 0);
+                              setCasual(f => ({ ...f, extraServiceIds: updated, totalPrice: total > 0 ? String(total) : f.totalPrice }));
+                            }}
+                            className="text-red-500 hover:text-red-700 ml-2"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                    {casualExtraAvailable.length > 0 && (
+                      <Select
+                        value=""
+                        onValueChange={v => {
+                          const updated = [...casual.extraServiceIds, Number(v)];
+                          const allSvcs = [Number(casual.serviceId), ...updated].map(sid => (services as Service[]).find(s => s.id === sid));
+                          const total = allSvcs.reduce((sum, s) => sum + (s ? Number(s.price) : 0), 0);
+                          setCasual(f => ({ ...f, extraServiceIds: updated, totalPrice: total > 0 ? String(total) : f.totalPrice }));
+                        }}
+                      >
+                        <SelectTrigger className="h-8 text-xs border-dashed">
+                          <div className="flex items-center gap-1 text-muted-foreground">
+                            <Plus className="h-3 w-3" /> Adicionar serviço adicional
+                          </div>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {casualExtraAvailable.map(s => (
+                            <SelectItem key={s.id} value={String(s.id)}>{s.name} — {formatBRL(s.price)}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+                )}
+
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <Label>Data *</Label>

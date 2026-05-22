@@ -397,6 +397,8 @@ export interface AppointmentFull {
   /** @nullable */
   notes?: string | null;
   /** @nullable */
+  extraServiceIds?: number[] | null;
+  /** @nullable */
   recurringWeeks?: number | null;
   /** @nullable */
   recurringGroupId?: string | null;
@@ -443,6 +445,7 @@ export interface AppointmentInput {
   clientId: number;
   serviceId?: number;
   packageId?: number;
+  extraServiceIds?: number[];
   scheduledDate: string;
   totalPrice: number;
   notes?: string;
@@ -467,6 +470,7 @@ export interface AppointmentUpdate {
   petId?: number;
   serviceId?: number;
   packageId?: number;
+  extraServiceIds?: number[];
   scheduledDate?: string;
   status?: AppointmentUpdateStatus;
   totalPrice?: number;

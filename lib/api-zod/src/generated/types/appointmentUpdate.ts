@@ -11,6 +11,7 @@ export interface AppointmentUpdate {
   petId?: number;
   serviceId?: number;
   packageId?: number;
+  extraServiceIds?: number[];
   scheduledDate?: Date;
   status?: AppointmentUpdateStatus;
   totalPrice?: number;

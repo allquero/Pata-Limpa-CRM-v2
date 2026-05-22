@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, numeric, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, numeric, timestamp, json } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { tenantsTable } from "./tenants";
@@ -21,6 +21,7 @@ export const appointmentsTable = pgTable("appointments", {
   status: text("status").notNull().default("aguardando").$type<AppointmentStatus>(),
   totalPrice: numeric("total_price", { precision: 10, scale: 2 }).notNull(),
   notes: text("notes"),
+  extraServiceIds: json("extra_service_ids").$type<number[]>(),
   recurringWeeks: integer("recurring_weeks"),
   recurringGroupId: text("recurring_group_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
