@@ -267,7 +267,7 @@ function KanbanColumn({ status, label, color, bg, appointments, clients, pets, s
 type ConfirmacaoMode = "agradecimento" | "conclusao";
 
 function ConfirmacaoWhatsAppModal({
-  appt, clients, pets, services, packages, mode = "conclusao", overridePrice, onClose, tenantId,
+  appt, clients, pets, services, packages, mode = "conclusao", overridePrice, overrideClient, onClose, tenantId,
 }: {
   appt: Appointment | null;
   clients: Client[];
@@ -276,6 +276,7 @@ function ConfirmacaoWhatsAppModal({
   packages: Package[];
   mode?: ConfirmacaoMode;
   overridePrice?: number;
+  overrideClient?: Pick<Client, "id" | "name" | "phone">;
   onClose: () => void;
   tenantId: number;
 }) {
@@ -284,7 +285,7 @@ function ConfirmacaoWhatsAppModal({
   useEffect(() => { setTemplateId("default"); }, [appt?.id, mode]);
 
   const pet = appt ? pets.find(p => p.id === appt.petId) : null;
-  const client = appt ? clients.find(c => c.id === appt.clientId) : null;
+  const client = overrideClient ?? (appt ? clients.find(c => c.id === appt.clientId) : null);
   const service = appt ? services.find(s => s.id === appt.serviceId) : null;
   const pkg = appt ? packages.find(p => p.id === appt.packageId) : null;
 
@@ -504,6 +505,7 @@ export default function Agendamentos() {
   const [confirmacaoAppt, setConfirmacaoAppt] = useState<Appointment | null>(null);
   const [confirmacaoMode, setConfirmacaoMode] = useState<ConfirmacaoMode>("conclusao");
   const [confirmacaoOverridePrice, setConfirmacaoOverridePrice] = useState<number | undefined>(undefined);
+  const [confirmacaoOverrideClient, setConfirmacaoOverrideClient] = useState<Pick<Client, "id" | "name" | "phone"> | undefined>(undefined);
   const openConfirmacao = (appt: Appointment) => {
     setConfirmacaoMode("conclusao");
     setConfirmacaoOverridePrice(undefined);
@@ -752,6 +754,13 @@ export default function Agendamentos() {
           },
         });
         resolvedClientId = newClient.id;
+        // Store newly created client so the WhatsApp modal can use it immediately
+        // without waiting for the clients list to be refetched
+        setConfirmacaoOverrideClient({
+          id: newClient.id,
+          name: newClient.name,
+          phone: newClient.phone,
+        });
         const newPet: Pet = await createPet.mutateAsync({
           data: {
             clientId: resolvedClientId,
@@ -790,6 +799,7 @@ export default function Agendamentos() {
         setConfirmacaoAppt(appointmentFromFull(first));
       }
     } catch {
+      setConfirmacaoOverrideClient(undefined);
       toast({ title: "Erro ao criar agendamento", variant: "destructive" });
     }
   };
@@ -1159,7 +1169,8 @@ export default function Agendamentos() {
         packages={packages as Package[]}
         mode={confirmacaoMode}
         overridePrice={confirmacaoOverridePrice}
-        onClose={() => setConfirmacaoAppt(null)}
+        overrideClient={confirmacaoOverrideClient}
+        onClose={() => { setConfirmacaoAppt(null); setConfirmacaoOverrideClient(undefined); }}
         tenantId={tenantId!}
       />
 
