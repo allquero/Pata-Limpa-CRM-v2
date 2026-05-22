@@ -366,8 +366,8 @@ function ConfirmacaoWhatsAppModal({
     onClose();
   };
 
-  const modalTitle = mode === "agradecimento" ? "Agradecimento via WhatsApp" : "Confirmação via WhatsApp";
-  const templateLabel = mode === "agradecimento" ? "Template de agradecimento" : "Template de confirmação";
+  const modalTitle = mode === "agradecimento" ? "Agradecimento via WhatsApp" : "Confirmação de Presença via WhatsApp";
+  const templateLabel = mode === "agradecimento" ? "Template de agradecimento" : "Template de confirmação de presença";
 
   return (
     <Dialog open={!!appt} onOpenChange={open => { if (!open) onClose(); }}>

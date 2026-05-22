@@ -24,7 +24,7 @@ export const FINANCIAL_TYPES = {
 };
 
 export const MESSAGE_TEMPLATE_TYPES = {
-  confirmacao: "Confirmação",
+  confirmacao: "Confirmação de Presença",
   lembrete: "Lembrete",
   leads: "Leads",
   agradecimento: "Agradecimento",
