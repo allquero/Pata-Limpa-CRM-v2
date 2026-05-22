@@ -5,17 +5,44 @@ import { useAppAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, MessageSquare, Copy } from "lucide-react";
+import { Plus, Pencil, Trash2, MessageSquare, Copy, Wand2 } from "lucide-react";
 
 type Template = { id: number; name: string; type: string; content: string };
 const emptyForm = { name: "", type: "confirmacao", content: "" };
+
+const DEFAULT_TEMPLATES: { name: string; type: string; content: string }[] = [
+  {
+    name: "Confirmação de Presença",
+    type: "confirmacao",
+    content:
+      "Olá {nome_cliente}! 🐾 Tudo bem?\n\nPassando para confirmar o agendamento do(a) {nome_pet} em {data} às {horario}.\n\nResponda SIM para confirmar ou nos avise para remarcarmos. Obrigado! 😊",
+  },
+  {
+    name: "Lembrete de Agendamento",
+    type: "lembrete",
+    content:
+      "Oi {nome_cliente}! 🐾 Lembrando que o(a) {nome_pet} tem {servico} agendado para amanhã, {data} às {horario}.\n\nNos vemos em breve! 🐶✂️",
+  },
+  {
+    name: "Agradecimento após atendimento",
+    type: "agradecimento",
+    content:
+      "Olá {nome_cliente}! Obrigado por trazer o(a) {nome_pet} hoje! 🐶✨\n\nEsperamos que tenham gostado do serviço. Até a próxima! 🐾",
+  },
+  {
+    name: "Reativação de cliente",
+    type: "leads",
+    content:
+      "Oi {nome_cliente}! 🐾 Faz um tempinho que não vemos o(a) {nome_pet} por aqui.\n\nQue tal agendar um banho e tosa? Entre em contato e garanta o horário! 😊",
+  },
+];
 
 const typeColors: Record<string, string> = {
   confirmacao: "bg-blue-100 text-blue-800",
@@ -37,6 +64,7 @@ export default function Mensagens() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Template | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [seedingDefaults, setSeedingDefaults] = useState(false);
 
   const openCreate = () => { setEditing(null); setForm(emptyForm); setModalOpen(true); };
   const openEdit = (t: Template) => { setEditing(t); setForm({ name: t.name, type: t.type, content: t.content }); setModalOpen(true); };
@@ -68,6 +96,21 @@ export default function Mensagens() {
     setForm(f => ({ ...f, content: f.content + v }));
   };
 
+  const criarTemplatesPadrao = async () => {
+    setSeedingDefaults(true);
+    try {
+      for (const t of DEFAULT_TEMPLATES) {
+        await createTemplate.mutateAsync({ data: { ...t, tenantId: tenantId!, type: t.type as any } });
+      }
+      toast({ title: "Templates padrão criados com sucesso!" });
+      refetch();
+    } catch {
+      toast({ title: "Erro ao criar templates padrão", variant: "destructive" });
+    } finally {
+      setSeedingDefaults(false);
+    }
+  };
+
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toast({ title: "Copiado!" });
@@ -80,13 +123,27 @@ export default function Mensagens() {
           <h1 className="text-2xl font-bold">Templates de Mensagem</h1>
           <p className="text-muted-foreground">Mensagens para WhatsApp — confirmações, lembretes, agradecimentos e leads</p>
         </div>
-        <Button onClick={openCreate}><Plus className="h-4 w-4 mr-2" />Novo Template</Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button variant="outline" onClick={criarTemplatesPadrao} disabled={seedingDefaults}>
+            <Wand2 className="h-4 w-4 mr-2" />
+            {seedingDefaults ? "Criando..." : "Templates padrão"}
+          </Button>
+          <Button onClick={openCreate}><Plus className="h-4 w-4 mr-2" />Novo Template</Button>
+        </div>
       </div>
 
       {isLoading ? (
         <div className="space-y-3">{Array(3).fill(0).map((_, i) => <Skeleton key={i} className="h-32 w-full" />)}</div>
       ) : (templates as Template[]).length === 0 ? (
-        <Card><CardContent className="py-12 text-center text-muted-foreground">Nenhum template cadastrado.</CardContent></Card>
+        <Card>
+          <CardContent className="py-12 text-center space-y-4">
+            <p className="text-muted-foreground">Nenhum template cadastrado.</p>
+            <Button variant="outline" onClick={criarTemplatesPadrao} disabled={seedingDefaults}>
+              <Wand2 className="h-4 w-4 mr-2" />
+              {seedingDefaults ? "Criando..." : "Criar templates padrão"}
+            </Button>
+          </CardContent>
+        </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {(templates as Template[]).map(t => (

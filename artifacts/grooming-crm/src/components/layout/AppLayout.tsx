@@ -45,7 +45,39 @@ export function AppLayout({ children }: { children: ReactNode }) {
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-background">
-        <Sidebar>
+        {/* ── Mobile top icon bar ───────────────────────────────────────── */}
+        <nav className="md:hidden fixed top-0 left-0 right-0 z-50 bg-background border-b border-border h-12 flex items-center px-1 gap-0.5 overflow-x-auto">
+          <span className="flex items-center px-2 flex-shrink-0">
+            <PawPrint className="h-5 w-5 text-primary" />
+          </span>
+          {navItems.map((item) => {
+            const isActive = location === item.href;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex-shrink-0 flex items-center justify-center w-9 h-9 rounded-lg transition-colors ${
+                  isActive
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-muted"
+                }`}
+                title={item.label}
+              >
+                <item.icon className="h-4 w-4" />
+              </Link>
+            );
+          })}
+          <button
+            onClick={logout}
+            className="flex-shrink-0 flex items-center justify-center w-9 h-9 rounded-lg text-muted-foreground hover:bg-muted ml-1"
+            title="Sair"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
+        </nav>
+
+        {/* ── Desktop sidebar ───────────────────────────────────────────── */}
+        <Sidebar className="hidden md:flex">
           <SidebarHeader className="h-16 flex items-center px-4 border-b border-sidebar-border">
             <h1 className="text-xl font-bold text-primary flex items-center gap-2">
               <PawPrint className="h-6 w-6" />
@@ -107,7 +139,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
             </div>
           </SidebarFooter>
         </Sidebar>
-        <main className="flex-1 overflow-auto">
+
+        <main className="flex-1 overflow-auto pt-12 md:pt-0">
           {children}
         </main>
       </div>
