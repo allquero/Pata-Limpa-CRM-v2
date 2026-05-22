@@ -29,7 +29,7 @@ import {
   Trash2, ChevronLeft, ChevronRight, Clock, PawPrint,
   MessageSquare, UserPlus, ShoppingCart, CalendarCheck,
   ChevronRight as ArrowNext, Search, X, CalendarDays,
-  Bell, ChevronDown, ChevronUp, CheckCheck,
+  Bell, ChevronDown, ChevronUp, CheckCheck, Pencil,
 } from "lucide-react";
 import { format, addDays, startOfWeek, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -75,7 +75,7 @@ function formatBRL(v: number) {
 
 // ─── Card components ──────────────────────────────────────────────────────────
 
-function AppointmentCard({ appt, clients, pets, services, packages, onDelete, onWhatsapp, isDragging = false, isEditingDate, editDate, editTime, onStartEditDate, onChangeEditDate, onSaveEditDate, onCancelEditDate }: {
+function AppointmentCard({ appt, clients, pets, services, packages, onDelete, onWhatsapp, onEditService, isDragging = false, isEditingDate, editDate, editTime, onStartEditDate, onChangeEditDate, onSaveEditDate, onCancelEditDate }: {
   appt: Appointment;
   clients: Client[];
   pets: Pet[];
@@ -83,6 +83,7 @@ function AppointmentCard({ appt, clients, pets, services, packages, onDelete, on
   packages: Package[];
   onDelete: (id: number) => void;
   onWhatsapp?: (appt: Appointment) => void;
+  onEditService?: (appt: Appointment) => void;
   isDragging?: boolean;
   isEditingDate?: boolean;
   editDate?: string;
@@ -112,12 +113,23 @@ function AppointmentCard({ appt, clients, pets, services, packages, onDelete, on
           <p className="text-xs text-muted-foreground truncate">{client?.name ?? "Cliente"}</p>
           <p className="text-xs text-muted-foreground">{service?.name ?? pkg?.name ?? "Serviço"}</p>
         </div>
-        <button
-          onClick={e => { e.stopPropagation(); onDelete(appt.id); }}
-          className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-colors"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </button>
+        <div className="flex items-center gap-0.5">
+          {onEditService && (
+            <button
+              onClick={e => { e.stopPropagation(); onEditService(appt); }}
+              className="p-1 rounded hover:bg-blue-50 text-muted-foreground hover:text-blue-600 transition-colors"
+              title="Editar serviço"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </button>
+          )}
+          <button
+            onClick={e => { e.stopPropagation(); onDelete(appt.id); }}
+            className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-colors"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
       </div>
       <div className="flex items-center justify-between mt-2 pt-2 border-t border-dashed">
         {isEditingDate ? (
@@ -167,7 +179,7 @@ function AppointmentCard({ appt, clients, pets, services, packages, onDelete, on
   );
 }
 
-function DraggableCard({ appt, clients, pets, services, packages, onDelete, onWhatsapp, isEditingDate, editDate, editTime, onStartEditDate, onChangeEditDate, onSaveEditDate, onCancelEditDate }: {
+function DraggableCard({ appt, clients, pets, services, packages, onDelete, onWhatsapp, onEditService, isEditingDate, editDate, editTime, onStartEditDate, onChangeEditDate, onSaveEditDate, onCancelEditDate }: {
   appt: Appointment;
   clients: Client[];
   pets: Pet[];
@@ -175,6 +187,7 @@ function DraggableCard({ appt, clients, pets, services, packages, onDelete, onWh
   packages: Package[];
   onDelete: (id: number) => void;
   onWhatsapp?: (appt: Appointment) => void;
+  onEditService?: (appt: Appointment) => void;
   isEditingDate?: boolean;
   editDate?: string;
   editTime?: string;
@@ -194,6 +207,7 @@ function DraggableCard({ appt, clients, pets, services, packages, onDelete, onWh
         packages={packages}
         onDelete={onDelete}
         onWhatsapp={onWhatsapp}
+        onEditService={onEditService}
         isDragging={isDragging}
         isEditingDate={isEditingDate}
         editDate={editDate}
@@ -207,7 +221,7 @@ function DraggableCard({ appt, clients, pets, services, packages, onDelete, onWh
   );
 }
 
-function KanbanColumn({ status, label, color, bg, appointments, clients, pets, services, packages, onDelete, onWhatsapp, editingApptId, editDate, editTime, onStartEditDate, onChangeEditDate, onSaveEditDate, onCancelEditDate }: {
+function KanbanColumn({ status, label, color, bg, appointments, clients, pets, services, packages, onDelete, onWhatsapp, onEditService, editingApptId, editDate, editTime, onStartEditDate, onChangeEditDate, onSaveEditDate, onCancelEditDate }: {
   status: AppStatus;
   label: string;
   color: string;
@@ -219,6 +233,7 @@ function KanbanColumn({ status, label, color, bg, appointments, clients, pets, s
   packages: Package[];
   onDelete: (id: number) => void;
   onWhatsapp: (appt: Appointment) => void;
+  onEditService: (appt: Appointment) => void;
   editingApptId: number | null;
   editDate: string;
   editTime: string;
@@ -248,6 +263,7 @@ function KanbanColumn({ status, label, color, bg, appointments, clients, pets, s
             packages={packages}
             onDelete={onDelete}
             onWhatsapp={onWhatsapp}
+            onEditService={onEditService}
             isEditingDate={editingApptId === appt.id}
             editDate={editDate}
             editTime={editTime}
@@ -259,6 +275,110 @@ function KanbanColumn({ status, label, color, bg, appointments, clients, pets, s
         ))}
       </div>
     </div>
+  );
+}
+
+// ─── EditServicoModal ─────────────────────────────────────────────────────────
+
+function EditServicoModal({
+  appt, services, pets, isSaving, onSave, onClose,
+}: {
+  appt: Appointment | null;
+  services: Service[];
+  pets: Pet[];
+  isSaving: boolean;
+  onSave: (serviceId: number | undefined, totalPrice: number, notes: string) => void;
+  onClose: () => void;
+}) {
+  const pet = appt ? pets.find(p => p.id === appt.petId) : null;
+  const filteredServices = pet?.size
+    ? services.filter(s => s.size === pet.size)
+    : services;
+
+  const [serviceId, setServiceId] = useState<string>("");
+  const [price, setPrice] = useState<string>("");
+  const [notes, setNotes] = useState<string>("");
+
+  useEffect(() => {
+    if (appt) {
+      setServiceId(appt.serviceId != null ? String(appt.serviceId) : "");
+      setPrice(String(Number(appt.totalPrice)));
+      setNotes(appt.notes ?? "");
+    }
+  }, [appt?.id]);
+
+  const handleServiceChange = (v: string) => {
+    setServiceId(v);
+    const svc = services.find(s => s.id === Number(v));
+    if (svc) setPrice(String(svc.price));
+  };
+
+  return (
+    <Dialog open={!!appt} onOpenChange={open => { if (!open) onClose(); }}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Pencil className="h-4 w-4 text-primary" />
+            Editar Serviço
+          </DialogTitle>
+        </DialogHeader>
+        {appt && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 p-2 bg-muted/40 rounded-lg text-sm">
+              <PawPrint className="h-4 w-4 text-primary shrink-0" />
+              <span className="font-medium">{pet?.name ?? "Pet"}</span>
+              {pet?.size && <span className="text-xs text-muted-foreground">({PORTE_SIZES[pet.size] ?? pet.size})</span>}
+            </div>
+            <div>
+              <Label className="text-xs">Serviço</Label>
+              <Select value={serviceId} onValueChange={handleServiceChange}>
+                <SelectTrigger className="h-8 text-sm mt-1">
+                  <SelectValue placeholder="Selecione um serviço" />
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredServices.map(s => (
+                    <SelectItem key={s.id} value={String(s.id)}>{s.name} — {formatBRL(s.price)}</SelectItem>
+                  ))}
+                  {filteredServices.length === 0 && (
+                    <SelectItem value="" disabled>Nenhum serviço para este porte</SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Valor (R$)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={price}
+                onChange={e => setPrice(e.target.value)}
+                className="h-8 text-sm mt-1"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Observações</Label>
+              <Textarea
+                value={notes}
+                onChange={e => setNotes(e.target.value)}
+                rows={2}
+                placeholder="Observações opcionais..."
+                className="text-sm mt-1"
+              />
+            </div>
+          </div>
+        )}
+        <DialogFooter>
+          <Button variant="outline" size="sm" onClick={onClose}>Cancelar</Button>
+          <Button
+            size="sm"
+            disabled={isSaving || !price || Number(price) <= 0}
+            onClick={() => onSave(serviceId ? Number(serviceId) : undefined, Number(price), notes)}
+          >
+            {isSaving ? "Salvando…" : "Salvar"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -500,6 +620,24 @@ export default function Agendamentos() {
   const [editingApptId, setEditingApptId] = useState<number | null>(null);
   const [editDate, setEditDate] = useState("");
   const [editTime, setEditTime] = useState("");
+
+  // Edit service modal
+  const [editServicoAppt, setEditServicoAppt] = useState<Appointment | null>(null);
+
+  const handleEditServicoSave = async (serviceId: number | undefined, totalPrice: number, notes: string) => {
+    if (!editServicoAppt) return;
+    try {
+      await updateAppointment.mutateAsync({
+        id: editServicoAppt.id,
+        data: { serviceId, totalPrice, notes: notes || undefined },
+      });
+      setEditServicoAppt(null);
+      refetch();
+      toast({ title: "Agendamento atualizado!" });
+    } catch {
+      toast({ title: "Erro ao atualizar agendamento", variant: "destructive" });
+    }
+  };
 
   // WhatsApp confirmation modal
   const [confirmacaoAppt, setConfirmacaoAppt] = useState<Appointment | null>(null);
@@ -1000,6 +1138,7 @@ export default function Agendamentos() {
               packages={packages as Package[]}
               onDelete={handleDelete}
               onWhatsapp={openConfirmacao}
+              onEditService={setEditServicoAppt}
               editingApptId={editingApptId}
               editDate={editDate}
               editTime={editTime}
@@ -1159,6 +1298,16 @@ export default function Agendamentos() {
           </div>
         )}
       </div>
+
+      {/* ── Modal: Editar Serviço ─────────────────────────────────────────── */}
+      <EditServicoModal
+        appt={editServicoAppt}
+        services={services as Service[]}
+        pets={allPets as Pet[]}
+        isSaving={updateAppointment.isPending}
+        onSave={handleEditServicoSave}
+        onClose={() => setEditServicoAppt(null)}
+      />
 
       {/* ── Modal: Confirmação WhatsApp ───────────────────────────────────── */}
       <ConfirmacaoWhatsAppModal
