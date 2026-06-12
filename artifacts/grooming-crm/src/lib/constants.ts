@@ -28,6 +28,7 @@ export const MESSAGE_TEMPLATE_TYPES = {
   lembrete: "Lembrete",
   leads: "Leads",
   agradecimento: "Agradecimento",
+  pet_pronto: "Pet Pronto",
 };
 
 export const DEFAULT_TENANT_ID = 1;
