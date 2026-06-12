@@ -550,6 +550,7 @@ export const MessageTemplateType = {
   lembrete: "lembrete",
   leads: "leads",
   agradecimento: "agradecimento",
+  pet_pronto: "pet_pronto",
 } as const;
 
 export interface MessageTemplate {
@@ -569,6 +570,7 @@ export const MessageTemplateInputType = {
   lembrete: "lembrete",
   leads: "leads",
   agradecimento: "agradecimento",
+  pet_pronto: "pet_pronto",
 } as const;
 
 export interface MessageTemplateInput {
@@ -586,6 +588,7 @@ export const MessageTemplateUpdateType = {
   lembrete: "lembrete",
   leads: "leads",
   agradecimento: "agradecimento",
+  pet_pronto: "pet_pronto",
 } as const;
 
 export interface MessageTemplateUpdate {
