@@ -110,7 +110,7 @@ export default function Mensagens() {
       for (const t of DEFAULT_TEMPLATES) {
         const found = existing.find(e => e.type === t.type && e.name === t.name);
         if (found) {
-          await updateTemplate.mutateAsync({ id: found.id, data: { ...t, tenantId: tenantId!, type: t.type as any } });
+          await updateTemplate.mutateAsync({ id: found.id, data: { ...t, type: t.type as any } });
         } else {
           await createTemplate.mutateAsync({ data: { ...t, tenantId: tenantId!, type: t.type as any } });
         }

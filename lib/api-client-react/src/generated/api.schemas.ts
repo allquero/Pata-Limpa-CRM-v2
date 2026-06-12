@@ -177,6 +177,27 @@ export interface ClientUpdate {
   notes?: string;
 }
 
+export type ImportResultCreated = {
+  clients: number;
+  pets: number;
+};
+
+export type ImportResultSkipped = {
+  clients: number;
+  pets: number;
+};
+
+export type ImportResultErrorsItem = {
+  line: number;
+  message: string;
+};
+
+export interface ImportResult {
+  created: ImportResultCreated;
+  skipped: ImportResultSkipped;
+  errors: ImportResultErrorsItem[];
+}
+
 export type PetInputSize = (typeof PetInputSize)[keyof typeof PetInputSize];
 
 export const PetInputSize = {

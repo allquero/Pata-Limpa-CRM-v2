@@ -552,6 +552,19 @@ paths:
         "204":
           description: Deleted
 
+  /clients/export:
+    get:
+      operationId: exportClients
+      tags: [clients]
+      summary: Export all clients and pets as a CSV file
+      responses:
+        "200":
+          description: CSV file with clients and pets
+          content:
+            text/csv:
+              schema:
+                type: string
+
   # Pets
   /pets:
     get:
@@ -1637,6 +1650,37 @@ components:
           type: string
         notes:
           type: string
+
+    ImportResult:
+      type: object
+      required: [created, skipped, errors]
+      properties:
+        created:
+          type: object
+          required: [clients, pets]
+          properties:
+            clients:
+              type: integer
+            pets:
+              type: integer
+        skipped:
+          type: object
+          required: [clients, pets]
+          properties:
+            clients:
+              type: integer
+            pets:
+              type: integer
+        errors:
+          type: array
+          items:
+            type: object
+            required: [line, message]
+            properties:
+              line:
+                type: integer
+              message:
+                type: string
 
     # Pet
     Pet:
