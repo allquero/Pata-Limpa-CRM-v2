@@ -45,6 +45,8 @@ import type {
   GetRevenueReportParams,
   GetTopClientsReportParams,
   HealthStatus,
+  ImportClientsBody,
+  ImportResult,
   Lead,
   ListAppointmentsParams,
   ListClientsParams,
@@ -2222,6 +2224,94 @@ export function useExportClients<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Import clients and pets from a CSV file (multipart/form-data)
+ */
+export const getImportClientsUrl = () => {
+  return `/api/clients/import`;
+};
+
+export const importClients = async (
+  importClientsBody: ImportClientsBody,
+  options?: RequestInit,
+): Promise<ImportResult> => {
+  const formData = new FormData();
+  formData.append(`file`, importClientsBody.file);
+
+  return customFetch<ImportResult>(getImportClientsUrl(), {
+    ...options,
+    method: "POST",
+    body: formData,
+  });
+};
+
+export const getImportClientsMutationOptions = <
+  TError = ErrorType<ErrorEnvelope>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof importClients>>,
+    TError,
+    { data: BodyType<ImportClientsBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof importClients>>,
+  TError,
+  { data: BodyType<ImportClientsBody> },
+  TContext
+> => {
+  const mutationKey = ["importClients"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof importClients>>,
+    { data: BodyType<ImportClientsBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return importClients(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ImportClientsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof importClients>>
+>;
+export type ImportClientsMutationBody = BodyType<ImportClientsBody>;
+export type ImportClientsMutationError = ErrorType<ErrorEnvelope>;
+
+/**
+ * @summary Import clients and pets from a CSV file (multipart/form-data)
+ */
+export const useImportClients = <
+  TError = ErrorType<ErrorEnvelope>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof importClients>>,
+    TError,
+    { data: BodyType<ImportClientsBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof importClients>>,
+  TError,
+  { data: BodyType<ImportClientsBody> },
+  TContext
+> => {
+  return useMutation(getImportClientsMutationOptions(options));
+};
 
 /**
  * @summary List pets

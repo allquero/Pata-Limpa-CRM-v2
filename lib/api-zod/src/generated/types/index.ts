@@ -48,6 +48,7 @@ export * from "./getFinancialSummaryParams";
 export * from "./getRevenueReportParams";
 export * from "./getTopClientsReportParams";
 export * from "./healthStatus";
+export * from "./importClientsBody";
 export * from "./importResult";
 export * from "./importResultCreated";
 export * from "./importResultErrorsItem";

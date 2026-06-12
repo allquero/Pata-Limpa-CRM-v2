@@ -565,6 +565,36 @@ paths:
               schema:
                 type: string
 
+  /clients/import:
+    post:
+      operationId: importClients
+      tags: [clients]
+      summary: Import clients and pets from a CSV file (multipart/form-data)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  description: CSV file content (UTF-8 encoded)
+      responses:
+        "200":
+          description: Import result summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportResult"
+        "400":
+          description: Invalid file or parse error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
   # Pets
   /pets:
     get:

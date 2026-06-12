@@ -416,6 +416,30 @@ export const DeleteClientParams = zod.object({
 });
 
 /**
+ * @summary Import clients and pets from a CSV file (multipart/form-data)
+ */
+export const ImportClientsBody = zod.object({
+  file: zod.string().describe("CSV file content (UTF-8 encoded)"),
+});
+
+export const ImportClientsResponse = zod.object({
+  created: zod.object({
+    clients: zod.number(),
+    pets: zod.number(),
+  }),
+  skipped: zod.object({
+    clients: zod.number(),
+    pets: zod.number(),
+  }),
+  errors: zod.array(
+    zod.object({
+      line: zod.number(),
+      message: zod.string(),
+    }),
+  ),
+});
+
+/**
  * @summary List pets
  */
 export const ListPetsQueryParams = zod.object({
