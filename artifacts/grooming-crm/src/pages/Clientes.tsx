@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useListClients, useCreateClient, useUpdateClient, useDeleteClient, useListPets, useCreatePet, useUpdatePet, useDeletePet, getListPetsQueryKey } from "@workspace/api-client-react";
 import type { PetInputSize } from "@workspace/api-client-react";
 import { PORTE_SIZES } from "@/lib/constants";
@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, ChevronDown, ChevronUp, PawPrint } from "lucide-react";
+import { Plus, Pencil, Trash2, ChevronDown, ChevronUp, PawPrint, Download, Upload, FileDown, AlertCircle, CheckCircle2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -30,6 +30,13 @@ type Pet = {
   petType?: string | null; frequency?: string | null;
   appointmentDay?: number | null; pricePerVisit?: string | null;
   firstVisitDate?: string | null;
+};
+
+type ImportError = { line: number; message: string };
+type ImportResult = {
+  created: { clients: number; pets: number };
+  skipped: { clients: number; pets: number };
+  errors: ImportError[];
 };
 
 // ── Constantes ───────────────────────────────────────────────────────────────
@@ -53,6 +60,12 @@ const emptyPet = {
   appointmentDay: 2, pricePerVisit: "", firstVisitDate: "",
 };
 
+const CSV_MODELO = `nome_cliente,telefone,email,endereco,notas_cliente,nome_pet,raca,porte,sexo,castrado,pelagem,comportamento,saude,preferencias_tosa,tipo_pet,frequencia,dia_semana,preco_por_visita,notas_pet
+Maria Silva,(44) 99999-0001,maria@email.com,Rua das Flores 10,,Rex,Poodle,pequeno_longo,macho,nao,longa,agitado,,tosa curta no corpo,eventual,,,
+Maria Silva,(44) 99999-0001,,,, Mel,Shih Tzu,mini_longo,femea,sim,longa,,alergia a shampoo forte,,eventual,,,
+João Costa,(44) 99999-0002,,,,Thor,Labrador,grande_curto,macho,nao,curta,,,, eventual,,,
+`;
+
 // ── Componente principal ─────────────────────────────────────────────────────
 export default function Clientes() {
   const { tenantId } = useAppAuth();
@@ -72,6 +85,12 @@ export default function Clientes() {
   const [editingPet, setEditingPet] = useState<Pet | null>(null);
   const [petClientId, setPetClientId] = useState<number | null>(null);
   const [petForm, setPetForm] = useState(emptyPet);
+
+  // ── Import/Export state ──────────────────────────────────────────────────
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const petsParams = expandedClient ? { clientId: expandedClient } : { clientId: 0 };
   const { data: pets = [], refetch: refetchPets } = useListPets(petsParams, {
@@ -152,23 +171,23 @@ export default function Clientes() {
     const isPacotista = petForm.petType === "pacotista";
     const payload = {
       name: petForm.name,
-      breed: petForm.breed || null,
+      breed: petForm.breed || undefined,
       size: petForm.size as PetInputSize,
-      notes: petForm.notes || null,
-      sex: petForm.sex || null,
+      notes: petForm.notes || undefined,
+      sex: petForm.sex || undefined,
       neutered: petForm.neutered,
-      coat: petForm.coat || null,
-      behavior: petForm.behavior || null,
-      healthNotes: petForm.healthNotes || null,
-      photoUrl: petForm.photoUrl || null,
-      groomingPreferences: petForm.groomingPreferences || null,
+      coat: petForm.coat || undefined,
+      behavior: petForm.behavior || undefined,
+      healthNotes: petForm.healthNotes || undefined,
+      photoUrl: petForm.photoUrl || undefined,
+      groomingPreferences: petForm.groomingPreferences || undefined,
       petType: petForm.petType,
-      frequency: isPacotista ? petForm.frequency : null,
-      appointmentDay: isPacotista ? Number(petForm.appointmentDay) : null,
-      pricePerVisit: isPacotista && petForm.pricePerVisit ? petForm.pricePerVisit : null,
+      frequency: isPacotista ? petForm.frequency : undefined,
+      appointmentDay: isPacotista ? Number(petForm.appointmentDay) : undefined,
+      pricePerVisit: isPacotista && petForm.pricePerVisit ? petForm.pricePerVisit : undefined,
       firstVisitDate: isPacotista && petForm.frequency === "quinzenal" && petForm.firstVisitDate
         ? new Date(petForm.firstVisitDate).toISOString()
-        : null,
+        : undefined,
       clientId: petClientId,
     };
 
@@ -195,17 +214,78 @@ export default function Clientes() {
     refetchPets();
   };
 
+  // ── Handlers import/export ───────────────────────────────────────────────
+  const handleExport = async () => {
+    try {
+      const res = await fetch("/api/clients/export", { credentials: "include" });
+      if (!res.ok) throw new Error("Erro ao exportar");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "clientes.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast({ title: "Erro ao exportar clientes", variant: "destructive" });
+    }
+  };
+
+  const handleDownloadModelo = () => {
+    const blob = new Blob([CSV_MODELO], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "modelo_importacao.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImport = async (file: File) => {
+    setImporting(true);
+    setImportResult(null);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/clients/import", {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ title: data.error ?? "Erro ao importar", variant: "destructive" });
+        return;
+      }
+      setImportResult(data as ImportResult);
+      refetch();
+    } catch {
+      toast({ title: "Erro ao importar arquivo", variant: "destructive" });
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
   const isPacotista = petForm.petType === "pacotista";
 
   // ── Render ───────────────────────────────────────────────────────────────
   return (
     <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold">Clientes</h1>
           <p className="text-muted-foreground">Gerencie seus clientes e pets</p>
         </div>
-        <Button onClick={openCreate}><Plus className="h-4 w-4 mr-2" />Novo Cliente</Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button variant="outline" onClick={handleExport}>
+            <Download className="h-4 w-4 mr-2" />Exportar CSV
+          </Button>
+          <Button variant="outline" onClick={() => { setImportResult(null); setImportModalOpen(true); }}>
+            <Upload className="h-4 w-4 mr-2" />Importar CSV
+          </Button>
+          <Button onClick={openCreate}><Plus className="h-4 w-4 mr-2" />Novo Cliente</Button>
+        </div>
       </div>
 
       <Input placeholder="Buscar por nome ou telefone..." value={search}
@@ -442,6 +522,126 @@ export default function Clientes() {
           <DialogFooter>
             <Button variant="outline" onClick={() => { setPetModalOpen(false); setEditingPet(null); }}>Cancelar</Button>
             <Button onClick={handleSavePet} disabled={!petForm.name}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Modal Importar CSV ── */}
+      <Dialog open={importModalOpen} onOpenChange={v => { setImportModalOpen(v); if (!v) setImportResult(null); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Upload className="h-5 w-5 text-primary" />
+              Importar Clientes e Pets
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {!importResult ? (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  Faça upload de um arquivo CSV com os dados dos clientes e pets. Clientes duplicados
+                  (mesmo nome + telefone) serão ignorados.
+                </p>
+
+                <div className="flex items-center gap-2 p-3 bg-muted/40 rounded-lg border border-dashed">
+                  <FileDown className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium">Precisa do modelo?</p>
+                    <p className="text-xs text-muted-foreground">Baixe o CSV de exemplo com os cabeçalhos corretos</p>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={handleDownloadModelo}>
+                    Baixar modelo
+                  </Button>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Arquivo CSV *</Label>
+                  <Input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".csv,text/csv"
+                    onChange={e => {
+                      const file = e.target.files?.[0];
+                      if (file) handleImport(file);
+                    }}
+                    disabled={importing}
+                    className="cursor-pointer"
+                  />
+                  {importing && (
+                    <p className="text-xs text-muted-foreground animate-pulse">Importando... aguarde.</p>
+                  )}
+                </div>
+
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <p className="font-medium">Campos aceitos:</p>
+                  <p className="font-mono bg-muted rounded p-2 text-[10px] leading-relaxed break-all">
+                    nome_cliente, telefone, email, endereco, notas_cliente,<br />
+                    nome_pet, raca, porte, sexo, castrado, pelagem, comportamento,<br />
+                    saude, preferencias_tosa, tipo_pet, frequencia, dia_semana,<br />
+                    preco_por_visita, notas_pet
+                  </p>
+                </div>
+              </>
+            ) : (
+              <div className="space-y-4">
+                {/* Resumo */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <CheckCircle2 className="h-4 w-4 text-green-600" />
+                      <span className="text-xs font-semibold text-green-700">Criados</span>
+                    </div>
+                    <p className="text-sm text-green-800">
+                      <span className="font-bold">{importResult.created.clients}</span> cliente{importResult.created.clients !== 1 ? "s" : ""}
+                    </p>
+                    <p className="text-sm text-green-800">
+                      <span className="font-bold">{importResult.created.pets}</span> pet{importResult.created.pets !== 1 ? "s" : ""}
+                    </p>
+                  </div>
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <AlertCircle className="h-4 w-4 text-amber-600" />
+                      <span className="text-xs font-semibold text-amber-700">Já existiam</span>
+                    </div>
+                    <p className="text-sm text-amber-800">
+                      <span className="font-bold">{importResult.skipped.clients}</span> cliente{importResult.skipped.clients !== 1 ? "s" : ""}
+                    </p>
+                    <p className="text-sm text-amber-800">
+                      <span className="font-bold">{importResult.skipped.pets}</span> pet{importResult.skipped.pets !== 1 ? "s" : ""}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Erros */}
+                {importResult.errors.length > 0 && (
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-semibold text-destructive">
+                      {importResult.errors.length} erro{importResult.errors.length !== 1 ? "s" : ""} encontrado{importResult.errors.length !== 1 ? "s" : ""}:
+                    </p>
+                    <div className="max-h-36 overflow-y-auto space-y-1">
+                      {importResult.errors.map((e, i) => (
+                        <div key={i} className="text-xs bg-red-50 border border-red-200 rounded px-2 py-1.5">
+                          <span className="font-medium">Linha {e.line}:</span> {e.message}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => { setImportResult(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}
+                >
+                  Importar outro arquivo
+                </Button>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setImportModalOpen(false); setImportResult(null); }}>Fechar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

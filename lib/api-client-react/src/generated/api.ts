@@ -2151,6 +2151,79 @@ export const useDeleteClient = <
 };
 
 /**
+ * @summary Export all clients and pets as a CSV file
+ */
+export const getExportClientsUrl = () => {
+  return `/api/clients/export`;
+};
+
+export const exportClients = async (options?: RequestInit): Promise<string> => {
+  return customFetch<string>(getExportClientsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getExportClientsQueryKey = () => {
+  return [`/api/clients/export`] as const;
+};
+
+export const getExportClientsQueryOptions = <
+  TData = Awaited<ReturnType<typeof exportClients>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof exportClients>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getExportClientsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof exportClients>>> = ({
+    signal,
+  }) => exportClients({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof exportClients>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ExportClientsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof exportClients>>
+>;
+export type ExportClientsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Export all clients and pets as a CSV file
+ */
+
+export function useExportClients<
+  TData = Awaited<ReturnType<typeof exportClients>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof exportClients>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getExportClientsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
  * @summary List pets
  */
 export const getListPetsUrl = (params?: ListPetsParams) => {

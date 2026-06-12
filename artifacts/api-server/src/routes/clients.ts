@@ -1,5 +1,6 @@
-import { Router, type IRouter } from "express";
-import { eq, and, ilike } from "drizzle-orm";
+import { Router, type IRouter, type Request, type Response } from "express";
+import { eq, and, ilike, inArray } from "drizzle-orm";
+import multer from "multer";
 import { db, clientsTable, petsTable } from "@workspace/db";
 import {
   CreateClientBody,
@@ -12,10 +13,270 @@ import {
 import { requireTenant } from "../middlewares/requireTenant";
 
 const router: IRouter = Router();
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
 router.use(requireTenant);
 
-router.get("/clients", async (req, res): Promise<void> => {
+// ── CSV helpers ──────────────────────────────────────────────────────────────
+
+const CSV_HEADERS = [
+  "nome_cliente", "telefone", "email", "endereco", "notas_cliente",
+  "nome_pet", "raca", "porte", "sexo", "castrado",
+  "pelagem", "comportamento", "saude", "preferencias_tosa",
+  "tipo_pet", "frequencia", "dia_semana", "preco_por_visita", "notas_pet",
+];
+
+function escapeCell(v: unknown): string {
+  const s = v == null ? "" : String(v);
+  if (s.includes(",") || s.includes('"') || s.includes("\n")) {
+    return `"${s.replace(/"/g, '""')}"`;
+  }
+  return s;
+}
+
+function buildCsvRow(cells: unknown[]): string {
+  return cells.map(escapeCell).join(",");
+}
+
+function parseCsvLine(line: string): string[] {
+  const result: string[] = [];
+  let current = "";
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (ch === "," && !inQuotes) {
+      result.push(current.trim());
+      current = "";
+    } else {
+      current += ch;
+    }
+  }
+  result.push(current.trim());
+  return result;
+}
+
+const DIAS_SEMANA: Record<string, number> = {
+  domingo: 0, segunda: 1, "segunda-feira": 1,
+  terca: 2, "terça": 2, "terça-feira": 2,
+  quarta: 3, "quarta-feira": 3,
+  quinta: 4, "quinta-feira": 4,
+  sexta: 5, "sexta-feira": 5,
+  sabado: 6, "sábado": 6,
+};
+
+// ── Export ───────────────────────────────────────────────────────────────────
+
+router.get("/clients/export", async (req: Request, res: Response): Promise<void> => {
+  const clients = await db
+    .select()
+    .from(clientsTable)
+    .where(eq(clientsTable.tenantId, req.tenantId!))
+    .orderBy(clientsTable.name);
+
+  const clientIds = clients.map(c => c.id);
+  const pets = clientIds.length > 0
+    ? await db.select().from(petsTable).where(inArray(petsTable.clientId, clientIds))
+    : [];
+
+  // Build pet map grouped by clientId
+  const petsByClient = new Map<number, typeof pets>();
+  for (const pet of pets) {
+    if (!petsByClient.has(pet.clientId)) petsByClient.set(pet.clientId, []);
+    petsByClient.get(pet.clientId)!.push(pet);
+  }
+
+  const rows: string[] = [buildCsvRow(CSV_HEADERS)];
+
+  for (const client of clients) {
+    const clientPets = petsByClient.get(client.id) ?? [];
+    if (clientPets.length === 0) {
+      rows.push(buildCsvRow([
+        client.name, client.phone, client.email, client.address, client.notes,
+        "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+      ]));
+    } else {
+      for (const pet of clientPets) {
+        rows.push(buildCsvRow([
+          client.name, client.phone, client.email, client.address, client.notes,
+          pet.name, pet.breed, pet.size, pet.sex,
+          pet.neutered ? "sim" : "nao",
+          pet.coat, pet.behavior, pet.healthNotes, pet.groomingPreferences,
+          pet.petType, pet.frequency, pet.appointmentDay, pet.pricePerVisit, pet.notes,
+        ]));
+      }
+    }
+  }
+
+  res.setHeader("Content-Type", "text/csv; charset=utf-8");
+  res.setHeader("Content-Disposition", 'attachment; filename="clientes.csv"');
+  res.send(rows.join("\n"));
+});
+
+// ── Import ───────────────────────────────────────────────────────────────────
+
+router.post("/clients/import", upload.single("file"), async (req: Request, res: Response): Promise<void> => {
+  if (!req.file) {
+    res.status(400).json({ error: "Nenhum arquivo enviado" });
+    return;
+  }
+
+  const text = req.file.buffer.toString("utf-8");
+  const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
+
+  if (lines.length < 2) {
+    res.status(400).json({ error: "Arquivo vazio ou sem dados (apenas cabeçalho)" });
+    return;
+  }
+
+  // Parse header to find column indices
+  const header = parseCsvLine(lines[0]).map(h => h.toLowerCase().trim());
+  const col = (name: string) => header.indexOf(name);
+
+  const iNomeCliente = col("nome_cliente");
+  const iTelefone = col("telefone");
+  const iEmail = col("email");
+  const iEndereco = col("endereco");
+  const iNotasCliente = col("notas_cliente");
+  const iNomePet = col("nome_pet");
+  const iRaca = col("raca");
+  const iPorte = col("porte");
+  const iSexo = col("sexo");
+  const iCastrado = col("castrado");
+  const iPelagem = col("pelagem");
+  const iComportamento = col("comportamento");
+  const iSaude = col("saude");
+  const iPrefTosa = col("preferencias_tosa");
+  const iTipoPet = col("tipo_pet");
+  const iFrequencia = col("frequencia");
+  const iDiaSemana = col("dia_semana");
+  const iPrecoVisita = col("preco_por_visita");
+  const iNotasPet = col("notas_pet");
+
+  if (iNomeCliente === -1) {
+    res.status(400).json({ error: "Coluna 'nome_cliente' não encontrada. Verifique o formato do arquivo." });
+    return;
+  }
+
+  const result = {
+    created: { clients: 0, pets: 0 },
+    skipped: { clients: 0, pets: 0 },
+    errors: [] as { line: number; message: string }[],
+  };
+
+  // Cache existing clients by name+phone to avoid re-querying
+  const existingClients = await db
+    .select({ id: clientsTable.id, name: clientsTable.name, phone: clientsTable.phone })
+    .from(clientsTable)
+    .where(eq(clientsTable.tenantId, req.tenantId!));
+
+  const clientKey = (name: string, phone: string) => `${name.trim().toLowerCase()}|${phone.trim()}`;
+  const clientCache = new Map<string, number>(
+    existingClients.map(c => [clientKey(c.name, c.phone ?? ""), c.id])
+  );
+  // Track newly created clients in this import session
+  const createdInSession = new Map<string, number>();
+
+  for (let i = 1; i < lines.length; i++) {
+    const lineNum = i + 1;
+    try {
+      const cells = parseCsvLine(lines[i]);
+      const get = (idx: number) => (idx >= 0 ? (cells[idx] ?? "").trim() : "");
+
+      const nomeCliente = get(iNomeCliente);
+      if (!nomeCliente) {
+        result.errors.push({ line: lineNum, message: "nome_cliente vazio" });
+        continue;
+      }
+
+      const telefone = get(iTelefone);
+      const key = clientKey(nomeCliente, telefone);
+
+      let clientId: number;
+
+      if (clientCache.has(key) || createdInSession.has(key)) {
+        clientId = (clientCache.get(key) ?? createdInSession.get(key))!;
+        result.skipped.clients++;
+      } else {
+        const [newClient] = await db
+          .insert(clientsTable)
+          .values({
+            tenantId: req.tenantId!,
+            name: nomeCliente,
+            phone: telefone || null,
+            email: get(iEmail) || null,
+            address: get(iEndereco) || null,
+            notes: get(iNotasCliente) || null,
+          })
+          .returning({ id: clientsTable.id });
+        clientId = newClient.id;
+        createdInSession.set(key, clientId);
+        result.created.clients++;
+      }
+
+      // Pet row
+      const nomePet = get(iNomePet);
+      if (!nomePet) continue; // no pet on this row — that's fine
+
+      const porte = get(iPorte);
+      if (!porte) {
+        result.errors.push({ line: lineNum, message: `Pet '${nomePet}': coluna 'porte' obrigatória` });
+        continue;
+      }
+
+      const tipoPet = get(iTipoPet) || "eventual";
+      const isPacotista = tipoPet === "pacotista";
+
+      let appointmentDay: number | null = null;
+      const diaSemanaStr = get(iDiaSemana).toLowerCase();
+      if (diaSemanaStr) {
+        const parsed = parseInt(diaSemanaStr, 10);
+        if (!isNaN(parsed) && parsed >= 0 && parsed <= 6) {
+          appointmentDay = parsed;
+        } else if (DIAS_SEMANA[diaSemanaStr] !== undefined) {
+          appointmentDay = DIAS_SEMANA[diaSemanaStr];
+        }
+      }
+
+      await db.insert(petsTable).values({
+        clientId,
+        name: nomePet,
+        breed: get(iRaca) || null,
+        size: porte as any,
+        sex: (get(iSexo) as any) || null,
+        neutered: get(iCastrado).toLowerCase() === "sim",
+        coat: get(iPelagem) || null,
+        behavior: get(iComportamento) || null,
+        healthNotes: get(iSaude) || null,
+        groomingPreferences: get(iPrefTosa) || null,
+        petType: (isPacotista ? "pacotista" : "eventual") as any,
+        frequency: isPacotista ? ((get(iFrequencia) || "semanal") as any) : null,
+        appointmentDay: isPacotista ? (appointmentDay as any) : null,
+        pricePerVisit: get(iPrecoVisita) || null,
+        notes: get(iNotasPet) || null,
+      });
+
+      result.created.pets++;
+    } catch (err) {
+      result.errors.push({
+        line: lineNum,
+        message: err instanceof Error ? err.message : "Erro desconhecido",
+      });
+    }
+  }
+
+  res.json(result);
+});
+
+// ── CRUD ─────────────────────────────────────────────────────────────────────
+
+router.get("/clients", async (req: Request, res: Response): Promise<void> => {
   const query = ListClientsQueryParams.safeParse(req.query);
   if (!query.success) {
     res.status(400).json({ error: query.error.message });
@@ -35,7 +296,7 @@ router.get("/clients", async (req, res): Promise<void> => {
   res.json(clients);
 });
 
-router.post("/clients", async (req, res): Promise<void> => {
+router.post("/clients", async (req: Request, res: Response): Promise<void> => {
   const parsed = CreateClientBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -48,7 +309,7 @@ router.post("/clients", async (req, res): Promise<void> => {
   res.status(201).json(client);
 });
 
-router.get("/clients/:id", async (req, res): Promise<void> => {
+router.get("/clients/:id", async (req: Request, res: Response): Promise<void> => {
   const params = GetClientParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -66,7 +327,7 @@ router.get("/clients/:id", async (req, res): Promise<void> => {
   res.json({ ...client, pets });
 });
 
-router.patch("/clients/:id", async (req, res): Promise<void> => {
+router.patch("/clients/:id", async (req: Request, res: Response): Promise<void> => {
   const params = UpdateClientParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -89,7 +350,7 @@ router.patch("/clients/:id", async (req, res): Promise<void> => {
   res.json(client);
 });
 
-router.delete("/clients/:id", async (req, res): Promise<void> => {
+router.delete("/clients/:id", async (req: Request, res: Response): Promise<void> => {
   const params = DeleteClientParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
