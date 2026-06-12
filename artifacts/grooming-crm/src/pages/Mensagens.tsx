@@ -42,6 +42,12 @@ const DEFAULT_TEMPLATES: { name: string; type: string; content: string }[] = [
     content:
       "Oi {nome_cliente}! 🐾 Faz um tempinho que não vemos o(a) {nome_pet} por aqui.\n\nQue tal agendar um banho e tosa? Entre em contato e garanta o horário! 😊",
   },
+  {
+    name: "Pet Pronto!",
+    type: "pet_pronto",
+    content:
+      "Olá {nome_cliente}! 🐾\n\nO(a) {nome_pet} já está prontinho(a) para ser buscado!\n\nPassamos aqui para avisar que o serviço foi concluído. Pode vir buscar quando quiser! 😊",
+  },
 ];
 
 const typeColors: Record<string, string> = {
@@ -49,6 +55,7 @@ const typeColors: Record<string, string> = {
   lembrete: "bg-yellow-100 text-yellow-800",
   leads: "bg-purple-100 text-purple-800",
   agradecimento: "bg-green-100 text-green-800",
+  pet_pronto: "bg-amber-100 text-amber-800",
 };
 
 const variables = ["{nome_cliente}", "{nome_pet}", "{data}", "{horario}", "{servico}", "{preco}", "{datas}"];
@@ -99,13 +106,19 @@ export default function Mensagens() {
   const criarTemplatesPadrao = async () => {
     setSeedingDefaults(true);
     try {
+      const existing = (templates as Template[]);
       for (const t of DEFAULT_TEMPLATES) {
-        await createTemplate.mutateAsync({ data: { ...t, tenantId: tenantId!, type: t.type as any } });
+        const found = existing.find(e => e.type === t.type && e.name === t.name);
+        if (found) {
+          await updateTemplate.mutateAsync({ id: found.id, data: { ...t, tenantId: tenantId!, type: t.type as any } });
+        } else {
+          await createTemplate.mutateAsync({ data: { ...t, tenantId: tenantId!, type: t.type as any } });
+        }
       }
-      toast({ title: "Templates padrão criados com sucesso!" });
+      toast({ title: "Templates padrão aplicados com sucesso!" });
       refetch();
     } catch {
-      toast({ title: "Erro ao criar templates padrão", variant: "destructive" });
+      toast({ title: "Erro ao aplicar templates padrão", variant: "destructive" });
     } finally {
       setSeedingDefaults(false);
     }
