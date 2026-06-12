@@ -186,7 +186,7 @@ function AppointmentCard({ appt, clients, pets, services, packages, onDelete, on
       </div>
       {/* Status buttons — always visible on mobile, hidden on desktop */}
       {onChangeStatus && appt.status !== "concluido" && appt.status !== "cancelado" && (
-        <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-dashed md:hidden" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-dashed" onClick={e => e.stopPropagation()}>
           {appt.status === "aguardando" && (
             <button
               onClick={e => { e.stopPropagation(); onChangeStatus(appt, "em_atendimento"); }}
