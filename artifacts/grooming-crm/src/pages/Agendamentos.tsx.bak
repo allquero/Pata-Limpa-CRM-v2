@@ -77,7 +77,7 @@ function formatBRL(v: number) {
 
 // ─── Card components ──────────────────────────────────────────────────────────
 
-function AppointmentCard({ appt, clients, pets, services, packages, onDelete, onWhatsapp, onPetPronto, onEditService, onChangeStatus, isDragging = false, isEditingDate, editDate, editTime, onStartEditDate, onChangeEditDate, onSaveEditDate, onCancelEditDate }: {
+function AppointmentCard({ appt, clients, pets, services, packages, onDelete, onWhatsapp, onEditService, onChangeStatus, isDragging = false, isEditingDate, editDate, editTime, onStartEditDate, onChangeEditDate, onSaveEditDate, onCancelEditDate }: {
   appt: Appointment;
   clients: Client[];
   pets: Pet[];
@@ -85,7 +85,6 @@ function AppointmentCard({ appt, clients, pets, services, packages, onDelete, on
   packages: Package[];
   onDelete: (id: number) => void;
   onWhatsapp?: (appt: Appointment) => void;
-  onPetPronto?: (appt: Appointment) => void;
   onEditService?: (appt: Appointment) => void;
   onChangeStatus?: (appt: Appointment, newStatus: AppStatus) => void;
   isDragging?: boolean;
@@ -186,7 +185,7 @@ function AppointmentCard({ appt, clients, pets, services, packages, onDelete, on
       </div>
       {/* Status buttons — always visible on mobile, hidden on desktop */}
       {onChangeStatus && appt.status !== "concluido" && appt.status !== "cancelado" && (
-        <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-dashed" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-dashed md:hidden" onClick={e => e.stopPropagation()}>
           {appt.status === "aguardando" && (
             <button
               onClick={e => { e.stopPropagation(); onChangeStatus(appt, "em_atendimento"); }}
@@ -196,21 +195,12 @@ function AppointmentCard({ appt, clients, pets, services, packages, onDelete, on
             </button>
           )}
           {appt.status === "em_atendimento" && (
-            <>
-              {/* Botão Pet Pronto — abre WhatsApp antes de concluir */}
-              <button
-                onClick={e => { e.stopPropagation(); onPetPronto?.(appt); }}
-                className="flex items-center justify-center gap-1 text-xs py-1 px-2 rounded bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors"
-              >
-                <MessageSquare className="h-3 w-3" /> Pet pronto
-              </button>
-              <button
-                onClick={e => { e.stopPropagation(); onChangeStatus(appt, "concluido"); }}
-                className="flex-1 flex items-center justify-center gap-1 text-xs py-1 px-2 rounded bg-green-50 text-green-700 hover:bg-green-100 transition-colors"
-              >
-                <CheckCheck className="h-3 w-3" /> Concluído
-              </button>
-            </>
+            <button
+              onClick={e => { e.stopPropagation(); onChangeStatus(appt, "concluido"); }}
+              className="flex-1 flex items-center justify-center gap-1 text-xs py-1 px-2 rounded bg-green-50 text-green-700 hover:bg-green-100 transition-colors"
+            >
+              <CheckCheck className="h-3 w-3" /> Concluído
+            </button>
           )}
           <button
             onClick={e => { e.stopPropagation(); onChangeStatus(appt, "cancelado"); }}
@@ -224,7 +214,7 @@ function AppointmentCard({ appt, clients, pets, services, packages, onDelete, on
   );
 }
 
-function DraggableCard({ appt, clients, pets, services, packages, onDelete, onWhatsapp, onPetPronto, onEditService, onChangeStatus, isEditingDate, editDate, editTime, onStartEditDate, onChangeEditDate, onSaveEditDate, onCancelEditDate }: {
+function DraggableCard({ appt, clients, pets, services, packages, onDelete, onWhatsapp, onEditService, onChangeStatus, isEditingDate, editDate, editTime, onStartEditDate, onChangeEditDate, onSaveEditDate, onCancelEditDate }: {
   appt: Appointment;
   clients: Client[];
   pets: Pet[];
@@ -232,7 +222,6 @@ function DraggableCard({ appt, clients, pets, services, packages, onDelete, onWh
   packages: Package[];
   onDelete: (id: number) => void;
   onWhatsapp?: (appt: Appointment) => void;
-  onPetPronto?: (appt: Appointment) => void;
   onEditService?: (appt: Appointment) => void;
   onChangeStatus?: (appt: Appointment, newStatus: AppStatus) => void;
   isEditingDate?: boolean;
@@ -254,7 +243,6 @@ function DraggableCard({ appt, clients, pets, services, packages, onDelete, onWh
         packages={packages}
         onDelete={onDelete}
         onWhatsapp={onWhatsapp}
-        onPetPronto={onPetPronto}
         onEditService={onEditService}
         onChangeStatus={onChangeStatus}
         isDragging={isDragging}
@@ -270,7 +258,7 @@ function DraggableCard({ appt, clients, pets, services, packages, onDelete, onWh
   );
 }
 
-function KanbanColumn({ status, label, color, bg, appointments, clients, pets, services, packages, onDelete, onWhatsapp, onPetPronto, onEditService, onChangeStatus, editingApptId, editDate, editTime, onStartEditDate, onChangeEditDate, onSaveEditDate, onCancelEditDate }: {
+function KanbanColumn({ status, label, color, bg, appointments, clients, pets, services, packages, onDelete, onWhatsapp, onEditService, onChangeStatus, editingApptId, editDate, editTime, onStartEditDate, onChangeEditDate, onSaveEditDate, onCancelEditDate }: {
   status: AppStatus;
   label: string;
   color: string;
@@ -282,7 +270,6 @@ function KanbanColumn({ status, label, color, bg, appointments, clients, pets, s
   packages: Package[];
   onDelete: (id: number) => void;
   onWhatsapp: (appt: Appointment) => void;
-  onPetPronto: (appt: Appointment) => void;
   onEditService: (appt: Appointment) => void;
   onChangeStatus: (appt: Appointment, newStatus: AppStatus) => void;
   editingApptId: number | null;
@@ -314,7 +301,6 @@ function KanbanColumn({ status, label, color, bg, appointments, clients, pets, s
             packages={packages}
             onDelete={onDelete}
             onWhatsapp={onWhatsapp}
-            onPetPronto={onPetPronto}
             onEditService={onEditService}
             onChangeStatus={onChangeStatus}
             isEditingDate={editingApptId === appt.id}
@@ -416,6 +402,7 @@ function GerenciarServicosModal({
               {pet?.size && <span className="text-xs text-muted-foreground">({PORTE_SIZES[pet.size] ?? pet.size})</span>}
             </div>
 
+            {/* Serviço principal */}
             <div>
               <Label className="text-xs">Serviço principal</Label>
               <Select value={primaryServiceId} onValueChange={handlePrimaryChange}>
@@ -433,6 +420,7 @@ function GerenciarServicosModal({
               </Select>
             </div>
 
+            {/* Serviços adicionais já selecionados */}
             {extraServiceIds.length > 0 && (
               <div className="space-y-1.5">
                 <Label className="text-xs">Serviços adicionais</Label>
@@ -450,6 +438,7 @@ function GerenciarServicosModal({
               </div>
             )}
 
+            {/* Adicionar serviço extra */}
             {addingExtra ? (
               <div className="flex gap-2 items-center">
                 <Select value={newExtraId} onValueChange={setNewExtraId}>
@@ -478,11 +467,13 @@ function GerenciarServicosModal({
               )
             )}
 
+            {/* Valor total */}
             <div>
               <Label className="text-xs">Valor total (R$)</Label>
               <Input type="number" step="0.01" value={price} onChange={e => setPrice(e.target.value)} className="h-8 text-sm mt-1" />
             </div>
 
+            {/* Observações */}
             <div>
               <Label className="text-xs">Observações</Label>
               <Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Observações opcionais..." className="text-sm mt-1" />
@@ -506,8 +497,7 @@ function GerenciarServicosModal({
 
 // ─── ConfirmacaoWhatsAppModal ─────────────────────────────────────────────────
 
-// "pet_pronto" = aviso "seu pet está pronto para ser buscado"
-type ConfirmacaoMode = "agradecimento" | "conclusao" | "pet_pronto";
+type ConfirmacaoMode = "agradecimento" | "conclusao";
 
 function ConfirmacaoWhatsAppModal({
   appt, clients, pets, services, packages, mode = "conclusao", overridePrice, overrideClient, onClose, tenantId,
@@ -548,9 +538,7 @@ function ConfirmacaoWhatsAppModal({
     { query: { queryKey: getListMessageTemplatesQueryKey(tmplParams), enabled: !!appt } }
   );
 
-  const templateType = mode === "pet_pronto"
-    ? "pet_pronto"
-    : (mode === "agradecimento" || mode === "conclusao") ? "agradecimento" : "confirmacao";
+  const templateType = (mode === "agradecimento" || mode === "conclusao") ? "agradecimento" : "confirmacao";
   const filteredTemplates = (msgTemplates as MessageTemplate[]).filter(t => t.type === templateType);
 
   const buildMessage = (): string => {
@@ -560,6 +548,7 @@ function ConfirmacaoWhatsAppModal({
     const serviceName = service?.name ?? pkg?.name ?? "Serviço";
     const price = formatBRL(overridePrice !== undefined ? overridePrice : Number(appt.totalPrice));
 
+    // For agradecimento: include current appt + all future; for conclusao: only future (excl. current)
     const allAppts = (clientAppts as Appointment[])
       .sort((a, b) => new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime());
 
@@ -576,11 +565,9 @@ function ConfirmacaoWhatsAppModal({
       ? filteredTemplates.find(t => String(t.id) === templateId)
       : null;
 
-    const defaultContent = mode === "pet_pronto"
-      ? `Olá {nome_cliente}! 🐾\n\nO(a) {nome_pet} já está prontinho(a) para ser buscado!\n\nPassamos aqui para avisar que o serviço foi concluído. Pode vir buscar quando quiser! 😊`
-      : mode === "agradecimento"
-        ? `Olá {nome_cliente}! Obrigado por agendar com a gente! 🐾\n\n{nome_pet} está agendado nas seguintes datas:\n{datas}\n\nServiço: {servico}\nValor: {preco}\n\nQualquer dúvida, estamos à disposição!`
-        : `Olá {nome_cliente}! Obrigado pela visita de {nome_pet} hoje! 🐾✨\n\nEsperamos que tenham gostado do serviço. Até a próxima! 😊`;
+    const defaultContent = mode === "agradecimento"
+      ? `Olá {nome_cliente}! Obrigado por agendar com a gente! 🐾\n\n{nome_pet} está agendado nas seguintes datas:\n{datas}\n\nServiço: {servico}\nValor: {preco}\n\nQualquer dúvida, estamos à disposição!`
+      : `Olá {nome_cliente}! Obrigado pela visita de {nome_pet} hoje! 🐾✨\n\nEsperamos que tenham gostado do serviço. Até a próxima! 😊`;
 
     const baseContent = selectedTmpl?.content ?? defaultContent;
 
@@ -593,6 +580,7 @@ function ConfirmacaoWhatsAppModal({
       .replace(/\{preco\}/g, price)
       .replace(/\{datas\}/g, datasStr);
 
+    // For conclusao mode: append future dates if not already in template
     if (mode === "conclusao" && !baseContent.includes("{datas}") && datesForList.length > 0) {
       const datesList = datesForList
         .map(a => `📅 ${format(new Date(a.scheduledDate), "dd/MM/yyyy 'às' HH:mm")}`)
@@ -612,19 +600,8 @@ function ConfirmacaoWhatsAppModal({
     onClose();
   };
 
-  const modalTitle = mode === "pet_pronto"
-    ? "🐾 Pet Pronto!"
-    : mode === "agradecimento"
-      ? "Agradecimento via WhatsApp"
-      : mode === "conclusao"
-        ? "Agradecimento após Atendimento"
-        : "Confirmação de Presença via WhatsApp";
-
-  const templateLabel = mode === "pet_pronto"
-    ? "Template de pet pronto"
-    : (mode === "agradecimento" || mode === "conclusao")
-      ? "Template de agradecimento"
-      : "Template de confirmação de presença";
+  const modalTitle = mode === "agradecimento" ? "Agradecimento via WhatsApp" : mode === "conclusao" ? "Agradecimento após Atendimento" : "Confirmação de Presença via WhatsApp";
+  const templateLabel = (mode === "agradecimento" || mode === "conclusao") ? "Template de agradecimento" : "Template de confirmação de presença";
 
   return (
     <Dialog open={!!appt} onOpenChange={open => { if (!open) onClose(); }}>
@@ -741,6 +718,7 @@ export default function Agendamentos() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [activeId, setActiveId] = useState<number | null>(null);
 
+  // Casual modal
   const [casualOpen, setCasualOpen] = useState(false);
   const [casualStep, setCasualStep] = useState(0);
   const [casual, setCasual] = useState(emptyCasual);
@@ -748,13 +726,16 @@ export default function Agendamentos() {
   const [casualSearchQuery, setCasualSearchQuery] = useState("");
   const [casualSelectedPetId, setCasualSelectedPetId] = useState<string>("");
 
+  // Sell package modal
   const [sellOpen, setSellOpen] = useState(false);
   const [sell, setSell] = useState(emptySell);
 
+  // Inline date edit in Kanban
   const [editingApptId, setEditingApptId] = useState<number | null>(null);
   const [editDate, setEditDate] = useState("");
   const [editTime, setEditTime] = useState("");
 
+  // Edit service modal
   const [editServicoAppt, setEditServicoAppt] = useState<Appointment | null>(null);
 
   const handleEditServicoSave = async (serviceId: number | undefined, extraServiceIds: number[], totalPrice: number, notes: string) => {
@@ -777,19 +758,11 @@ export default function Agendamentos() {
   const [confirmacaoMode, setConfirmacaoMode] = useState<ConfirmacaoMode>("conclusao");
   const [confirmacaoOverridePrice, setConfirmacaoOverridePrice] = useState<number | undefined>(undefined);
   const [confirmacaoOverrideClient, setConfirmacaoOverrideClient] = useState<Pick<Client, "id" | "name" | "phone"> | undefined>(undefined);
-
   const openConfirmacao = (appt: Appointment) => {
     setConfirmacaoMode("conclusao");
     setConfirmacaoOverridePrice(undefined);
     setConfirmacaoAppt(appt);
   };
-
-  // Novo: abre o modal no modo "pet_pronto"
-  const openPetPronto = useCallback((appt: Appointment) => {
-    setConfirmacaoMode("pet_pronto");
-    setConfirmacaoOverridePrice(undefined);
-    setConfirmacaoAppt(appt);
-  }, []);
 
   // Reminders panel
   const tomorrow = addDays(new Date(), 1);
@@ -805,6 +778,7 @@ export default function Agendamentos() {
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
+  // Tomorrow's appointments for reminders
   const tomorrowStart = new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate());
   const tomorrowEnd = new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate(), 23, 59, 59);
   const { data: tomorrowAppts = [] } = useListAppointments({
@@ -831,22 +805,27 @@ export default function Agendamentos() {
   const { data: services = [] } = useListServices({ tenantId: tenantId! });
   const { data: packages = [] } = useListPackages({ tenantId: tenantId! });
 
+  // Pets for sell modal — only fetched when a client is selected
   const sellPetParams = sell.clientId ? { clientId: Number(sell.clientId) } : undefined;
   const { data: sellClientPets = [] } = useListPets(sellPetParams, {
     query: { queryKey: getListPetsQueryKey(sellPetParams), enabled: !!sell.clientId },
   });
 
+  // Pets for casual modal — only fetched when an existing client is found
   const casualClientPetParams = casualFoundClient ? { clientId: casualFoundClient.id } : undefined;
   const { data: casualClientPets = [], isFetched: casualClientPetsFetched } = useListPets(casualClientPetParams, {
     query: { queryKey: getListPetsQueryKey(casualClientPetParams), enabled: !!casualFoundClient },
   });
 
+  // Auto-select "new" pet when found client has no registered pets
   useEffect(() => {
     if (casualFoundClient && casualClientPetsFetched && (casualClientPets as Pet[]).length === 0) {
       setCasualSelectedPetId("new");
     }
   }, [casualFoundClient, casualClientPetsFetched, casualClientPets]);
 
+  // Live search results for casual modal (client-side, min 2 chars)
+  // Phone matching is only applied when the query looks like a phone (only digits/spaces/dashes/parens)
   const casualSearchQuery_trimmed = casualSearchQuery.trim();
   const isPhoneQuery = casualSearchQuery_trimmed.length > 0 && /^[\d\s\-\(\)]+$/.test(casualSearchQuery_trimmed);
   const casualSearchResults = casualSearchQuery_trimmed.length >= 2
@@ -864,6 +843,7 @@ export default function Agendamentos() {
   const createPet = useCreatePet();
   const sellPackage = useSellPackage();
 
+  // ── Inline date editing handlers ───────────────────────────────────────────
   const startEditDate = (appt: Appointment) => {
     setEditingApptId(appt.id);
     setEditDate(new Date(appt.scheduledDate).toISOString().substring(0, 10));
@@ -894,6 +874,7 @@ export default function Agendamentos() {
     setEditTime("");
   };
 
+  // ── Casual: services filtered by pet size ──────────────────────────────────
   const casualFilteredServices = casual.petSize
     ? (services as Service[]).filter(s => s.size === casual.petSize)
     : (services as Service[]);
@@ -901,6 +882,7 @@ export default function Agendamentos() {
     s => s.id !== Number(casual.serviceId) && !casual.extraServiceIds.includes(s.id),
   );
 
+  // ── Sell: selected package & price for pet ────────────────────────────────
   const selectedPkg = (packages as Package[]).find(p => p.id === Number(sell.packageId));
   const sellPet = (sellClientPets as Pet[]).find(p => p.id === Number(sell.petId));
   const sellPetSize = sellPet?.size;
@@ -908,6 +890,7 @@ export default function Agendamentos() {
     ? (selectedPkg.priceBySizes.find(p => p.size === sellPetSize)?.price ?? null)
     : null;
 
+  // ── Sell: sessions preview ────────────────────────────────────────────────
   const sellSessions = (() => {
     if (!selectedPkg) return [];
     const items = [...(selectedPkg.serviceItems ?? [])].sort((a, b) => b.quantity - a.quantity);
@@ -923,6 +906,7 @@ export default function Agendamentos() {
     }));
   })();
 
+  // ── DnD ──────────────────────────────────────────────────────────────────
   const handleDragStart = (event: DragStartEvent) => setActiveId(event.active.id as number);
 
   const handleStatusChange = useCallback(async (appt: Appointment, newStatus: AppStatus) => {
@@ -954,6 +938,7 @@ export default function Agendamentos() {
     refetch();
   };
 
+  // ── Casual modal ──────────────────────────────────────────────────────────
   const openCasual = () => {
     setCasual(emptyCasual);
     setCasualStep(0);
@@ -965,7 +950,10 @@ export default function Agendamentos() {
 
   const casualNextStep = () => {
     if (casualStep === 0) {
-      if (casualFoundClient) { setCasualStep(2); return; }
+      if (casualFoundClient) {
+        setCasualStep(2);
+        return;
+      }
       if (!casual.clientName.trim()) { toast({ title: "Nome do cliente é obrigatório", variant: "destructive" }); return; }
       if (!casual.clientPhone.trim()) { toast({ title: "Telefone é obrigatório", variant: "destructive" }); return; }
     }
@@ -977,7 +965,11 @@ export default function Agendamentos() {
   };
 
   const casualPrevStep = () => {
-    if (casualStep === 2 && casualFoundClient) { setCasualStep(0); } else { setCasualStep(s => s - 1); }
+    if (casualStep === 2 && casualFoundClient) {
+      setCasualStep(0);
+    } else {
+      setCasualStep(s => s - 1);
+    }
   };
 
   const handleCasualSave = async () => {
@@ -985,38 +977,88 @@ export default function Agendamentos() {
     if (!casual.scheduledDate || !casual.scheduledTime) { toast({ title: "Data e horário são obrigatórios", variant: "destructive" }); return; }
     if (!casual.totalPrice) { toast({ title: "Informe o valor", variant: "destructive" }); return; }
     if (!casual.petSize) { toast({ title: "Porte do pet é obrigatório", variant: "destructive" }); return; }
+
     if (casualFoundClient) {
       const usingExistingPet = casualSelectedPetId && casualSelectedPetId !== "new";
-      if (!usingExistingPet && !casual.petName.trim()) { toast({ title: "Nome do pet é obrigatório", variant: "destructive" }); return; }
+      if (!usingExistingPet) {
+        if (!casual.petName.trim()) { toast({ title: "Nome do pet é obrigatório", variant: "destructive" }); return; }
+      }
       if (!casualSelectedPetId) { toast({ title: "Selecione um pet", variant: "destructive" }); return; }
     }
+
     try {
       let resolvedClientId: number;
       let resolvedPetId: number;
+
       if (casualFoundClient) {
         resolvedClientId = casualFoundClient.id;
         if (casualSelectedPetId && casualSelectedPetId !== "new") {
           resolvedPetId = Number(casualSelectedPetId);
         } else {
-          const newPet: Pet = await createPet.mutateAsync({ data: { clientId: resolvedClientId, name: casual.petName.trim(), breed: casual.petBreed.trim() || undefined, size: casual.petSize } });
+          const newPet: Pet = await createPet.mutateAsync({
+            data: {
+              clientId: resolvedClientId,
+              name: casual.petName.trim(),
+              breed: casual.petBreed.trim() || undefined,
+              size: casual.petSize,
+            },
+          });
           resolvedPetId = newPet.id;
         }
       } else {
-        const newClient: Client = await createClient.mutateAsync({ data: { tenantId: tenantId!, name: casual.clientName.trim(), phone: casual.clientPhone.trim() } });
+        const newClient: Client = await createClient.mutateAsync({
+          data: {
+            tenantId: tenantId!,
+            name: casual.clientName.trim(),
+            phone: casual.clientPhone.trim(),
+          },
+        });
         resolvedClientId = newClient.id;
-        setConfirmacaoOverrideClient({ id: newClient.id, name: newClient.name, phone: newClient.phone });
-        const newPet: Pet = await createPet.mutateAsync({ data: { clientId: resolvedClientId, name: casual.petName.trim(), breed: casual.petBreed.trim() || undefined, size: casual.petSize } });
+        // Store newly created client so the WhatsApp modal can use it immediately
+        // without waiting for the clients list to be refetched
+        setConfirmacaoOverrideClient({
+          id: newClient.id,
+          name: newClient.name,
+          phone: newClient.phone,
+        });
+        const newPet: Pet = await createPet.mutateAsync({
+          data: {
+            clientId: resolvedClientId,
+            name: casual.petName.trim(),
+            breed: casual.petBreed.trim() || undefined,
+            size: casual.petSize,
+          },
+        });
         resolvedPetId = newPet.id;
       }
+
       const dt = new Date(`${casual.scheduledDate}T${casual.scheduledTime}:00`);
-      const createdAppts = await createAppointment.mutateAsync({ data: { tenantId: tenantId!, clientId: resolvedClientId, petId: resolvedPetId, serviceId: Number(casual.serviceId), extraServiceIds: casual.extraServiceIds.length > 0 ? casual.extraServiceIds : undefined, scheduledDate: dt.toISOString(), totalPrice: Number(casual.totalPrice), notes: casual.notes || undefined } });
+      const createdAppts = await createAppointment.mutateAsync({
+        data: {
+          tenantId: tenantId!,
+          clientId: resolvedClientId,
+          petId: resolvedPetId,
+          serviceId: Number(casual.serviceId),
+          extraServiceIds: casual.extraServiceIds.length > 0 ? casual.extraServiceIds : undefined,
+          scheduledDate: dt.toISOString(),
+          totalPrice: Number(casual.totalPrice),
+          notes: casual.notes || undefined,
+        },
+      });
+
       const clientName = casualFoundClient?.name ?? casual.clientName;
-      const petName = casualSelectedPetId && casualSelectedPetId !== "new" ? (casualClientPets as Pet[]).find(p => p.id === Number(casualSelectedPetId))?.name ?? "" : casual.petName;
+      const petName = casualSelectedPetId && casualSelectedPetId !== "new"
+        ? (casualClientPets as Pet[]).find(p => p.id === Number(casualSelectedPetId))?.name ?? ""
+        : casual.petName;
       toast({ title: "Agendamento criado!", description: `${clientName} · ${petName}` });
       setCasualOpen(false);
       refetch();
       const first = createdAppts[0];
-      if (first) { setConfirmacaoMode("agradecimento"); setConfirmacaoOverridePrice(undefined); setConfirmacaoAppt(appointmentFromFull(first)); }
+      if (first) {
+        setConfirmacaoMode("agradecimento");
+        setConfirmacaoOverridePrice(undefined);
+        setConfirmacaoAppt(appointmentFromFull(first));
+      }
     } catch {
       setConfirmacaoOverrideClient(undefined);
       toast({ title: "Erro ao criar agendamento", variant: "destructive" });
@@ -1025,7 +1067,11 @@ export default function Agendamentos() {
 
   const isCasualSaving = createClient.isPending || createPet.isPending || createAppointment.isPending;
 
-  const openSell = () => { setSell(emptySell); setSellOpen(true); };
+  // ── Sell package modal ────────────────────────────────────────────────────
+  const openSell = () => {
+    setSell(emptySell);
+    setSellOpen(true);
+  };
 
   const handleSellSave = async () => {
     if (!sell.packageId) { toast({ title: "Selecione o pacote", variant: "destructive" }); return; }
@@ -1033,19 +1079,37 @@ export default function Agendamentos() {
     if (!sell.petId) { toast({ title: "Selecione o pet", variant: "destructive" }); return; }
     if (!sell.startDate || !sell.startTime) { toast({ title: "Data e horário são obrigatórios", variant: "destructive" }); return; }
     try {
-      const result: SellPackageResult = await sellPackage.mutateAsync({ id: Number(sell.packageId), data: { tenantId: tenantId!, clientId: Number(sell.clientId), petId: Number(sell.petId), startDate: sell.startDate, startTime: sell.startTime, notes: sell.notes || null } });
+      const result: SellPackageResult = await sellPackage.mutateAsync({
+        id: Number(sell.packageId),
+        data: {
+          tenantId: tenantId!,
+          clientId: Number(sell.clientId),
+          petId: Number(sell.petId),
+          startDate: sell.startDate,
+          startTime: sell.startTime,
+          notes: sell.notes || null,
+        },
+      });
       const count = result.appointments.length;
       const price = result.financialEntry.amount;
-      toast({ title: "Pacote vendido com sucesso!", description: `${count} agendamento${count !== 1 ? "s" : ""} criado${count !== 1 ? "s" : ""} · Receita: ${formatBRL(price)}` });
+      toast({
+        title: "Pacote vendido com sucesso!",
+        description: `${count} agendamento${count !== 1 ? "s" : ""} criado${count !== 1 ? "s" : ""} · Receita: ${formatBRL(price)}`,
+      });
       setSellOpen(false);
       refetch();
       const firstSell = result.appointments[0];
-      if (firstSell) { setConfirmacaoMode("agradecimento"); setConfirmacaoOverridePrice(result.financialEntry.amount); setConfirmacaoAppt(appointmentFromFull(firstSell)); }
+      if (firstSell) {
+        setConfirmacaoMode("agradecimento");
+        setConfirmacaoOverridePrice(result.financialEntry.amount);
+        setConfirmacaoAppt(appointmentFromFull(firstSell));
+      }
     } catch {
       toast({ title: "Erro ao vender pacote", variant: "destructive" });
     }
   };
 
+  // ── Reminders helpers ─────────────────────────────────────────────────────
   const markNotified = (apptId: number) => {
     setNotifiedIds(prev => {
       const next = new Set(prev);
@@ -1063,8 +1127,14 @@ export default function Agendamentos() {
     const apptTime = new Date(appt.scheduledDate).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
     const apptDate = format(tomorrow, "dd/MM/yyyy");
     const serviceName = service?.name ?? pkg?.name ?? "Serviço";
-    const selectedTmpl = reminderTemplateId !== "default" ? reminderTemplates.find(t => String(t.id) === reminderTemplateId) : null;
-    const content = selectedTmpl?.content ?? `Olá {nome_cliente}! Lembramos que {nome_pet} tem agendamento amanhã, dia {data} às {horario}. Serviço: {servico}. Valor: {preco}. Aguardamos vocês! 🐾`;
+
+    const selectedTmpl = reminderTemplateId !== "default"
+      ? reminderTemplates.find(t => String(t.id) === reminderTemplateId)
+      : null;
+
+    const content = selectedTmpl?.content
+      ?? `Olá {nome_cliente}! Lembramos que {nome_pet} tem agendamento amanhã, dia {data} às {horario}. Serviço: {servico}. Valor: {preco}. Aguardamos vocês! 🐾`;
+
     return content
       .replace(/\{nome_cliente\}/g, client?.name ?? "")
       .replace(/\{nome_pet\}/g, pet?.name ?? "")
@@ -1076,7 +1146,10 @@ export default function Agendamentos() {
 
   const sendReminder = (appt: Appointment) => {
     const client = (clients as Client[]).find(c => c.id === appt.clientId);
-    if (!client?.phone) { toast({ title: "Cliente sem telefone cadastrado", variant: "destructive" }); return; }
+    if (!client?.phone) {
+      toast({ title: "Cliente sem telefone cadastrado", variant: "destructive" });
+      return;
+    }
     const message = fillReminderTemplate(appt);
     const cleaned = client.phone.replace(/\D/g, "");
     const number = cleaned.length === 11 ? `55${cleaned}` : cleaned;
@@ -1093,6 +1166,7 @@ export default function Agendamentos() {
     });
   };
 
+  // Sort: un-notified first, notified (faded) at the end — both groups sorted by time
   const sortedTomorrowAppts = [
     ...(tomorrowAppts as Appointment[]).filter(a => !notifiedIds.has(a.id)),
     ...(tomorrowAppts as Appointment[]).filter(a => notifiedIds.has(a.id)),
@@ -1103,6 +1177,7 @@ export default function Agendamentos() {
     return new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime();
   });
 
+  // ── Kanban helpers ────────────────────────────────────────────────────────
   const activeAppt = activeId ? (appointments as Appointment[]).find(a => a.id === activeId) : null;
   const filterForDay = (day: Date) => (appointments as Appointment[]).filter(a => isSameDay(new Date(a.scheduledDate), day));
   const filterByStatus = (status: AppStatus) =>
@@ -1112,6 +1187,7 @@ export default function Agendamentos() {
 
   return (
     <div className="p-6 space-y-4 pl-[12px] pr-[12px] pt-[12px] pb-[12px]">
+      {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3 mb-[8px]">
         <div>
           <h1 className="text-2xl font-bold">Agendamentos</h1>
@@ -1128,6 +1204,7 @@ export default function Agendamentos() {
           </Button>
         </div>
       </div>
+      {/* Date navigation */}
       <div className="flex items-center gap-4 flex-wrap mb-[8px]">
         <Tabs value={view} onValueChange={v => setView(v as "day" | "week")}>
           <TabsList>
@@ -1151,6 +1228,7 @@ export default function Agendamentos() {
           <Button variant="outline" size="sm" onClick={() => setSelectedDate(new Date())}>Hoje</Button>
         </div>
       </div>
+      {/* Week strip */}
       {view === "week" && (
         <div className="flex gap-1 overflow-x-auto pb-1">
           {weekDays.map(d => (
@@ -1166,6 +1244,7 @@ export default function Agendamentos() {
           ))}
         </div>
       )}
+      {/* Kanban */}
       <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {COLUMNS.map(col => (
@@ -1182,7 +1261,6 @@ export default function Agendamentos() {
               packages={packages as Package[]}
               onDelete={handleDelete}
               onWhatsapp={openConfirmacao}
-              onPetPronto={openPetPronto}
               onEditService={setEditServicoAppt}
               onChangeStatus={handleStatusChange}
               editingApptId={editingApptId}
@@ -1210,7 +1288,6 @@ export default function Agendamentos() {
           )}
         </DragOverlay>
       </DndContext>
-
       {/* ── Lembretes de amanhã ──────────────────────────────────────────── */}
       <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
         <button
@@ -1219,10 +1296,16 @@ export default function Agendamentos() {
         >
           <div className="flex items-center gap-2">
             <Bell className="h-4 w-4 text-amber-500" />
-            <span className="font-semibold text-sm">Lembretes de amanhã</span>
-            <span className="text-xs text-muted-foreground">{format(tomorrow, "EEEE, d 'de' MMMM", { locale: ptBR })}</span>
+            <span className="font-semibold text-sm">
+              Lembretes de amanhã
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {format(tomorrow, "EEEE, d 'de' MMMM", { locale: ptBR })}
+            </span>
             {sortedTomorrowAppts.length > 0 && (
-              <Badge variant="secondary" className="text-xs">{sortedTomorrowAppts.length - notifiedIds.size}/{sortedTomorrowAppts.length}</Badge>
+              <Badge variant="secondary" className="text-xs">
+                {sortedTomorrowAppts.length - notifiedIds.size}/{sortedTomorrowAppts.length}
+              </Badge>
             )}
           </div>
           {remindersOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
@@ -1230,13 +1313,18 @@ export default function Agendamentos() {
 
         {remindersOpen && (
           <div className="border-t">
+            {/* Template selector */}
             <div className="flex items-center gap-3 px-4 py-3 bg-muted/30 border-b flex-wrap">
               <Label className="text-xs whitespace-nowrap shrink-0">Template de lembrete:</Label>
               <Select value={reminderTemplateId} onValueChange={setReminderTemplateId}>
-                <SelectTrigger className="h-7 text-xs w-auto min-w-[200px]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-7 text-xs w-auto min-w-[200px]">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="default">Mensagem padrão</SelectItem>
-                  {reminderTemplates.map(t => (<SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>))}
+                  {reminderTemplates.map(t => (
+                    <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               {notifiedIds.size > 0 && (
@@ -1246,8 +1334,12 @@ export default function Agendamentos() {
                 </span>
               )}
             </div>
+
+            {/* Appointments list */}
             {sortedTomorrowAppts.length === 0 ? (
-              <div className="py-10 text-center text-sm text-muted-foreground">Nenhum agendamento para amanhã 🎉</div>
+              <div className="py-10 text-center text-sm text-muted-foreground">
+                Nenhum agendamento para amanhã 🎉
+              </div>
             ) : (
               <div className="divide-y">
                 {sortedTomorrowAppts.map(appt => {
@@ -1257,28 +1349,69 @@ export default function Agendamentos() {
                   const pkg = (packages as Package[]).find(p => p.id === appt.packageId);
                   const apptTime = new Date(appt.scheduledDate).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
                   const isNotified = notifiedIds.has(appt.id);
+
                   return (
-                    <div key={appt.id} className={`flex items-center gap-3 px-4 py-3 transition-all ${isNotified ? "opacity-40" : "hover:bg-accent/20"}`}>
+                    <div
+                      key={appt.id}
+                      className={`flex items-center gap-3 px-4 py-3 transition-all ${isNotified ? "opacity-40" : "hover:bg-accent/20"}`}
+                    >
+                      {/* Time */}
                       <div className="flex items-center gap-1 text-xs text-muted-foreground w-12 shrink-0">
-                        <Clock className="h-3 w-3" />{apptTime}
+                        <Clock className="h-3 w-3" />
+                        {apptTime}
                       </div>
+
+                      {/* Pet + client */}
                       <div className="flex items-center gap-1.5 flex-1 min-w-0">
                         <PawPrint className="h-3.5 w-3.5 text-primary shrink-0" />
                         <span className="font-semibold text-sm truncate">{pet?.name ?? "Pet"}</span>
-                        {pet?.size && (<Badge variant="outline" className="text-xs px-1 py-0 shrink-0">{PORTE_SIZES[pet.size as keyof typeof PORTE_SIZES] ?? pet.size}</Badge>)}
+                        {pet?.size && (
+                          <Badge variant="outline" className="text-xs px-1 py-0 shrink-0">
+                            {PORTE_SIZES[pet.size as keyof typeof PORTE_SIZES] ?? pet.size}
+                          </Badge>
+                        )}
                         <span className="text-xs text-muted-foreground truncate">· {client?.name ?? "Cliente"}</span>
                       </div>
-                      <span className="text-xs text-muted-foreground hidden sm:block truncate max-w-[120px]">{service?.name ?? pkg?.name ?? ""}</span>
-                      <span className="text-xs font-semibold text-primary shrink-0">{formatBRL(Number(appt.totalPrice))}</span>
-                      {!client?.phone && (<span className="text-xs text-amber-600 shrink-0">sem telefone</span>)}
+
+                      {/* Service */}
+                      <span className="text-xs text-muted-foreground hidden sm:block truncate max-w-[120px]">
+                        {service?.name ?? pkg?.name ?? ""}
+                      </span>
+
+                      {/* Price */}
+                      <span className="text-xs font-semibold text-primary shrink-0">
+                        {formatBRL(Number(appt.totalPrice))}
+                      </span>
+
+                      {/* Phone warning */}
+                      {!client?.phone && (
+                        <span className="text-xs text-amber-600 shrink-0">sem telefone</span>
+                      )}
+
+                      {/* Actions */}
                       {isNotified ? (
                         <div className="flex items-center gap-1.5 shrink-0">
-                          <span className="text-xs text-green-600 flex items-center gap-1"><CheckCheck className="h-3.5 w-3.5" />Enviado</span>
-                          <button onClick={() => unmarkNotified(appt.id)} className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 ml-1">desfazer</button>
+                          <span className="text-xs text-green-600 flex items-center gap-1">
+                            <CheckCheck className="h-3.5 w-3.5" />
+                            Enviado
+                          </span>
+                          <button
+                            onClick={() => unmarkNotified(appt.id)}
+                            className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 ml-1"
+                            title="Desmarcar como enviado"
+                          >
+                            desfazer
+                          </button>
                         </div>
                       ) : (
-                        <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white gap-1.5 h-7 text-xs shrink-0" onClick={() => sendReminder(appt)} disabled={!client?.phone}>
-                          <MessageSquare className="h-3.5 w-3.5" />Lembrete
+                        <Button
+                          size="sm"
+                          className="bg-green-600 hover:bg-green-700 text-white gap-1.5 h-7 text-xs shrink-0"
+                          onClick={() => sendReminder(appt)}
+                          disabled={!client?.phone}
+                        >
+                          <MessageSquare className="h-3.5 w-3.5" />
+                          Lembrete
                         </Button>
                       )}
                     </div>
@@ -1300,7 +1433,7 @@ export default function Agendamentos() {
         onClose={() => setEditServicoAppt(null)}
       />
 
-      {/* ── Modal: Confirmação / Pet Pronto / Agradecimento WhatsApp ─────── */}
+      {/* ── Modal: Confirmação WhatsApp ───────────────────────────────────── */}
       <ConfirmacaoWhatsAppModal
         appt={confirmacaoAppt}
         clients={clients as Client[]}
@@ -1323,16 +1456,22 @@ export default function Agendamentos() {
               Novo Agendamento — Cliente Casual
             </DialogTitle>
           </DialogHeader>
+
+          {/* Step labels */}
           <div className="flex items-center gap-0 text-xs font-medium mb-1">
             {STEP_LABELS.map((lbl, i) => (
               <div key={i} className="flex items-center gap-0">
-                <span className={`px-2 py-0.5 rounded-full text-xs ${i === casualStep ? "bg-primary text-primary-foreground" : i < casualStep ? "text-primary" : "text-muted-foreground"}`}>{lbl}</span>
+                <span className={`px-2 py-0.5 rounded-full text-xs ${i === casualStep ? "bg-primary text-primary-foreground" : i < casualStep ? "text-primary" : "text-muted-foreground"}`}>
+                  {lbl}
+                </span>
                 {i < STEP_LABELS.length - 1 && <span className="text-muted-foreground mx-0.5">›</span>}
               </div>
             ))}
           </div>
           <StepDots step={casualStep} total={3} />
+
           <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+            {/* Step 0: Cliente */}
             {casualStep === 0 && (
               <>
                 {casualFoundClient ? (
@@ -1341,9 +1480,18 @@ export default function Agendamentos() {
                       <div>
                         <p className="text-xs font-medium text-green-700 mb-0.5">Cliente encontrado</p>
                         <p className="font-semibold text-sm">{casualFoundClient.name}</p>
-                        {casualFoundClient.phone && <p className="text-xs text-muted-foreground">{casualFoundClient.phone}</p>}
+                        {casualFoundClient.phone && (
+                          <p className="text-xs text-muted-foreground">{casualFoundClient.phone}</p>
+                        )}
                       </div>
-                      <button type="button" onClick={() => { setCasualFoundClient(null); setCasualSelectedPetId(""); setCasualSearchQuery(""); }} className="p-1 rounded hover:bg-green-100 text-green-700"><X className="h-4 w-4" /></button>
+                      <button
+                        type="button"
+                        onClick={() => { setCasualFoundClient(null); setCasualSelectedPetId(""); setCasualSearchQuery(""); }}
+                        className="p-1 rounded hover:bg-green-100 text-green-700"
+                        title="Remover seleção"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
                     </div>
                   </div>
                 ) : (
@@ -1352,87 +1500,200 @@ export default function Agendamentos() {
                       <Label>Buscar cliente existente</Label>
                       <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                        <Input className="pl-9" placeholder="Nome ou telefone..." value={casualSearchQuery} onChange={e => setCasualSearchQuery(e.target.value)} autoFocus />
+                        <Input
+                          className="pl-9"
+                          placeholder="Nome ou telefone..."
+                          value={casualSearchQuery}
+                          onChange={e => setCasualSearchQuery(e.target.value)}
+                          autoFocus
+                        />
                       </div>
                       {casualSearchResults.length > 0 && (
                         <div className="border rounded-md divide-y shadow-sm bg-white z-10">
                           {casualSearchResults.map(c => (
-                            <button key={c.id} type="button" className="w-full text-left px-3 py-2 hover:bg-accent text-sm flex items-center justify-between gap-2" onClick={() => { setCasualFoundClient(c); setCasualSearchQuery(""); }}>
+                            <button
+                              key={c.id}
+                              type="button"
+                              className="w-full text-left px-3 py-2 hover:bg-accent text-sm flex items-center justify-between gap-2"
+                              onClick={() => { setCasualFoundClient(c); setCasualSearchQuery(""); }}
+                            >
                               <span className="font-medium">{c.name}</span>
                               {c.phone && <span className="text-muted-foreground text-xs shrink-0">{c.phone}</span>}
                             </button>
                           ))}
                         </div>
                       )}
-                      {casualSearchQuery.trim().length >= 2 && casualSearchResults.length === 0 && <p className="text-xs text-muted-foreground">Nenhum cliente encontrado. Preencha abaixo para cadastrar.</p>}
+                      {casualSearchQuery.trim().length >= 2 && casualSearchResults.length === 0 && (
+                        <p className="text-xs text-muted-foreground">Nenhum cliente encontrado. Preencha abaixo para cadastrar.</p>
+                      )}
                     </div>
+
                     <div className="relative my-1">
-                      <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
-                      <div className="relative flex justify-center text-xs uppercase"><span className="bg-background px-2 text-muted-foreground">ou cadastrar novo</span></div>
+                      <div className="absolute inset-0 flex items-center">
+                        <span className="w-full border-t" />
+                      </div>
+                      <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-background px-2 text-muted-foreground">ou cadastrar novo</span>
+                      </div>
                     </div>
+
                     <div className="space-y-1.5">
                       <Label>Nome do cliente *</Label>
-                      <Input placeholder="Ex: Maria Silva" value={casual.clientName} onChange={e => setCasual(f => ({ ...f, clientName: e.target.value }))} />
+                      <Input
+                        placeholder="Ex: Maria Silva"
+                        value={casual.clientName}
+                        onChange={e => setCasual(f => ({ ...f, clientName: e.target.value }))}
+                      />
                     </div>
                     <div className="space-y-1.5">
                       <Label>Telefone / WhatsApp *</Label>
-                      <Input placeholder="Ex: 11 99999-0000" value={casual.clientPhone} onChange={e => setCasual(f => ({ ...f, clientPhone: e.target.value }))} />
+                      <Input
+                        placeholder="Ex: 11 99999-0000"
+                        value={casual.clientPhone}
+                        onChange={e => setCasual(f => ({ ...f, clientPhone: e.target.value }))}
+                      />
                     </div>
                   </>
                 )}
               </>
             )}
+
+            {/* Step 1: Pet */}
             {casualStep === 1 && (
               <>
-                <div className="space-y-1.5"><Label>Nome do pet *</Label><Input placeholder="Ex: Thor" value={casual.petName} onChange={e => setCasual(f => ({ ...f, petName: e.target.value }))} autoFocus /></div>
-                <div className="space-y-1.5"><Label>Raça</Label><Input placeholder="Ex: Labrador" value={casual.petBreed} onChange={e => setCasual(f => ({ ...f, petBreed: e.target.value }))} /></div>
+                <div className="space-y-1.5">
+                  <Label>Nome do pet *</Label>
+                  <Input
+                    placeholder="Ex: Thor"
+                    value={casual.petName}
+                    onChange={e => setCasual(f => ({ ...f, petName: e.target.value }))}
+                    autoFocus
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Raça</Label>
+                  <Input
+                    placeholder="Ex: Labrador"
+                    value={casual.petBreed}
+                    onChange={e => setCasual(f => ({ ...f, petBreed: e.target.value }))}
+                  />
+                </div>
                 <div className="space-y-1.5">
                   <Label>Porte *</Label>
-                  <Select value={casual.petSize} onValueChange={v => setCasual(f => ({ ...f, petSize: v as PetInputSize, serviceId: "", totalPrice: "" }))}>
+                  <Select
+                    value={casual.petSize}
+                    onValueChange={v => setCasual(f => ({ ...f, petSize: v as PetInputSize, serviceId: "", totalPrice: "" }))}
+                  >
                     <SelectTrigger><SelectValue placeholder="Selecione o porte" /></SelectTrigger>
-                    <SelectContent>{(Object.entries(PORTE_SIZES) as [PetInputSize, string][]).map(([val, lbl]) => (<SelectItem key={val} value={val}>{lbl}</SelectItem>))}</SelectContent>
+                    <SelectContent>
+                      {(Object.entries(PORTE_SIZES) as [PetInputSize, string][]).map(([val, lbl]) => (
+                        <SelectItem key={val} value={val}>{lbl}</SelectItem>
+                      ))}
+                    </SelectContent>
                   </Select>
                 </div>
               </>
             )}
+
+            {/* Step 2: Agendamento */}
             {casualStep === 2 && (
               <>
+                {/* Pet selection — only when using existing client */}
                 {casualFoundClient && (
                   <div className="space-y-1.5">
                     <Label>Pet *</Label>
-                    <Select value={casualSelectedPetId} onValueChange={v => { setCasualSelectedPetId(v); if (v !== "new") { const pet = (casualClientPets as Pet[]).find(p => p.id === Number(v)); if (pet) setCasual(f => ({ ...f, petSize: pet.size as PetInputSize, serviceId: "", totalPrice: "" })); } else { setCasual(f => ({ ...f, petSize: "" as PetInputSize | "", serviceId: "", totalPrice: "" })); } }}>
+                    <Select
+                      value={casualSelectedPetId}
+                      onValueChange={v => {
+                        setCasualSelectedPetId(v);
+                        if (v !== "new") {
+                          const pet = (casualClientPets as Pet[]).find(p => p.id === Number(v));
+                          if (pet) setCasual(f => ({ ...f, petSize: pet.size as PetInputSize, serviceId: "", totalPrice: "" }));
+                        } else {
+                          setCasual(f => ({ ...f, petSize: "" as PetInputSize | "", serviceId: "", totalPrice: "" }));
+                        }
+                      }}
+                    >
                       <SelectTrigger><SelectValue placeholder="Selecione o pet" /></SelectTrigger>
                       <SelectContent>
-                        {(casualClientPets as Pet[]).map(p => (<SelectItem key={p.id} value={String(p.id)}>{p.name} — {PORTE_SIZES[p.size] ?? p.size}</SelectItem>))}
+                        {(casualClientPets as Pet[]).map(p => (
+                          <SelectItem key={p.id} value={String(p.id)}>
+                            {p.name} — {PORTE_SIZES[p.size] ?? p.size}
+                          </SelectItem>
+                        ))}
                         <SelectItem value="new">+ Novo pet</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 )}
+
+                {/* New pet fields — shown when: new client OR "new" pet option selected */}
                 {(!casualFoundClient || casualSelectedPetId === "new") && (
                   <>
-                    <div className="space-y-1.5"><Label>Nome do pet *</Label><Input placeholder="Ex: Thor" value={casual.petName} onChange={e => setCasual(f => ({ ...f, petName: e.target.value }))} /></div>
-                    <div className="space-y-1.5"><Label>Raça</Label><Input placeholder="Ex: Labrador" value={casual.petBreed} onChange={e => setCasual(f => ({ ...f, petBreed: e.target.value }))} /></div>
+                    <div className="space-y-1.5">
+                      <Label>Nome do pet *</Label>
+                      <Input
+                        placeholder="Ex: Thor"
+                        value={casual.petName}
+                        onChange={e => setCasual(f => ({ ...f, petName: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Raça</Label>
+                      <Input
+                        placeholder="Ex: Labrador"
+                        value={casual.petBreed}
+                        onChange={e => setCasual(f => ({ ...f, petBreed: e.target.value }))}
+                      />
+                    </div>
                     <div className="space-y-1.5">
                       <Label>Porte *</Label>
-                      <Select value={casual.petSize} onValueChange={v => setCasual(f => ({ ...f, petSize: v as PetInputSize, serviceId: "", totalPrice: "" }))}>
+                      <Select
+                        value={casual.petSize}
+                        onValueChange={v => setCasual(f => ({ ...f, petSize: v as PetInputSize, serviceId: "", totalPrice: "" }))}
+                      >
                         <SelectTrigger><SelectValue placeholder="Selecione o porte" /></SelectTrigger>
-                        <SelectContent>{(Object.entries(PORTE_SIZES) as [PetInputSize, string][]).map(([val, lbl]) => (<SelectItem key={val} value={val}>{lbl}</SelectItem>))}</SelectContent>
+                        <SelectContent>
+                          {(Object.entries(PORTE_SIZES) as [PetInputSize, string][]).map(([val, lbl]) => (
+                            <SelectItem key={val} value={val}>{lbl}</SelectItem>
+                          ))}
+                        </SelectContent>
                       </Select>
                     </div>
                   </>
                 )}
+
                 <div className="space-y-1.5">
                   <Label>Serviço *</Label>
-                  <Select value={casual.serviceId} onValueChange={v => { const svc = (services as Service[]).find(s => s.id === Number(v)); setCasual(f => ({ ...f, serviceId: v, totalPrice: svc ? String(svc.price) : f.totalPrice })); }}>
-                    <SelectTrigger><SelectValue placeholder={casual.petSize ? "Selecione o serviço" : "Selecione o porte primeiro"} /></SelectTrigger>
+                  <Select
+                    value={casual.serviceId}
+                    onValueChange={v => {
+                      const svc = (services as Service[]).find(s => s.id === Number(v));
+                      setCasual(f => ({ ...f, serviceId: v, totalPrice: svc ? String(svc.price) : f.totalPrice }));
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={casual.petSize ? "Selecione o serviço" : "Selecione o porte primeiro"} />
+                    </SelectTrigger>
                     <SelectContent>
-                      {casualFilteredServices.length === 0 && (<SelectItem value="_none" disabled>Nenhum serviço para este porte</SelectItem>)}
-                      {casualFilteredServices.map(s => (<SelectItem key={s.id} value={String(s.id)}>{s.name} — {formatBRL(s.price)}</SelectItem>))}
+                      {casualFilteredServices.length === 0 && (
+                        <SelectItem value="_none" disabled>Nenhum serviço para este porte</SelectItem>
+                      )}
+                      {casualFilteredServices.map(s => (
+                        <SelectItem key={s.id} value={String(s.id)}>
+                          {s.name} — {formatBRL(s.price)}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
-                  {casual.petSize && <p className="text-xs text-muted-foreground">Serviços filtrados para porte: <span className="font-medium">{PORTE_SIZES[casual.petSize]}</span></p>}
+                  {casual.petSize && (
+                    <p className="text-xs text-muted-foreground">
+                      Serviços filtrados para porte: <span className="font-medium">{PORTE_SIZES[casual.petSize]}</span>
+                    </p>
+                  )}
                 </div>
+
+                {/* Serviços adicionais */}
                 {casual.serviceId && (
                   <div className="space-y-1.5">
                     <Label>Serviços adicionais</Label>
@@ -1441,95 +1702,240 @@ export default function Agendamentos() {
                       return (
                         <div key={id} className="flex items-center justify-between bg-muted/30 rounded px-2 py-1.5 text-xs">
                           <span>{svc?.name ?? `#${id}`}{svc ? ` — ${formatBRL(svc.price)}` : ""}</span>
-                          <button onClick={() => { const updated = casual.extraServiceIds.filter(x => x !== id); const allSvcs = [Number(casual.serviceId), ...updated].map(sid => (services as Service[]).find(s => s.id === sid)); const total = allSvcs.reduce((sum, s) => sum + (s ? Number(s.price) : 0), 0); setCasual(f => ({ ...f, extraServiceIds: updated, totalPrice: total > 0 ? String(total) : f.totalPrice })); }} className="text-red-500 hover:text-red-700 ml-2"><X className="h-3 w-3" /></button>
+                          <button
+                            onClick={() => {
+                              const updated = casual.extraServiceIds.filter(x => x !== id);
+                              const allSvcs = [Number(casual.serviceId), ...updated].map(sid => (services as Service[]).find(s => s.id === sid));
+                              const total = allSvcs.reduce((sum, s) => sum + (s ? Number(s.price) : 0), 0);
+                              setCasual(f => ({ ...f, extraServiceIds: updated, totalPrice: total > 0 ? String(total) : f.totalPrice }));
+                            }}
+                            className="text-red-500 hover:text-red-700 ml-2"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
                         </div>
                       );
                     })}
                     {casualExtraAvailable.length > 0 && (
-                      <Select value="" onValueChange={v => { const updated = [...casual.extraServiceIds, Number(v)]; const allSvcs = [Number(casual.serviceId), ...updated].map(sid => (services as Service[]).find(s => s.id === sid)); const total = allSvcs.reduce((sum, s) => sum + (s ? Number(s.price) : 0), 0); setCasual(f => ({ ...f, extraServiceIds: updated, totalPrice: total > 0 ? String(total) : f.totalPrice })); }}>
-                        <SelectTrigger className="h-8 text-xs border-dashed"><div className="flex items-center gap-1 text-muted-foreground"><Plus className="h-3 w-3" /> Adicionar serviço adicional</div></SelectTrigger>
-                        <SelectContent>{casualExtraAvailable.map(s => (<SelectItem key={s.id} value={String(s.id)}>{s.name} — {formatBRL(s.price)}</SelectItem>))}</SelectContent>
+                      <Select
+                        value=""
+                        onValueChange={v => {
+                          const updated = [...casual.extraServiceIds, Number(v)];
+                          const allSvcs = [Number(casual.serviceId), ...updated].map(sid => (services as Service[]).find(s => s.id === sid));
+                          const total = allSvcs.reduce((sum, s) => sum + (s ? Number(s.price) : 0), 0);
+                          setCasual(f => ({ ...f, extraServiceIds: updated, totalPrice: total > 0 ? String(total) : f.totalPrice }));
+                        }}
+                      >
+                        <SelectTrigger className="h-8 text-xs border-dashed">
+                          <div className="flex items-center gap-1 text-muted-foreground">
+                            <Plus className="h-3 w-3" /> Adicionar serviço adicional
+                          </div>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {casualExtraAvailable.map(s => (
+                            <SelectItem key={s.id} value={String(s.id)}>{s.name} — {formatBRL(s.price)}</SelectItem>
+                          ))}
+                        </SelectContent>
                       </Select>
                     )}
                   </div>
                 )}
+
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5"><Label>Data *</Label><Input type="date" value={casual.scheduledDate} onChange={e => setCasual(f => ({ ...f, scheduledDate: e.target.value }))} /></div>
-                  <div className="space-y-1.5"><Label>Horário *</Label><Input type="time" value={casual.scheduledTime} onChange={e => setCasual(f => ({ ...f, scheduledTime: e.target.value }))} /></div>
+                  <div className="space-y-1.5">
+                    <Label>Data *</Label>
+                    <Input type="date" value={casual.scheduledDate} onChange={e => setCasual(f => ({ ...f, scheduledDate: e.target.value }))} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Horário *</Label>
+                    <Input type="time" value={casual.scheduledTime} onChange={e => setCasual(f => ({ ...f, scheduledTime: e.target.value }))} />
+                  </div>
                 </div>
-                <div className="space-y-1.5"><Label>Valor (R$) *</Label><Input type="number" step="0.01" min="0" placeholder="0,00" value={casual.totalPrice} onChange={e => setCasual(f => ({ ...f, totalPrice: e.target.value }))} /></div>
-                <div className="space-y-1.5"><Label>Observações</Label><Textarea placeholder="Observações adicionais" value={casual.notes} onChange={e => setCasual(f => ({ ...f, notes: e.target.value }))} rows={2} /></div>
+                <div className="space-y-1.5">
+                  <Label>Valor (R$) *</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0,00"
+                    value={casual.totalPrice}
+                    onChange={e => setCasual(f => ({ ...f, totalPrice: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Observações</Label>
+                  <Textarea
+                    placeholder="Observações adicionais"
+                    value={casual.notes}
+                    onChange={e => setCasual(f => ({ ...f, notes: e.target.value }))}
+                    rows={2}
+                  />
+                </div>
               </>
             )}
           </div>
+
           <DialogFooter className="gap-2">
-            {casualStep > 0 && (<Button variant="outline" onClick={casualPrevStep}>Voltar</Button>)}
+            {casualStep > 0 && (
+              <Button variant="outline" onClick={casualPrevStep}>Voltar</Button>
+            )}
             <Button variant="outline" onClick={() => setCasualOpen(false)}>Cancelar</Button>
             {casualStep < 2 ? (
-              <Button onClick={casualNextStep}>Próximo <ArrowNext className="h-4 w-4 ml-1" /></Button>
+              <Button onClick={casualNextStep}>
+                Próximo <ArrowNext className="h-4 w-4 ml-1" />
+              </Button>
             ) : (
-              <Button onClick={handleCasualSave} disabled={isCasualSaving}>{isCasualSaving ? "Salvando..." : "Confirmar Agendamento"}</Button>
+              <Button onClick={handleCasualSave} disabled={isCasualSaving}>
+                {isCasualSaving ? "Salvando..." : "Confirmar Agendamento"}
+              </Button>
             )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
       {/* ── Modal: Vender Pacote ──────────────────────────────────────────── */}
       <Dialog open={sellOpen} onOpenChange={open => { if (!open) setSellOpen(false); }}>
         <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><ShoppingCart className="h-5 w-5" />Vender Pacote</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <ShoppingCart className="h-5 w-5" />
+              Vender Pacote
+            </DialogTitle>
           </DialogHeader>
+
           <div className="space-y-4 py-1">
+            {/* Pacote */}
             <div className="space-y-1.5">
               <Label>Pacote *</Label>
               <Select value={sell.packageId} onValueChange={v => setSell(f => ({ ...f, packageId: v, petId: "" }))}>
                 <SelectTrigger><SelectValue placeholder="Selecione o pacote" /></SelectTrigger>
                 <SelectContent>
-                  {(packages as Package[]).map(p => { const prices = p.priceBySizes.map(x => x.price).filter(x => x > 0); const min = prices.length ? Math.min(...prices) : 0; const max = prices.length ? Math.max(...prices) : 0; const range = min === max ? formatBRL(min) : `${formatBRL(min)} – ${formatBRL(max)}`; return (<SelectItem key={p.id} value={String(p.id)}>{p.name} ({range})</SelectItem>); })}
+                  {(packages as Package[]).map(p => {
+                    const prices = p.priceBySizes.map(x => x.price).filter(x => x > 0);
+                    const min = prices.length ? Math.min(...prices) : 0;
+                    const max = prices.length ? Math.max(...prices) : 0;
+                    const range = min === max ? formatBRL(min) : `${formatBRL(min)} – ${formatBRL(max)}`;
+                    return (
+                      <SelectItem key={p.id} value={String(p.id)}>
+                        {p.name} ({range})
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
-              {selectedPkg && (<div className="flex flex-wrap gap-1 mt-1">{selectedPkg.serviceItems.map((item, i) => (<Badge key={i} variant="outline" className="text-xs">{item.quantity}× {item.serviceName}</Badge>))}</div>)}
+              {selectedPkg && (
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {selectedPkg.serviceItems.map((item, i) => (
+                    <Badge key={i} variant="outline" className="text-xs">{item.quantity}× {item.serviceName}</Badge>
+                  ))}
+                </div>
+              )}
             </div>
+
+            {/* Cliente */}
             <div className="space-y-1.5">
               <Label>Cliente *</Label>
               <Select value={sell.clientId} onValueChange={v => setSell(f => ({ ...f, clientId: v, petId: "" }))}>
                 <SelectTrigger><SelectValue placeholder="Selecione o cliente" /></SelectTrigger>
-                <SelectContent>{(clients as Client[]).map(c => (<SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>))}</SelectContent>
+                <SelectContent>
+                  {(clients as Client[]).map(c => (
+                    <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
               </Select>
             </div>
+
+            {/* Pet */}
             <div className="space-y-1.5">
               <Label>Pet *</Label>
-              <Select value={sell.petId} onValueChange={v => setSell(f => ({ ...f, petId: v }))} disabled={!sell.clientId}>
-                <SelectTrigger><SelectValue placeholder={sell.clientId ? "Selecione o pet" : "Selecione um cliente primeiro"} /></SelectTrigger>
-                <SelectContent>{(sellClientPets as Pet[]).map(p => (<SelectItem key={p.id} value={String(p.id)}>{p.name} — {PORTE_SIZES[p.size] ?? p.size}</SelectItem>))}</SelectContent>
+              <Select
+                value={sell.petId}
+                onValueChange={v => setSell(f => ({ ...f, petId: v }))}
+                disabled={!sell.clientId}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={sell.clientId ? "Selecione o pet" : "Selecione um cliente primeiro"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {(sellClientPets as Pet[]).map(p => (
+                    <SelectItem key={p.id} value={String(p.id)}>
+                      {p.name} — {PORTE_SIZES[p.size] ?? p.size}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
               </Select>
             </div>
+
+            {/* Price preview */}
             {sell.petId && sell.packageId && (
               <div className="rounded-lg bg-muted/40 border px-4 py-3 flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Valor do pacote</span>
-                {priceForPet !== null ? (<span className="text-lg font-bold text-primary">{formatBRL(priceForPet)}</span>) : (<span className="text-sm text-amber-600">Sem preço para este porte</span>)}
+                {priceForPet !== null ? (
+                  <span className="text-lg font-bold text-primary">{formatBRL(priceForPet)}</span>
+                ) : (
+                  <span className="text-sm text-amber-600">Sem preço para este porte</span>
+                )}
               </div>
             )}
+
+            {/* Data e hora */}
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5"><Label>Data do 1º agend. *</Label><Input type="date" value={sell.startDate} onChange={e => setSell(f => ({ ...f, startDate: e.target.value }))} /></div>
-              <div className="space-y-1.5"><Label>Horário *</Label><Input type="time" value={sell.startTime} onChange={e => setSell(f => ({ ...f, startTime: e.target.value }))} /></div>
+              <div className="space-y-1.5">
+                <Label>Data do 1º agend. *</Label>
+                <Input type="date" value={sell.startDate} onChange={e => setSell(f => ({ ...f, startDate: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Horário *</Label>
+                <Input type="time" value={sell.startTime} onChange={e => setSell(f => ({ ...f, startTime: e.target.value }))} />
+              </div>
             </div>
+
+            {/* Sessions preview */}
             {sellSessions.length > 0 && sell.startDate && (
               <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1.5"><CalendarCheck className="h-3.5 w-3.5" />Agendamentos que serão criados</p>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                  <CalendarCheck className="h-3.5 w-3.5" />
+                  Agendamentos que serão criados
+                </p>
                 <div className="rounded-lg border divide-y text-sm">
-                  {sellSessions.map((s, i) => { const d = new Date(`${sell.startDate}T${sell.startTime}`); d.setDate(d.getDate() + i * 7); return (<div key={s.index} className="flex items-center justify-between px-3 py-2"><span className="text-muted-foreground">{d.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" })} às {sell.startTime}</span><span className={s.hasExtra ? "font-medium text-primary text-xs" : "text-xs"}>{s.label}</span></div>); })}
+                  {sellSessions.map((s, i) => {
+                    const d = new Date(`${sell.startDate}T${sell.startTime}`);
+                    d.setDate(d.getDate() + i * 7);
+                    return (
+                      <div key={s.index} className="flex items-center justify-between px-3 py-2">
+                        <span className="text-muted-foreground">
+                          {d.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" })} às {sell.startTime}
+                        </span>
+                        <span className={s.hasExtra ? "font-medium text-primary text-xs" : "text-xs"}>
+                          {s.label}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
-            <div className="space-y-1.5"><Label>Observações</Label><Textarea placeholder="Observações para todos os agendamentos" value={sell.notes} onChange={e => setSell(f => ({ ...f, notes: e.target.value }))} rows={2} /></div>
+
+            {/* Notes */}
+            <div className="space-y-1.5">
+              <Label>Observações</Label>
+              <Textarea
+                placeholder="Observações para todos os agendamentos"
+                value={sell.notes}
+                onChange={e => setSell(f => ({ ...f, notes: e.target.value }))}
+                rows={2}
+              />
+            </div>
           </div>
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setSellOpen(false)}>Cancelar</Button>
             <Button onClick={handleSellSave} disabled={sellPackage.isPending} className="gap-2">
               <ShoppingCart className="h-4 w-4" />
-              {sellPackage.isPending ? "Criando..." : sellSessions.length > 0 ? `Confirmar Venda (${sellSessions.length} agend.)` : "Confirmar Venda"}
+              {sellPackage.isPending
+                ? "Criando..."
+                : sellSessions.length > 0
+                  ? `Confirmar Venda (${sellSessions.length} agend.)`
+                  : "Confirmar Venda"}
             </Button>
           </DialogFooter>
         </DialogContent>
