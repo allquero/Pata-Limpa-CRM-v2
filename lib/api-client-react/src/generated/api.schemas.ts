@@ -756,6 +756,11 @@ export type ListClientsParams = {
   search?: string;
 };
 
+export type ImportClientsBody = {
+  /** CSV file content (UTF-8 encoded) */
+  file: string;
+};
+
 export type ListPetsParams = {
   clientId?: number;
   tenantId?: number;

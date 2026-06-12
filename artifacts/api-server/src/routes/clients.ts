@@ -183,6 +183,20 @@ router.post("/clients/import", upload.single("file"), async (req: Request, res: 
   // Track newly created clients in this import session
   const createdInSession = new Map<string, number>();
 
+  // Pre-load existing pets for all tenant clients to enable deduplication
+  const existingClientIds = existingClients.map(c => c.id);
+  const existingPets = existingClientIds.length > 0
+    ? await db
+        .select({ clientId: petsTable.clientId, name: petsTable.name })
+        .from(petsTable)
+        .where(inArray(petsTable.clientId, existingClientIds))
+    : [];
+
+  const petKey = (clientId: number, name: string) => `${clientId}|${name.trim().toLowerCase()}`;
+  const petCache = new Set<string>(existingPets.map(p => petKey(p.clientId, p.name)));
+  // Track newly created pets in this import session
+  const createdPetsInSession = new Set<string>();
+
   for (let i = 1; i < lines.length; i++) {
     const lineNum = i + 1;
     try {
@@ -230,6 +244,13 @@ router.post("/clients/import", upload.single("file"), async (req: Request, res: 
         continue;
       }
 
+      // Deduplication: skip if a pet with same name already exists for this client
+      const pKey = petKey(clientId, nomePet);
+      if (petCache.has(pKey) || createdPetsInSession.has(pKey)) {
+        result.skipped.pets++;
+        continue;
+      }
+
       const tipoPet = get(iTipoPet) || "eventual";
       const isPacotista = tipoPet === "pacotista";
 
@@ -262,6 +283,7 @@ router.post("/clients/import", upload.single("file"), async (req: Request, res: 
         notes: get(iNotasPet) || null,
       });
 
+      createdPetsInSession.add(pKey);
       result.created.pets++;
     } catch (err) {
       result.errors.push({
