@@ -2146,7 +2146,7 @@ components:
           type: string
         type:
           type: string
-          enum: [confirmacao, lembrete, leads, agradecimento]
+          enum: [confirmacao, lembrete, leads, agradecimento, pet_pronto]
         content:
           type: string
         createdAt:
@@ -2163,7 +2163,7 @@ components:
           type: string
         type:
           type: string
-          enum: [confirmacao, lembrete, leads, agradecimento]
+          enum: [confirmacao, lembrete, leads, agradecimento, pet_pronto]
         content:
           type: string
 
@@ -2174,7 +2174,7 @@ components:
           type: string
         type:
           type: string
-          enum: [confirmacao, lembrete, leads, agradecimento]
+          enum: [confirmacao, lembrete, leads, agradecimento, pet_pronto]
         content:
           type: string
 

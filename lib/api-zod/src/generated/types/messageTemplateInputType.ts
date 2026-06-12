@@ -14,4 +14,5 @@ export const MessageTemplateInputType = {
   lembrete: "lembrete",
   leads: "leads",
   agradecimento: "agradecimento",
+  pet_pronto: "pet_pronto",
 } as const;
