@@ -296,8 +296,8 @@ function KanbanColumn({ status, label, color, bg, appointments, clients, pets, s
   const { setNodeRef, isOver } = useDroppable({ id: status });
   return (
     <div className={`flex flex-col rounded-xl border-2 ${bg} ${isOver ? "ring-2 ring-primary ring-offset-1" : ""} transition-all min-h-[400px]`}>
-      <div className="flex items-center justify-between px-3 py-2.5 border-b border-current/10 pt-[4px] pb-[4px] pl-[6px] pr-[6px]">
-        <span className={`font-semibold text-sm ${color}`}>{label}</span>
+      <div className="flex items-center justify-between px-3 py-2.5 border-b border-current/10 pt-[4px] pb-[4px] text-center flex-row pl-[6px] pr-[6px] ml-[2px] mr-[2px]">
+        <span className="font-semibold text-sm text-yellow-700 text-center">{label}</span>
         <Badge variant="secondary" className="text-xs">{appointments.length}</Badge>
       </div>
       <div ref={setNodeRef} className="flex-1 p-2 space-y-2 overflow-y-auto pt-[3px] pb-[3px] pl-[3px] pr-[3px]">
