@@ -750,6 +750,7 @@ export default function Agendamentos() {
 
   const [sellOpen, setSellOpen] = useState(false);
   const [sell, setSell] = useState(emptySell);
+  const [sellClientSearch, setSellClientSearch] = useState("");
 
   const [editingApptId, setEditingApptId] = useState<number | null>(null);
   const [editDate, setEditDate] = useState("");
@@ -1025,7 +1026,7 @@ export default function Agendamentos() {
 
   const isCasualSaving = createClient.isPending || createPet.isPending || createAppointment.isPending;
 
-  const openSell = () => { setSell(emptySell); setSellOpen(true); };
+  const openSell = () => { setSell(emptySell); setSellClientSearch(""); setSellOpen(true); };
 
   const handleSellSave = async () => {
     if (!sell.packageId) { toast({ title: "Selecione o pacote", variant: "destructive" }); return; }
@@ -1493,10 +1494,39 @@ export default function Agendamentos() {
             </div>
             <div className="space-y-1.5">
               <Label>Cliente *</Label>
-              <Select value={sell.clientId} onValueChange={v => setSell(f => ({ ...f, clientId: v, petId: "" }))}>
-                <SelectTrigger><SelectValue placeholder="Selecione o cliente" /></SelectTrigger>
-                <SelectContent>{(clients as Client[]).map(c => (<SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>))}</SelectContent>
-              </Select>
+              {sell.clientId ? (
+                <div className="rounded-lg border bg-green-50 border-green-200 p-2.5 flex items-center justify-between">
+                  <span className="font-semibold text-sm">{(clients as Client[]).find(c => c.id === Number(sell.clientId))?.name ?? "—"}</span>
+                  <button type="button" onClick={() => { setSell(f => ({ ...f, clientId: "", petId: "" })); setSellClientSearch(""); }} className="p-1 rounded hover:bg-green-100 text-green-700"><X className="h-4 w-4" /></button>
+                </div>
+              ) : (
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  <Input
+                    className="pl-9"
+                    placeholder="Buscar por nome..."
+                    value={sellClientSearch}
+                    onChange={e => setSellClientSearch(e.target.value)}
+                    autoFocus
+                  />
+                  {sellClientSearch.trim().length >= 1 && (() => {
+                    const q = sellClientSearch.trim().toLowerCase();
+                    const results = (clients as Client[]).filter(c => c.name.toLowerCase().includes(q));
+                    return results.length > 0 ? (
+                      <div className="absolute z-10 w-full mt-1 border rounded-md shadow-sm bg-white divide-y max-h-48 overflow-y-auto">
+                        {results.map(c => (
+                          <button key={c.id} type="button" className="w-full text-left px-3 py-2 hover:bg-accent text-sm flex items-center justify-between gap-2" onClick={() => { setSell(f => ({ ...f, clientId: String(c.id), petId: "" })); setSellClientSearch(""); }}>
+                            <span className="font-medium">{c.name}</span>
+                            {c.phone && <span className="text-muted-foreground text-xs shrink-0">{c.phone}</span>}
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground mt-1">Nenhum cliente encontrado.</p>
+                    );
+                  })()}
+                </div>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label>Pet *</Label>
