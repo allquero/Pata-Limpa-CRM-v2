@@ -115,7 +115,7 @@ export default function Financeiro() {
         <Button onClick={openCreate}><Plus className="h-4 w-4 mr-2" />Novo Lançamento</Button>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         <Card>
           <CardHeader className="pb-2 flex flex-row items-center justify-between">
             <CardTitle className="text-sm text-muted-foreground">Receitas</CardTitle>
@@ -141,47 +141,28 @@ export default function Financeiro() {
           <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Saldo</CardTitle></CardHeader>
           <CardContent><div className={`text-2xl font-bold ${saldo >= 0 ? "text-green-600" : "text-red-600"}`}>{fmt(saldo)}</div></CardContent>
         </Card>
+        <Card className="col-span-2 sm:col-span-1">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between">
+            <CardTitle className="text-sm text-muted-foreground">Vendas Hoje</CardTitle>
+            <ShoppingBag className="h-4 w-4 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-primary">{fmt(todayTotal)}</div>
+            <p className="text-xs text-muted-foreground mt-0.5">{todayReceitas.length} lançamento{todayReceitas.length !== 1 ? "s" : ""}</p>
+          </CardContent>
+        </Card>
       </div>
 
-      <Card>
-        <CardHeader className="pb-3 flex flex-row items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <ShoppingBag className="h-5 w-5 text-primary" />
-            Vendas do Dia
-          </CardTitle>
-          <span className="text-sm text-muted-foreground">{today.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "2-digit" })}</span>
-        </CardHeader>
-        <CardContent>
-          {todayReceitas.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">Nenhuma receita registrada hoje.</p>
-          ) : (
-            <div className="space-y-1">
-              {todayReceitas.map(e => (
-                <div key={e.id} className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-accent/30 transition-colors">
-                  <div>
-                    <p className="text-sm font-medium">{e.description}</p>
-                    {e.category && <p className="text-xs text-muted-foreground">{e.category}</p>}
-                  </div>
-                  <span className="text-sm font-semibold text-green-600">+{fmt(Number(e.amount))}</span>
-                </div>
-              ))}
-              <div className="border-t pt-2 mt-2 flex items-center justify-between px-2">
-                <span className="text-sm font-semibold text-muted-foreground">{todayReceitas.length} lançamento{todayReceitas.length !== 1 ? "s" : ""}</span>
-                <span className="text-lg font-bold text-green-600">{fmt(todayTotal)}</span>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
       <div className="flex flex-wrap gap-3 items-end">
-        <div>
-          <Label>De</Label>
-          <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-40" />
-        </div>
-        <div>
-          <Label>Até</Label>
-          <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-40" />
+        <div className="flex gap-3 items-end">
+          <div>
+            <Label>De</Label>
+            <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-36" />
+          </div>
+          <div>
+            <Label>Até</Label>
+            <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-36" />
+          </div>
         </div>
         <div>
           <Label>Tipo</Label>
