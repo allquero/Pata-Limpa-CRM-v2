@@ -273,7 +273,7 @@ export default function Clientes() {
           {filtered.map(client => (
             <Card key={client.id}>
               <CardContent className="p-0">
-                <div className="flex items-center justify-between p-4 pl-[8px] pr-[8px]">
+                <div className="flex items-center justify-between p-4 pl-[9px] pr-[9px] pt-[9px] pb-[9px]">
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold truncate">{client.name}</p>
                     <p className="text-sm text-muted-foreground">
