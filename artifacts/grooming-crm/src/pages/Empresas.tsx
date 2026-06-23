@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { Building2, Save } from "lucide-react";
+import { Building2, Save, Clock, Sun } from "lucide-react";
 
 export default function Empresas() {
   const { tenantId } = useAppAuth();
@@ -15,7 +15,7 @@ export default function Empresas() {
   const { data: tenant, isLoading, refetch } = useGetTenant(tenantId!);
   const updateTenant = useUpdateTenant();
 
-  const [form, setForm] = useState({ name: "", phone: "", email: "", address: "" });
+  const [form, setForm] = useState({ name: "", phone: "", email: "", address: "", schedulingMethod: "hora" as "hora" | "periodo" });
 
   useEffect(() => {
     if (tenant) {
@@ -24,6 +24,7 @@ export default function Empresas() {
         phone: (tenant as any).phone ?? "",
         email: (tenant as any).email ?? "",
         address: (tenant as any).address ?? "",
+        schedulingMethod: ((tenant as any).schedulingMethod ?? "hora") as "hora" | "periodo",
       });
     }
   }, [tenant]);
@@ -66,6 +67,59 @@ export default function Empresas() {
               <div><Label>Endereço</Label><Input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} /></div>
               <Button onClick={handleSave} disabled={!form.name} className="w-full">
                 <Save className="h-4 w-4 mr-2" />Salvar Alterações
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="max-w-lg">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="h-5 w-5 text-primary" />
+            Método de Agendamento
+          </CardTitle>
+          <CardDescription>Escolha como os horários dos agendamentos são definidos.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <Skeleton className="h-20 w-full" />
+          ) : (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, schedulingMethod: "hora" }))}
+                  className={`flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all ${
+                    form.schedulingMethod === "hora"
+                      ? "border-primary bg-primary/5 text-primary"
+                      : "border-border bg-card text-muted-foreground hover:border-primary/40"
+                  }`}
+                >
+                  <Clock className="h-6 w-6" />
+                  <span className="text-sm font-semibold">Por Hora</span>
+                  <span className="text-xs text-center leading-tight">Horário exato (ex: 14:30)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, schedulingMethod: "periodo" }))}
+                  className={`flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all ${
+                    form.schedulingMethod === "periodo"
+                      ? "border-primary bg-primary/5 text-primary"
+                      : "border-border bg-card text-muted-foreground hover:border-primary/40"
+                  }`}
+                >
+                  <Sun className="h-6 w-6" />
+                  <span className="text-sm font-semibold">Por Período</span>
+                  <span className="text-xs text-center leading-tight">Manhã ou Tarde</span>
+                </button>
+              </div>
+              <Button
+                onClick={handleSave}
+                disabled={!form.name || updateTenant.isPending}
+                className="w-full"
+              >
+                <Save className="h-4 w-4 mr-2" />Salvar Método
               </Button>
             </div>
           )}

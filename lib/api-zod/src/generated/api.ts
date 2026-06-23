@@ -41,6 +41,8 @@ export const GetMyTenantHeader = zod.object({
     .describe("Opaque session token — `Bearer <sid>`."),
 });
 
+export const getMyTenantResponseTenantOneSchedulingMethodDefault = `hora`;
+
 export const GetMyTenantResponse = zod.object({
   tenant: zod.union([
     zod.object({
@@ -52,6 +54,9 @@ export const GetMyTenantResponse = zod.object({
       address: zod.string().nullish(),
       accessStart: zod.coerce.date().nullish(),
       accessEnd: zod.coerce.date().nullish(),
+      schedulingMethod: zod
+        .enum(["hora", "periodo"])
+        .default(getMyTenantResponseTenantOneSchedulingMethodDefault),
       createdAt: zod.coerce.date(),
     }),
     zod.null(),
@@ -118,6 +123,8 @@ export const HealthCheckResponse = zod.object({
 /**
  * @summary List all pet shop tenants (admin only)
  */
+export const adminListTenantsResponseSchedulingMethodDefault = `hora`;
+
 export const AdminListTenantsResponseItem = zod.object({
   id: zod.number(),
   userId: zod.string().nullish(),
@@ -127,6 +134,9 @@ export const AdminListTenantsResponseItem = zod.object({
   address: zod.string().nullish(),
   accessStart: zod.coerce.date().nullish(),
   accessEnd: zod.coerce.date().nullish(),
+  schedulingMethod: zod
+    .enum(["hora", "periodo"])
+    .default(adminListTenantsResponseSchedulingMethodDefault),
   createdAt: zod.coerce.date(),
 });
 export const AdminListTenantsResponse = zod.array(AdminListTenantsResponseItem);
@@ -160,6 +170,8 @@ export const AdminUpdateTenantBody = zod.object({
   accessEnd: zod.coerce.date().nullish(),
 });
 
+export const adminUpdateTenantResponseSchedulingMethodDefault = `hora`;
+
 export const AdminUpdateTenantResponse = zod.object({
   id: zod.number(),
   userId: zod.string().nullish(),
@@ -169,6 +181,9 @@ export const AdminUpdateTenantResponse = zod.object({
   address: zod.string().nullish(),
   accessStart: zod.coerce.date().nullish(),
   accessEnd: zod.coerce.date().nullish(),
+  schedulingMethod: zod
+    .enum(["hora", "periodo"])
+    .default(adminUpdateTenantResponseSchedulingMethodDefault),
   createdAt: zod.coerce.date(),
 });
 
@@ -236,6 +251,8 @@ export const AdminDeleteSaleParams = zod.object({
 /**
  * @summary List all grooming businesses
  */
+export const listTenantsResponseSchedulingMethodDefault = `hora`;
+
 export const ListTenantsResponseItem = zod.object({
   id: zod.number(),
   userId: zod.string().nullish(),
@@ -245,6 +262,9 @@ export const ListTenantsResponseItem = zod.object({
   address: zod.string().nullish(),
   accessStart: zod.coerce.date().nullish(),
   accessEnd: zod.coerce.date().nullish(),
+  schedulingMethod: zod
+    .enum(["hora", "periodo"])
+    .default(listTenantsResponseSchedulingMethodDefault),
   createdAt: zod.coerce.date(),
 });
 export const ListTenantsResponse = zod.array(ListTenantsResponseItem);
@@ -266,6 +286,8 @@ export const GetTenantParams = zod.object({
   id: zod.coerce.number(),
 });
 
+export const getTenantResponseSchedulingMethodDefault = `hora`;
+
 export const GetTenantResponse = zod.object({
   id: zod.number(),
   userId: zod.string().nullish(),
@@ -275,6 +297,9 @@ export const GetTenantResponse = zod.object({
   address: zod.string().nullish(),
   accessStart: zod.coerce.date().nullish(),
   accessEnd: zod.coerce.date().nullish(),
+  schedulingMethod: zod
+    .enum(["hora", "periodo"])
+    .default(getTenantResponseSchedulingMethodDefault),
   createdAt: zod.coerce.date(),
 });
 
@@ -290,7 +315,10 @@ export const UpdateTenantBody = zod.object({
   phone: zod.string().optional(),
   email: zod.string().optional(),
   address: zod.string().optional(),
+  schedulingMethod: zod.enum(["hora", "periodo"]).optional(),
 });
+
+export const updateTenantResponseSchedulingMethodDefault = `hora`;
 
 export const UpdateTenantResponse = zod.object({
   id: zod.number(),
@@ -301,6 +329,9 @@ export const UpdateTenantResponse = zod.object({
   address: zod.string().nullish(),
   accessStart: zod.coerce.date().nullish(),
   accessEnd: zod.coerce.date().nullish(),
+  schedulingMethod: zod
+    .enum(["hora", "periodo"])
+    .default(updateTenantResponseSchedulingMethodDefault),
   createdAt: zod.coerce.date(),
 });
 

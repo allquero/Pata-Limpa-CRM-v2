@@ -5,6 +5,7 @@
  * Grooming CRM API
  * OpenAPI spec version: 0.1.0
  */
+import type { TenantSchedulingMethod } from "./tenantSchedulingMethod";
 
 export interface Tenant {
   id: number;
@@ -21,5 +22,6 @@ export interface Tenant {
   accessStart?: Date | null;
   /** @nullable */
   accessEnd?: Date | null;
+  schedulingMethod?: TenantSchedulingMethod;
   createdAt: Date;
 }

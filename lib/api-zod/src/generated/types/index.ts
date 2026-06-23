@@ -98,5 +98,7 @@ export * from "./serviceUpdate";
 export * from "./serviceUpdateSize";
 export * from "./tenant";
 export * from "./tenantInput";
+export * from "./tenantSchedulingMethod";
 export * from "./tenantUpdate";
+export * from "./tenantUpdateSchedulingMethod";
 export * from "./topClient";

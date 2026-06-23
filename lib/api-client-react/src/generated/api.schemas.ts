@@ -71,6 +71,14 @@ export interface AdminSalesEnvelope {
   allTimeTotal: number;
 }
 
+export type TenantSchedulingMethod =
+  (typeof TenantSchedulingMethod)[keyof typeof TenantSchedulingMethod];
+
+export const TenantSchedulingMethod = {
+  hora: "hora",
+  periodo: "periodo",
+} as const;
+
 export interface Tenant {
   id: number;
   /** @nullable */
@@ -86,6 +94,7 @@ export interface Tenant {
   accessStart?: string | null;
   /** @nullable */
   accessEnd?: string | null;
+  schedulingMethod?: TenantSchedulingMethod;
   createdAt: string;
 }
 
@@ -96,11 +105,20 @@ export interface TenantInput {
   address?: string;
 }
 
+export type TenantUpdateSchedulingMethod =
+  (typeof TenantUpdateSchedulingMethod)[keyof typeof TenantUpdateSchedulingMethod];
+
+export const TenantUpdateSchedulingMethod = {
+  hora: "hora",
+  periodo: "periodo",
+} as const;
+
 export interface TenantUpdate {
   name?: string;
   phone?: string;
   email?: string;
   address?: string;
+  schedulingMethod?: TenantUpdateSchedulingMethod;
 }
 
 export interface Client {

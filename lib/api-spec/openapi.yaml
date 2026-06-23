@@ -1572,6 +1572,10 @@ components:
         accessEnd:
           type: ["string", "null"]
           format: date
+        schedulingMethod:
+          type: string
+          enum: [hora, periodo]
+          default: hora
         createdAt:
           type: string
           format: date-time
@@ -1600,6 +1604,9 @@ components:
           type: string
         address:
           type: string
+        schedulingMethod:
+          type: string
+          enum: [hora, periodo]
 
     # Client
     Client:
