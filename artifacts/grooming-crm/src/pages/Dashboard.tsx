@@ -29,18 +29,17 @@ export default function Dashboard() {
     });
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 pt-[8px] pb-[8px] pl-[8px] pr-[8px]">
       <div>
         <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
         <p className="text-muted-foreground">Visão geral do pet shop</p>
       </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-[0px] pb-[0px] mb-[20px]">
         {isLoading ? (
           Array(4).fill(0).map((_, i) => <Skeleton key={i} className="h-32 rounded-xl" />)
         ) : (
           <>
-            <Card>
+            <Card className="pt-[0px] pb-[0px]">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">Agendamentos Hoje</CardTitle>
                 <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -50,44 +49,43 @@ export default function Dashboard() {
               </CardContent>
             </Card>
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardHeader className="flex flex-row items-center justify-between pb-2 pt-[12px]">
                 <CardTitle className="text-sm font-medium text-muted-foreground">Esta Semana</CardTitle>
                 <Calendar className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-6 pt-0 pb-[12px]">
                 <div className="text-3xl font-bold">{data?.weekAppointments ?? 0}</div>
               </CardContent>
             </Card>
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardHeader className="flex flex-row items-center justify-between pb-2 pt-[12px]">
                 <CardTitle className="text-sm font-medium text-muted-foreground">Receita do Mês</CardTitle>
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-6 pt-0 pb-[12px]">
                 <div className="text-3xl font-bold">{formatCurrency(data?.monthRevenue ?? 0)}</div>
               </CardContent>
             </Card>
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardHeader className="flex flex-row items-center justify-between pb-2 pt-[12px]">
                 <CardTitle className="text-sm font-medium text-muted-foreground">Clientes Ativos</CardTitle>
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-6 pt-0 pb-[12px]">
                 <div className="text-3xl font-bold">{data?.activeClients ?? 0}</div>
               </CardContent>
             </Card>
           </>
         )}
       </div>
-
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-col space-y-1.5 p-6 pl-[12px] pr-[12px] pt-[12px] pb-[12px]">
           <CardTitle className="flex items-center gap-2">
             <Clock className="h-5 w-5" />
             Agendamentos Recentes
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-6 pt-0 pb-[12px] pr-[12px] pl-[12px]">
           {isLoading ? (
             <div className="space-y-3">
               {Array(3).fill(0).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
@@ -97,7 +95,7 @@ export default function Dashboard() {
           ) : (
             <div className="space-y-3">
               {(data.recentAppointments as any[]).map((appt: any) => (
-                <div key={appt.id} className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
+                <div key={appt.id} className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors mb-[10px] pt-[4px] pb-[4px] pl-[8px] pr-[8px]">
                   <div className="flex items-center gap-3">
                     <div>
                       <p className="font-medium text-sm">{appt.pet?.name ?? "–"}</p>
