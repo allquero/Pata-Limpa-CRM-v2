@@ -1120,7 +1120,7 @@ export default function Agendamentos() {
         <div className="flex gap-2">
           <Button variant="outline" onClick={openCasual} className="gap-2">
             <UserPlus className="h-4 w-4" />
-            Cliente Casual
+            Novo Agendamento
           </Button>
           <Button onClick={openSell} className="gap-2">
             <ShoppingCart className="h-4 w-4" />
@@ -1314,13 +1314,13 @@ export default function Agendamentos() {
         tenantId={tenantId!}
       />
 
-      {/* ── Modal: Cliente Casual ─────────────────────────────────────────── */}
+      {/* ── Modal: Novo Agendamento ──────────────────────────────────────── */}
       <Dialog open={casualOpen} onOpenChange={open => { if (!open) setCasualOpen(false); }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <UserPlus className="h-5 w-5" />
-              Novo Agendamento — Cliente Casual
+              Novo Agendamento
             </DialogTitle>
           </DialogHeader>
           <div className="flex items-center gap-0 text-xs font-medium mb-1">
