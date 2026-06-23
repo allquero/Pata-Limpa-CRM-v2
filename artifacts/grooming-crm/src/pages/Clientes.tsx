@@ -246,8 +246,8 @@ export default function Clientes() {
 
   // ── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-3">
+    <div className="p-6 space-y-6 pl-[10px] pr-[10px] pt-[10px] pb-[10px]">
+      <div className="flex items-center justify-between flex-wrap gap-3 mb-[13px]">
         <div>
           <h1 className="text-2xl font-bold">Clientes</h1>
           <p className="text-muted-foreground">Gerencie seus clientes e pets</p>
@@ -262,10 +262,8 @@ export default function Clientes() {
           <Button onClick={openCreate}><Plus className="h-4 w-4 mr-2" />Novo Cliente</Button>
         </div>
       </div>
-
       <Input placeholder="Buscar por nome ou telefone..." value={search}
         onChange={e => setSearch(e.target.value)} className="max-w-sm" />
-
       {isLoading ? (
         <div className="space-y-3">{Array(4).fill(0).map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}</div>
       ) : filtered.length === 0 ? (
@@ -275,7 +273,7 @@ export default function Clientes() {
           {filtered.map(client => (
             <Card key={client.id}>
               <CardContent className="p-0">
-                <div className="flex items-center justify-between p-4">
+                <div className="flex items-center justify-between p-4 pl-[8px] pr-[8px]">
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold truncate">{client.name}</p>
                     <p className="text-sm text-muted-foreground">
@@ -283,7 +281,7 @@ export default function Clientes() {
                     </p>
                     {client.notes && <p className="text-xs text-muted-foreground mt-1 truncate">{client.notes}</p>}
                   </div>
-                  <div className="flex items-center gap-2 ml-4">
+                  <div className="flex ml-[16px] pt-[0px] pb-[0px] gap-[4px] justify-between items-center flex-row">
                     <Button variant="ghost" size="sm" onClick={() => openAddPet(client.id)}>
                       <PawPrint className="h-4 w-4 mr-1" />Pet
                     </Button>
@@ -297,14 +295,14 @@ export default function Clientes() {
                 </div>
 
                 {expandedClient === client.id && (
-                  <div className="border-t px-4 py-3 bg-muted/30">
+                  <div className="border-t px-4 py-3 bg-muted/30 pl-[6px] pr-[6px] pt-[6px] pb-[6px]">
                     <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Pets</p>
                     {(pets as Pet[]).filter(p => p.clientId === client.id).length === 0 ? (
                       <p className="text-sm text-muted-foreground">Nenhum pet cadastrado.</p>
                     ) : (
                       <div className="flex flex-wrap gap-2">
                         {(pets as Pet[]).filter(p => p.clientId === client.id).map(pet => (
-                          <div key={pet.id} className="flex items-center gap-2 bg-card border rounded-lg px-3 py-1.5">
+                          <div key={pet.id} className="flex items-center gap-2 bg-card border rounded-lg px-3 py-1.5 pl-[10px] pr-[10px] pt-[4px] pb-[4px]">
                             <PawPrint className="h-3 w-3 text-primary" />
                             <span className="text-sm font-medium">{pet.name}</span>
                             {pet.breed && <span className="text-xs text-muted-foreground">{pet.breed}</span>}
@@ -326,7 +324,6 @@ export default function Clientes() {
           ))}
         </div>
       )}
-
       {/* ── Modal Cliente ── */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent>
@@ -344,7 +341,6 @@ export default function Clientes() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
       {/* ── Modal Pet ── */}
       <Dialog open={petModalOpen} onOpenChange={setPetModalOpen}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
@@ -427,7 +423,6 @@ export default function Clientes() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
       {/* ── Modal Importar CSV ── */}
       <Dialog open={importModalOpen} onOpenChange={v => { setImportModalOpen(v); if (!v) setImportResult(null); }}>
         <DialogContent className="max-w-lg">
