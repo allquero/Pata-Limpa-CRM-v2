@@ -58,12 +58,11 @@ export default function Leads() {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 pl-[12px] pr-[12px] pt-[12px] pb-[12px]">
       <div>
         <h1 className="text-2xl font-bold">Leads — Clientes Inativos</h1>
         <p className="text-muted-foreground">Clientes sem agendamento há mais de X dias</p>
       </div>
-
       <div className="flex flex-wrap gap-4 items-end">
         <div>
           <Label>Sem agendamento há mais de</Label>
@@ -83,7 +82,6 @@ export default function Leads() {
           </Select>
         </div>
       </div>
-
       {isLoading ? (
         <div className="space-y-3">{Array(5).fill(0).map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}</div>
       ) : leads.length === 0 ? (
@@ -93,7 +91,7 @@ export default function Leads() {
           <p className="text-sm text-muted-foreground">{leads.length} cliente(s) inativo(s)</p>
           {[...leads].sort((a, b) => (b.daysSinceLastAppointment ?? 0) - (a.daysSinceLastAppointment ?? 0)).map(lead => (
             <Card key={`${lead.clientId}-${leadPetName(lead)}`}>
-              <CardContent className="p-4 flex items-center justify-between gap-4">
+              <CardContent className="p-4 flex items-center justify-between gap-4 pt-[7px] pb-[7px] pl-[8px] pr-[8px]">
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                     <PawPrint className="h-5 w-5 text-primary" />
@@ -123,7 +121,6 @@ export default function Leads() {
           ))}
         </div>
       )}
-
       <Dialog open={!!whatsappModal} onOpenChange={() => setWhatsappModal(null)}>
         {whatsappModal && (
           <DialogContent>
