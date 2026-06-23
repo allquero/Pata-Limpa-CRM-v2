@@ -22,8 +22,7 @@ router.use(requireTenant);
 const CSV_HEADERS = [
   "nome_cliente", "telefone", "email", "endereco", "notas_cliente",
   "nome_pet", "raca", "porte", "sexo", "castrado",
-  "pelagem", "comportamento", "saude", "preferencias_tosa",
-  "tipo_pet", "frequencia", "dia_semana", "preco_por_visita", "notas_pet",
+  "pelagem", "comportamento", "saude", "preferencias_tosa", "notas_pet",
 ];
 
 function escapeCell(v: unknown): string {
@@ -62,14 +61,6 @@ function parseCsvLine(line: string): string[] {
   return result;
 }
 
-const DIAS_SEMANA: Record<string, number> = {
-  domingo: 0, segunda: 1, "segunda-feira": 1,
-  terca: 2, "terça": 2, "terça-feira": 2,
-  quarta: 3, "quarta-feira": 3,
-  quinta: 4, "quinta-feira": 4,
-  sexta: 5, "sexta-feira": 5,
-  sabado: 6, "sábado": 6,
-};
 
 // ── Export ───────────────────────────────────────────────────────────────────
 
@@ -99,7 +90,7 @@ router.get("/clients/export", async (req: Request, res: Response): Promise<void>
     if (clientPets.length === 0) {
       rows.push(buildCsvRow([
         client.name, client.phone, client.email, client.address, client.notes,
-        "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+        "", "", "", "", "", "", "", "", "", "",
       ]));
     } else {
       for (const pet of clientPets) {
@@ -108,7 +99,7 @@ router.get("/clients/export", async (req: Request, res: Response): Promise<void>
           pet.name, pet.breed, pet.size, pet.sex,
           pet.neutered ? "sim" : "nao",
           pet.coat, pet.behavior, pet.healthNotes, pet.groomingPreferences,
-          pet.petType, pet.frequency, pet.appointmentDay, pet.pricePerVisit, pet.notes,
+          pet.notes,
         ]));
       }
     }
@@ -153,10 +144,6 @@ router.post("/clients/import", upload.single("file"), async (req: Request, res: 
   const iComportamento = col("comportamento");
   const iSaude = col("saude");
   const iPrefTosa = col("preferencias_tosa");
-  const iTipoPet = col("tipo_pet");
-  const iFrequencia = col("frequencia");
-  const iDiaSemana = col("dia_semana");
-  const iPrecoVisita = col("preco_por_visita");
   const iNotasPet = col("notas_pet");
 
   if (iNomeCliente === -1) {
@@ -251,20 +238,6 @@ router.post("/clients/import", upload.single("file"), async (req: Request, res: 
         continue;
       }
 
-      const tipoPet = get(iTipoPet) || "eventual";
-      const isPacotista = tipoPet === "pacotista";
-
-      let appointmentDay: number | null = null;
-      const diaSemanaStr = get(iDiaSemana).toLowerCase();
-      if (diaSemanaStr) {
-        const parsed = parseInt(diaSemanaStr, 10);
-        if (!isNaN(parsed) && parsed >= 0 && parsed <= 6) {
-          appointmentDay = parsed;
-        } else if (DIAS_SEMANA[diaSemanaStr] !== undefined) {
-          appointmentDay = DIAS_SEMANA[diaSemanaStr];
-        }
-      }
-
       await db.insert(petsTable).values({
         clientId,
         name: nomePet,
@@ -276,10 +249,6 @@ router.post("/clients/import", upload.single("file"), async (req: Request, res: 
         behavior: get(iComportamento) || null,
         healthNotes: get(iSaude) || null,
         groomingPreferences: get(iPrefTosa) || null,
-        petType: (isPacotista ? "pacotista" : "eventual") as any,
-        frequency: isPacotista ? ((get(iFrequencia) || "semanal") as any) : null,
-        appointmentDay: isPacotista ? (appointmentDay as any) : null,
-        pricePerVisit: get(iPrecoVisita) || null,
         notes: get(iNotasPet) || null,
       });
 
