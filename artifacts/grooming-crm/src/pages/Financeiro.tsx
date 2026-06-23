@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { Plus, Pencil, Trash2, TrendingUp, TrendingDown, Minus, ShoppingBag } from "lucide-react";
 
 type FinancialEntry = { id: number; type: string; description: string; amount: number; date: string; category?: string | null };
 const emptyForm = { type: "receita", description: "", amount: "", date: new Date().toISOString().substring(0, 10), category: "" };
@@ -31,9 +31,15 @@ export default function Financeiro() {
   const monthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().substring(0, 10);
   const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().substring(0, 10);
 
+  const todayStr = today.toISOString().substring(0, 10);
+
   const [startDate, setStartDate] = useState(monthStart);
   const [endDate, setEndDate] = useState(monthEnd);
   const [typeFilter, setTypeFilter] = useState("all");
+
+  const { data: todayEntries = [] } = useListFinancialEntries({ tenantId: tenantId!, startDate: todayStr, endDate: todayStr });
+  const todayReceitas = (todayEntries as FinancialEntry[]).filter(e => e.type === "receita");
+  const todayTotal = todayReceitas.reduce((sum, e) => sum + Number(e.amount), 0);
 
   const queryParams = {
     tenantId: tenantId!,
@@ -136,6 +142,37 @@ export default function Financeiro() {
           <CardContent><div className={`text-2xl font-bold ${saldo >= 0 ? "text-green-600" : "text-red-600"}`}>{fmt(saldo)}</div></CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader className="pb-3 flex flex-row items-center justify-between">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <ShoppingBag className="h-5 w-5 text-primary" />
+            Vendas do Dia
+          </CardTitle>
+          <span className="text-sm text-muted-foreground">{today.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "2-digit" })}</span>
+        </CardHeader>
+        <CardContent>
+          {todayReceitas.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">Nenhuma receita registrada hoje.</p>
+          ) : (
+            <div className="space-y-1">
+              {todayReceitas.map(e => (
+                <div key={e.id} className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-accent/30 transition-colors">
+                  <div>
+                    <p className="text-sm font-medium">{e.description}</p>
+                    {e.category && <p className="text-xs text-muted-foreground">{e.category}</p>}
+                  </div>
+                  <span className="text-sm font-semibold text-green-600">+{fmt(Number(e.amount))}</span>
+                </div>
+              ))}
+              <div className="border-t pt-2 mt-2 flex items-center justify-between px-2">
+                <span className="text-sm font-semibold text-muted-foreground">{todayReceitas.length} lançamento{todayReceitas.length !== 1 ? "s" : ""}</span>
+                <span className="text-lg font-bold text-green-600">{fmt(todayTotal)}</span>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="flex flex-wrap gap-3 items-end">
         <div>
