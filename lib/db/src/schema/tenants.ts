@@ -11,6 +11,7 @@ export const tenantsTable = pgTable("tenants", {
   address: text("address"),
   accessStart: date("access_start"),
   accessEnd: date("access_end"),
+  schedulingMethod: varchar("scheduling_method", { length: 20 }).notNull().default("hora"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (table) => [

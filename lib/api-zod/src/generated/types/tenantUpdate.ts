@@ -5,10 +5,12 @@
  * Grooming CRM API
  * OpenAPI spec version: 0.1.0
  */
+import type { TenantUpdateSchedulingMethod } from "./tenantUpdateSchedulingMethod";
 
 export interface TenantUpdate {
   name?: string;
   phone?: string;
   email?: string;
   address?: string;
+  schedulingMethod?: TenantUpdateSchedulingMethod;
 }
