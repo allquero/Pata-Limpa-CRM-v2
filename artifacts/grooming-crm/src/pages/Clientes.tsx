@@ -27,9 +27,6 @@ type Pet = {
   sex?: string | null; neutered?: boolean | null;
   coat?: string | null; behavior?: string | null; healthNotes?: string | null;
   photoUrl?: string | null; groomingPreferences?: string | null;
-  petType?: string | null; frequency?: string | null;
-  appointmentDay?: number | null; pricePerVisit?: string | null;
-  firstVisitDate?: string | null;
 };
 
 type ImportError = { line: number; message: string };
@@ -40,11 +37,6 @@ type ImportResult = {
 };
 
 // ── Constantes ───────────────────────────────────────────────────────────────
-const DIAS_SEMANA: Record<number, string> = {
-  0: "Domingo", 1: "Segunda-feira", 2: "Terça-feira",
-  3: "Quarta-feira", 4: "Quinta-feira", 5: "Sexta-feira", 6: "Sábado",
-};
-
 const COAT_OPTIONS = [
   "Curta", "Longa", "Crespa / Encaracolada", "Dupla (undercoat)", "Lisa", "Áspera",
 ];
@@ -56,14 +48,12 @@ const emptyPet = {
   sex: "", neutered: false,
   coat: "", behavior: "", healthNotes: "",
   photoUrl: "", groomingPreferences: "",
-  petType: "eventual", frequency: "semanal",
-  appointmentDay: 2, pricePerVisit: "", firstVisitDate: "",
 };
 
-const CSV_MODELO = `nome_cliente,telefone,email,endereco,notas_cliente,nome_pet,raca,porte,sexo,castrado,pelagem,comportamento,saude,preferencias_tosa,tipo_pet,frequencia,dia_semana,preco_por_visita,notas_pet
-Maria Silva,(44) 99999-0001,maria@email.com,Rua das Flores 10,,Rex,Poodle,pequeno_longo,macho,nao,longa,agitado,,tosa curta no corpo,eventual,,,
-Maria Silva,(44) 99999-0001,,,, Mel,Shih Tzu,mini_longo,femea,sim,longa,,alergia a shampoo forte,,eventual,,,
-João Costa,(44) 99999-0002,,,,Thor,Labrador,grande_curto,macho,nao,curta,,,, eventual,,,
+const CSV_MODELO = `nome_cliente,telefone,email,endereco,notas_cliente,nome_pet,raca,porte,sexo,castrado,pelagem,comportamento,saude,preferencias_tosa,notas_pet
+Maria Silva,(44) 99999-0001,maria@email.com,Rua das Flores 10,,Rex,Poodle,pequeno_longo,macho,nao,longa,agitado,,tosa curta no corpo,
+Maria Silva,(44) 99999-0001,,,, Mel,Shih Tzu,mini_longo,femea,sim,longa,,alergia a shampoo forte,,
+João Costa,(44) 99999-0002,,,,Thor,Labrador,grande_curto,macho,nao,curta,,,, 
 `;
 
 // ── Componente principal ─────────────────────────────────────────────────────
@@ -157,18 +147,12 @@ export default function Clientes() {
       healthNotes: pet.healthNotes ?? "",
       photoUrl: pet.photoUrl ?? "",
       groomingPreferences: pet.groomingPreferences ?? "",
-      petType: pet.petType ?? "eventual",
-      frequency: pet.frequency ?? "semanal",
-      appointmentDay: pet.appointmentDay ?? 2,
-      pricePerVisit: pet.pricePerVisit ?? "",
-      firstVisitDate: pet.firstVisitDate ? pet.firstVisitDate.slice(0, 10) : "",
     });
     setPetModalOpen(true);
   };
 
   const handleSavePet = async () => {
     if (!petClientId) return;
-    const isPacotista = petForm.petType === "pacotista";
     const payload = {
       name: petForm.name,
       breed: petForm.breed || undefined,
@@ -181,13 +165,6 @@ export default function Clientes() {
       healthNotes: petForm.healthNotes || undefined,
       photoUrl: petForm.photoUrl || undefined,
       groomingPreferences: petForm.groomingPreferences || undefined,
-      petType: petForm.petType,
-      frequency: isPacotista ? petForm.frequency : undefined,
-      appointmentDay: isPacotista ? Number(petForm.appointmentDay) : undefined,
-      pricePerVisit: isPacotista && petForm.pricePerVisit ? petForm.pricePerVisit : undefined,
-      firstVisitDate: isPacotista && petForm.frequency === "quinzenal" && petForm.firstVisitDate
-        ? new Date(petForm.firstVisitDate).toISOString()
-        : undefined,
       clientId: petClientId,
     };
 
@@ -267,8 +244,6 @@ export default function Clientes() {
     }
   };
 
-  const isPacotista = petForm.petType === "pacotista";
-
   // ── Render ───────────────────────────────────────────────────────────────
   return (
     <div className="p-6 space-y-6">
@@ -336,13 +311,6 @@ export default function Clientes() {
                             <Badge variant="secondary" className="text-xs">
                               {PORTE_SIZES[pet.size as keyof typeof PORTE_SIZES] ?? pet.size}
                             </Badge>
-                            {pet.petType === "pacotista" ? (
-                              <Badge className="text-xs bg-purple-100 text-purple-700 border-purple-200">
-                                Pacotista · {pet.frequency === "quinzenal" ? "Quinzenal" : "Semanal"}
-                              </Badge>
-                            ) : (
-                              <Badge variant="outline" className="text-xs">Eventual</Badge>
-                            )}
                             <Button variant="ghost" size="icon" className="h-5 w-5"
                               onClick={() => openEditPet(pet)}><Pencil className="h-3 w-3" /></Button>
                             <Button variant="ghost" size="icon" className="h-5 w-5"
@@ -385,18 +353,6 @@ export default function Clientes() {
           </DialogHeader>
 
           <div className="space-y-4">
-
-            {/* Tipo de cliente */}
-            <div>
-              <Label>Tipo *</Label>
-              <Select value={petForm.petType} onValueChange={v => setPetForm(f => ({ ...f, petType: v }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="eventual">Eventual (avulso)</SelectItem>
-                  <SelectItem value="pacotista">Pacotista (plano mensal)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
 
             {/* Identificação */}
             <div className="grid grid-cols-2 gap-3">
@@ -459,60 +415,6 @@ export default function Clientes() {
               <Input placeholder="Ex: tosa curta no corpo, franja longa..." value={petForm.groomingPreferences}
                 onChange={e => setPetForm(f => ({ ...f, groomingPreferences: e.target.value }))} />
             </div>
-
-            {/* Campos exclusivos de pacotista */}
-            {isPacotista && (
-              <div className="space-y-3 border rounded-lg p-3 bg-purple-50/50">
-                <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide">Configuração do Plano</p>
-
-                <div>
-                  <Label>Frequência *</Label>
-                  <Select value={petForm.frequency} onValueChange={v => setPetForm(f => ({ ...f, frequency: v }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="semanal">Semanal (toda semana)</SelectItem>
-                      <SelectItem value="quinzenal">Quinzenal (a cada 2 semanas — raças peludas)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label>Dia fixo da semana *</Label>
-                  <Select value={String(petForm.appointmentDay)}
-                    onValueChange={v => setPetForm(f => ({ ...f, appointmentDay: Number(v) }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(DIAS_SEMANA).map(([k, v]) => (
-                        <SelectItem key={k} value={k}>{v}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    O sistema calcula automaticamente quantas visitas cabem no mês.
-                  </p>
-                </div>
-
-                <div>
-                  <Label>Preço por visita (R$)</Label>
-                  <Input type="number" step="0.01" placeholder="Ex: 45.00" value={petForm.pricePerVisit}
-                    onChange={e => setPetForm(f => ({ ...f, pricePerVisit: e.target.value }))} />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Valor cobrado por visita com desconto do pacote. Total do mês = visitas × preço.
-                  </p>
-                </div>
-
-                {petForm.frequency === "quinzenal" && (
-                  <div>
-                    <Label>Data da primeira visita do pacote *</Label>
-                    <Input type="date" value={petForm.firstVisitDate}
-                      onChange={e => setPetForm(f => ({ ...f, firstVisitDate: e.target.value }))} />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Usado para calcular quais terças (ou dia fixo) são deste pet no calendário quinzenal.
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
 
             <div><Label>Observações gerais</Label>
               <Textarea value={petForm.notes} onChange={e => setPetForm(f => ({ ...f, notes: e.target.value }))} rows={2} />
