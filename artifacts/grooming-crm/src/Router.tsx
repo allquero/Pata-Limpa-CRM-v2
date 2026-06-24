@@ -2,7 +2,6 @@ import { Route, Switch, Redirect } from "wouter";
 import { AppLayout } from "@/components/layout/AppLayout";
 import Dashboard from "@/pages/Dashboard";
 import Clientes from "@/pages/Clientes";
-import Agendamentos from "@/pages/Agendamentos";
 import Servicos from "@/pages/Servicos";
 import Pacotes from "@/pages/Pacotes";
 import Financeiro from "@/pages/Financeiro";
@@ -77,8 +76,8 @@ export function Router() {
       <Switch>
         <Route path="/" component={Dashboard} />
         <Route path="/dashboard" component={Dashboard} />
+        <Route path="/agendamentos"><Redirect to="/" /></Route>
         <Route path="/clientes" component={Clientes} />
-        <Route path="/agendamentos" component={Agendamentos} />
         <Route path="/servicos" component={Servicos} />
         <Route path="/pacotes" component={Pacotes} />
         <Route path="/financeiro" component={Financeiro} />

@@ -1021,7 +1021,13 @@ export const ListAppointmentsResponseItem = zod.object({
   serviceId: zod.number().nullish(),
   packageId: zod.number().nullish(),
   scheduledDate: zod.coerce.date(),
-  status: zod.enum(["aguardando", "em_atendimento", "concluido", "cancelado"]),
+  status: zod.enum([
+    "aguardando",
+    "em_atendimento",
+    "pet_pronto",
+    "concluido",
+    "cancelado",
+  ]),
   totalPrice: zod.number(),
   notes: zod.string().nullish(),
   extraServiceIds: zod.array(zod.number()).nullish(),
@@ -1124,7 +1130,13 @@ export const GetAppointmentResponse = zod.object({
   serviceId: zod.number().nullish(),
   packageId: zod.number().nullish(),
   scheduledDate: zod.coerce.date(),
-  status: zod.enum(["aguardando", "em_atendimento", "concluido", "cancelado"]),
+  status: zod.enum([
+    "aguardando",
+    "em_atendimento",
+    "pet_pronto",
+    "concluido",
+    "cancelado",
+  ]),
   totalPrice: zod.number(),
   notes: zod.string().nullish(),
   extraServiceIds: zod.array(zod.number()).nullish(),
@@ -1203,7 +1215,13 @@ export const UpdateAppointmentBody = zod.object({
   extraServiceIds: zod.array(zod.number()).optional(),
   scheduledDate: zod.coerce.date().optional(),
   status: zod
-    .enum(["aguardando", "em_atendimento", "concluido", "cancelado"])
+    .enum([
+      "aguardando",
+      "em_atendimento",
+      "pet_pronto",
+      "concluido",
+      "cancelado",
+    ])
     .optional(),
   totalPrice: zod.number().optional(),
   notes: zod.string().optional(),
@@ -1217,7 +1235,13 @@ export const UpdateAppointmentResponse = zod.object({
   serviceId: zod.number().nullish(),
   packageId: zod.number().nullish(),
   scheduledDate: zod.coerce.date(),
-  status: zod.enum(["aguardando", "em_atendimento", "concluido", "cancelado"]),
+  status: zod.enum([
+    "aguardando",
+    "em_atendimento",
+    "pet_pronto",
+    "concluido",
+    "cancelado",
+  ]),
   totalPrice: zod.number(),
   notes: zod.string().nullish(),
   extraServiceIds: zod.array(zod.number()).nullish(),
@@ -1297,7 +1321,13 @@ export const UpdateAppointmentStatusParams = zod.object({
 });
 
 export const UpdateAppointmentStatusBody = zod.object({
-  status: zod.enum(["aguardando", "em_atendimento", "concluido", "cancelado"]),
+  status: zod.enum([
+    "aguardando",
+    "em_atendimento",
+    "pet_pronto",
+    "concluido",
+    "cancelado",
+  ]),
 });
 
 export const UpdateAppointmentStatusResponse = zod.object({
@@ -1308,7 +1338,13 @@ export const UpdateAppointmentStatusResponse = zod.object({
   serviceId: zod.number().nullish(),
   packageId: zod.number().nullish(),
   scheduledDate: zod.coerce.date(),
-  status: zod.enum(["aguardando", "em_atendimento", "concluido", "cancelado"]),
+  status: zod.enum([
+    "aguardando",
+    "em_atendimento",
+    "pet_pronto",
+    "concluido",
+    "cancelado",
+  ]),
   totalPrice: zod.number(),
   notes: zod.string().nullish(),
   extraServiceIds: zod.array(zod.number()).nullish(),
@@ -1716,6 +1752,7 @@ export const GetDashboardResponse = zod.object({
         status: zod.enum([
           "aguardando",
           "em_atendimento",
+          "pet_pronto",
           "concluido",
           "cancelado",
         ]),

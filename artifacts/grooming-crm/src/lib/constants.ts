@@ -13,6 +13,7 @@ export const PORTE_SIZES = {
 export const APPOINTMENT_STATUSES = {
   aguardando: "Aguardando",
   em_atendimento: "Em Atendimento",
+  pet_pronto: "Pet Pronto",
   concluido: "Concluído",
   cancelado: "Cancelado",
 };

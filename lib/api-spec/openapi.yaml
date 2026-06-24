@@ -2067,7 +2067,7 @@ components:
           format: date-time
         status:
           type: string
-          enum: [aguardando, em_atendimento, concluido, cancelado]
+          enum: [aguardando, em_atendimento, pet_pronto, concluido, cancelado]
         totalPrice:
           type: number
         notes:
@@ -2154,7 +2154,7 @@ components:
           format: date-time
         status:
           type: string
-          enum: [aguardando, em_atendimento, concluido, cancelado]
+          enum: [aguardando, em_atendimento, pet_pronto, concluido, cancelado]
         totalPrice:
           type: number
         notes:
@@ -2166,7 +2166,7 @@ components:
       properties:
         status:
           type: string
-          enum: [aguardando, em_atendimento, concluido, cancelado]
+          enum: [aguardando, em_atendimento, pet_pronto, concluido, cancelado]
 
     # Financial Entry
     FinancialEntry:

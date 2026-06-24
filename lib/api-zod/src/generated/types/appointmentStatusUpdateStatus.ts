@@ -12,6 +12,7 @@ export type AppointmentStatusUpdateStatus =
 export const AppointmentStatusUpdateStatus = {
   aguardando: "aguardando",
   em_atendimento: "em_atendimento",
+  pet_pronto: "pet_pronto",
   concluido: "concluido",
   cancelado: "cancelado",
 } as const;

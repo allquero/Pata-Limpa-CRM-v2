@@ -7,7 +7,7 @@ import { petsTable } from "./pets";
 import { servicesTable } from "./services";
 import { packagesTable } from "./packages";
 
-export const appointmentStatusEnum = ["aguardando", "em_atendimento", "concluido", "cancelado"] as const;
+export const appointmentStatusEnum = ["aguardando", "em_atendimento", "pet_pronto", "concluido", "cancelado"] as const;
 export type AppointmentStatus = typeof appointmentStatusEnum[number];
 
 export const appointmentsTable = pgTable("appointments", {

@@ -3,7 +3,6 @@ import { Link, useLocation } from "wouter";
 import { 
   LayoutDashboard, 
   Users, 
-  Calendar, 
   Scissors, 
   DollarSign, 
   BarChart3, 
@@ -22,7 +21,6 @@ import { useAppAuth } from "@/lib/auth-context";
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/clientes", label: "Clientes", icon: Users },
-  { href: "/agendamentos", label: "Agendamentos", icon: Calendar },
   { href: "/servicos", label: "Serviços", icon: Scissors },
   { href: "/pacotes", label: "Pacotes", icon: Package },
   { href: "/financeiro", label: "Financeiro", icon: DollarSign },
