@@ -27,6 +27,7 @@ type Pet = {
   sex?: string | null; neutered?: boolean | null;
   coat?: string | null; behavior?: string | null; healthNotes?: string | null;
   photoUrl?: string | null; groomingPreferences?: string | null;
+  senior?: boolean | null;
 };
 
 type ImportError = { line: number; message: string };
@@ -48,6 +49,7 @@ const emptyPet = {
   sex: "", neutered: false,
   coat: "", behavior: "", healthNotes: "",
   photoUrl: "", groomingPreferences: "",
+  senior: false,
 };
 
 const CSV_MODELO = `nome_cliente,telefone,email,endereco,notas_cliente,nome_pet,raca,porte,sexo,castrado,pelagem,comportamento,saude,preferencias_tosa,notas_pet
@@ -147,6 +149,7 @@ export default function Clientes() {
       healthNotes: pet.healthNotes ?? "",
       photoUrl: pet.photoUrl ?? "",
       groomingPreferences: pet.groomingPreferences ?? "",
+      senior: pet.senior ?? false,
     });
     setPetModalOpen(true);
   };
@@ -165,6 +168,7 @@ export default function Clientes() {
       healthNotes: petForm.healthNotes || undefined,
       photoUrl: petForm.photoUrl || undefined,
       groomingPreferences: petForm.groomingPreferences || undefined,
+      senior: petForm.senior,
       clientId: petClientId,
     };
 
@@ -302,9 +306,10 @@ export default function Clientes() {
                     ) : (
                       <div className="flex flex-wrap gap-2">
                         {(pets as Pet[]).filter(p => p.clientId === client.id).map(pet => (
-                          <div key={pet.id} className="flex items-center gap-2 bg-card border rounded-lg px-3 py-1.5 pl-[10px] pr-[10px] pt-[4px] pb-[4px]">
-                            <PawPrint className="h-3 w-3 text-primary" />
+                          <div key={pet.id} className={`flex items-center gap-2 border rounded-lg px-3 py-1.5 pl-[10px] pr-[10px] pt-[4px] pb-[4px] ${pet.senior ? "bg-amber-50 border-amber-300" : "bg-card"}`}>
+                            <PawPrint className={`h-3 w-3 ${pet.senior ? "text-amber-500" : "text-primary"}`} />
                             <span className="text-sm font-medium">{pet.name}</span>
+                            {pet.senior && <Badge className="text-xs bg-amber-100 text-amber-700 border border-amber-300 px-1.5 py-0">Idoso</Badge>}
                             {pet.breed && <span className="text-xs text-muted-foreground">{pet.breed}</span>}
                             <Badge variant="secondary" className="text-xs">
                               {PORTE_SIZES[pet.size as keyof typeof PORTE_SIZES] ?? pet.size}
@@ -386,6 +391,20 @@ export default function Clientes() {
                     <SelectItem value="nao">Não</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+            </div>
+
+            {/* Idoso */}
+            <div
+              className={`flex items-center justify-between rounded-lg border px-3 py-2.5 cursor-pointer transition-colors ${petForm.senior ? "bg-amber-50 border-amber-300" : "bg-muted/20"}`}
+              onClick={() => setPetForm(f => ({ ...f, senior: !f.senior }))}
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">Pet Idoso</span>
+                <span className="text-xs text-muted-foreground">Requer cuidados especiais</span>
+              </div>
+              <div className={`w-10 h-5 rounded-full transition-colors relative ${petForm.senior ? "bg-amber-400" : "bg-muted-foreground/30"}`}>
+                <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${petForm.senior ? "left-5" : "left-0.5"}`} />
               </div>
             </div>
 

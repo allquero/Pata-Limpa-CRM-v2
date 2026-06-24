@@ -18,5 +18,6 @@ export interface PetUpdate {
   behavior?: string;
   healthNotes?: string;
   groomingPreferences?: string;
+  senior?: boolean;
   notes?: string;
 }

@@ -19,5 +19,6 @@ export interface PetInput {
   behavior?: string;
   healthNotes?: string;
   groomingPreferences?: string;
+  senior?: boolean;
   notes?: string;
 }

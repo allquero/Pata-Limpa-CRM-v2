@@ -1757,6 +1757,8 @@ components:
           type: ["string", "null"]
         groomingPreferences:
           type: ["string", "null"]
+        senior:
+          type: boolean
         notes:
           type: ["string", "null"]
         createdAt:
@@ -1798,6 +1800,8 @@ components:
           type: string
         groomingPreferences:
           type: string
+        senior:
+          type: boolean
         notes:
           type: string
 
@@ -1833,6 +1837,8 @@ components:
           type: string
         groomingPreferences:
           type: string
+        senior:
+          type: boolean
         notes:
           type: string
 
