@@ -247,19 +247,19 @@ export default function Clientes() {
   // ── Render ───────────────────────────────────────────────────────────────
   return (
     <div className="p-6 space-y-6 pl-[10px] pr-[10px] pt-[10px] pb-[10px]">
-      <div className="flex items-center justify-between flex-wrap gap-3 mb-[13px]">
+      <div className="flex items-center justify-between flex-wrap gap-3 mb-[13px] text-[14px]">
         <div>
-          <h1 className="text-2xl font-bold">Clientes</h1>
+          <h1 className="font-bold text-[22px]">Clientes</h1>
           <p className="text-muted-foreground">Gerencie seus clientes e pets</p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <Button variant="outline" onClick={handleExport}>
+        <div className="flex items-center flex-wrap justify-start gap-[4px] text-[10px]">
+          <Button variant="outline" onClick={handleExport} className="text-[10px] pl-[10px] pr-[10px] pt-[8px] pb-[8px]">
             <Download className="h-4 w-4 mr-2" />Exportar CSV
           </Button>
-          <Button variant="outline" onClick={() => { setImportResult(null); setImportModalOpen(true); }}>
+          <Button variant="outline" onClick={() => { setImportResult(null); setImportModalOpen(true); }} className="text-[10px] pl-[10px] pr-[10px]">
             <Upload className="h-4 w-4 mr-2" />Importar CSV
           </Button>
-          <Button onClick={openCreate}><Plus className="h-4 w-4 mr-2" />Novo Cliente</Button>
+          <Button onClick={openCreate} className="text-[10px] pl-[10px] pr-[10px]"><Plus className="h-4 w-4 mr-2" />Novo Cliente</Button>
         </div>
       </div>
       <Input placeholder="Buscar por nome ou telefone..." value={search}
@@ -269,11 +269,11 @@ export default function Clientes() {
       ) : filtered.length === 0 ? (
         <Card><CardContent className="py-12 text-center text-muted-foreground">Nenhum cliente encontrado.</CardContent></Card>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-3 pt-[0px] pb-[0px]">
           {filtered.map(client => (
             <Card key={client.id}>
               <CardContent className="p-0">
-                <div className="flex items-center justify-between p-4 pl-[9px] pr-[9px] pt-[9px] pb-[9px]">
+                <div className="flex items-center p-4 pl-[6px] pr-[6px] pt-[6px] pb-[6px] justify-between text-left text-[14px]">
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold truncate">{client.name}</p>
                     <p className="text-sm text-muted-foreground">
@@ -281,7 +281,7 @@ export default function Clientes() {
                     </p>
                     {client.notes && <p className="text-xs text-muted-foreground mt-1 truncate">{client.notes}</p>}
                   </div>
-                  <div className="flex ml-[16px] pt-[0px] pb-[0px] gap-[4px] justify-between items-center flex-row">
+                  <div className="flex gap-[4px] items-center ml-[0px] pt-[0px] pb-[0px] pl-[0px] pr-[0px] flex-row mr-[0px] mb-[0px] justify-between text-left">
                     <Button variant="ghost" size="sm" onClick={() => openAddPet(client.id)}>
                       <PawPrint className="h-4 w-4 mr-1" />Pet
                     </Button>

@@ -46,7 +46,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-background">
         {/* ── Mobile top icon bar ───────────────────────────────────────── */}
-        <nav className="md:hidden fixed top-0 left-0 right-0 z-50 bg-background border-b border-border h-12 flex items-center px-1 gap-0.5 overflow-x-auto">
+        <nav className="md:hidden fixed top-0 left-0 right-0 z-50 bg-background border-b border-border h-12 flex items-center px-1 overflow-x-auto pt-[10px] pb-[10px] mt-[10px] mb-[10px] pl-[10px] pr-[10px] gap-[6px]">
           <span className="flex items-center px-2 flex-shrink-0">
             <PawPrint className="h-5 w-5 text-primary" />
           </span>
