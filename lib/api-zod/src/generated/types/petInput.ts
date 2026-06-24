@@ -5,6 +5,7 @@
  * Grooming CRM API
  * OpenAPI spec version: 0.1.0
  */
+import type { PetInputSex } from "./petInputSex";
 import type { PetInputSize } from "./petInputSize";
 
 export interface PetInput {
@@ -12,5 +13,11 @@ export interface PetInput {
   name: string;
   breed?: string;
   size: PetInputSize;
+  sex?: PetInputSex;
+  neutered?: boolean;
+  coat?: string;
+  behavior?: string;
+  healthNotes?: string;
+  groomingPreferences?: string;
   notes?: string;
 }

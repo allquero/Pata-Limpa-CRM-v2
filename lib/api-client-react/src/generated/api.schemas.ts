@@ -150,6 +150,16 @@ export const PetSize = {
   gigante: "gigante",
 } as const;
 
+/**
+ * @nullable
+ */
+export type PetSex = (typeof PetSex)[keyof typeof PetSex] | null;
+
+export const PetSex = {
+  macho: "macho",
+  femea: "femea",
+} as const;
+
 export interface Pet {
   id: number;
   clientId: number;
@@ -157,6 +167,17 @@ export interface Pet {
   /** @nullable */
   breed?: string | null;
   size: PetSize;
+  /** @nullable */
+  sex?: PetSex;
+  neutered?: boolean;
+  /** @nullable */
+  coat?: string | null;
+  /** @nullable */
+  behavior?: string | null;
+  /** @nullable */
+  healthNotes?: string | null;
+  /** @nullable */
+  groomingPreferences?: string | null;
   /** @nullable */
   notes?: string | null;
   createdAt: string;
@@ -230,11 +251,24 @@ export const PetInputSize = {
   gigante: "gigante",
 } as const;
 
+export type PetInputSex = (typeof PetInputSex)[keyof typeof PetInputSex];
+
+export const PetInputSex = {
+  macho: "macho",
+  femea: "femea",
+} as const;
+
 export interface PetInput {
   clientId: number;
   name: string;
   breed?: string;
   size: PetInputSize;
+  sex?: PetInputSex;
+  neutered?: boolean;
+  coat?: string;
+  behavior?: string;
+  healthNotes?: string;
+  groomingPreferences?: string;
   notes?: string;
 }
 
@@ -252,10 +286,23 @@ export const PetUpdateSize = {
   gigante: "gigante",
 } as const;
 
+export type PetUpdateSex = (typeof PetUpdateSex)[keyof typeof PetUpdateSex];
+
+export const PetUpdateSex = {
+  macho: "macho",
+  femea: "femea",
+} as const;
+
 export interface PetUpdate {
   name?: string;
   breed?: string;
   size?: PetUpdateSize;
+  sex?: PetUpdateSex;
+  neutered?: boolean;
+  coat?: string;
+  behavior?: string;
+  healthNotes?: string;
+  groomingPreferences?: string;
   notes?: string;
 }
 

@@ -158,7 +158,7 @@ export default function Clientes() {
       breed: petForm.breed || undefined,
       size: petForm.size as PetInputSize,
       notes: petForm.notes || undefined,
-      sex: petForm.sex || undefined,
+      sex: (petForm.sex || undefined) as "macho" | "femea" | undefined,
       neutered: petForm.neutered,
       coat: petForm.coat || undefined,
       behavior: petForm.behavior || undefined,
