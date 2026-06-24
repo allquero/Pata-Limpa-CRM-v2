@@ -5,6 +5,7 @@
  * Grooming CRM API
  * OpenAPI spec version: 0.1.0
  */
+import type { PetSex } from "./petSex";
 import type { PetSize } from "./petSize";
 
 export interface Pet {
@@ -14,6 +15,17 @@ export interface Pet {
   /** @nullable */
   breed?: string | null;
   size: PetSize;
+  /** @nullable */
+  sex?: PetSex;
+  neutered?: boolean;
+  /** @nullable */
+  coat?: string | null;
+  /** @nullable */
+  behavior?: string | null;
+  /** @nullable */
+  healthNotes?: string | null;
+  /** @nullable */
+  groomingPreferences?: string | null;
   /** @nullable */
   notes?: string | null;
   createdAt: Date;

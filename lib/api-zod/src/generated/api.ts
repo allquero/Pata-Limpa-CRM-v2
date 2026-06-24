@@ -407,6 +407,14 @@ export const GetClientResponse = zod.object({
         "grande_longo",
         "gigante",
       ]),
+      sex: zod
+        .union([zod.literal("macho"), zod.literal("femea"), zod.literal(null)])
+        .nullish(),
+      neutered: zod.boolean().optional(),
+      coat: zod.string().nullish(),
+      behavior: zod.string().nullish(),
+      healthNotes: zod.string().nullish(),
+      groomingPreferences: zod.string().nullish(),
       notes: zod.string().nullish(),
       createdAt: zod.coerce.date(),
     }),
@@ -494,6 +502,14 @@ export const ListPetsResponseItem = zod.object({
     "grande_longo",
     "gigante",
   ]),
+  sex: zod
+    .union([zod.literal("macho"), zod.literal("femea"), zod.literal(null)])
+    .nullish(),
+  neutered: zod.boolean().optional(),
+  coat: zod.string().nullish(),
+  behavior: zod.string().nullish(),
+  healthNotes: zod.string().nullish(),
+  groomingPreferences: zod.string().nullish(),
   notes: zod.string().nullish(),
   createdAt: zod.coerce.date(),
 });
@@ -517,6 +533,12 @@ export const CreatePetBody = zod.object({
     "grande_longo",
     "gigante",
   ]),
+  sex: zod.enum(["macho", "femea"]).optional(),
+  neutered: zod.boolean().optional(),
+  coat: zod.string().optional(),
+  behavior: zod.string().optional(),
+  healthNotes: zod.string().optional(),
+  groomingPreferences: zod.string().optional(),
   notes: zod.string().optional(),
 });
 
@@ -543,6 +565,14 @@ export const GetPetResponse = zod.object({
     "grande_longo",
     "gigante",
   ]),
+  sex: zod
+    .union([zod.literal("macho"), zod.literal("femea"), zod.literal(null)])
+    .nullish(),
+  neutered: zod.boolean().optional(),
+  coat: zod.string().nullish(),
+  behavior: zod.string().nullish(),
+  healthNotes: zod.string().nullish(),
+  groomingPreferences: zod.string().nullish(),
   notes: zod.string().nullish(),
   createdAt: zod.coerce.date(),
 });
@@ -570,6 +600,12 @@ export const UpdatePetBody = zod.object({
       "gigante",
     ])
     .optional(),
+  sex: zod.enum(["macho", "femea"]).optional(),
+  neutered: zod.boolean().optional(),
+  coat: zod.string().optional(),
+  behavior: zod.string().optional(),
+  healthNotes: zod.string().optional(),
+  groomingPreferences: zod.string().optional(),
   notes: zod.string().optional(),
 });
 
@@ -589,6 +625,14 @@ export const UpdatePetResponse = zod.object({
     "grande_longo",
     "gigante",
   ]),
+  sex: zod
+    .union([zod.literal("macho"), zod.literal("femea"), zod.literal(null)])
+    .nullish(),
+  neutered: zod.boolean().optional(),
+  coat: zod.string().nullish(),
+  behavior: zod.string().nullish(),
+  healthNotes: zod.string().nullish(),
+  groomingPreferences: zod.string().nullish(),
   notes: zod.string().nullish(),
   createdAt: zod.coerce.date(),
 });
@@ -995,6 +1039,14 @@ export const ListAppointmentsResponseItem = zod.object({
         "grande_longo",
         "gigante",
       ]),
+      sex: zod
+        .union([zod.literal("macho"), zod.literal("femea"), zod.literal(null)])
+        .nullish(),
+      neutered: zod.boolean().optional(),
+      coat: zod.string().nullish(),
+      behavior: zod.string().nullish(),
+      healthNotes: zod.string().nullish(),
+      groomingPreferences: zod.string().nullish(),
       notes: zod.string().nullish(),
       createdAt: zod.coerce.date(),
     })
@@ -1089,6 +1141,14 @@ export const GetAppointmentResponse = zod.object({
         "grande_longo",
         "gigante",
       ]),
+      sex: zod
+        .union([zod.literal("macho"), zod.literal("femea"), zod.literal(null)])
+        .nullish(),
+      neutered: zod.boolean().optional(),
+      coat: zod.string().nullish(),
+      behavior: zod.string().nullish(),
+      healthNotes: zod.string().nullish(),
+      groomingPreferences: zod.string().nullish(),
       notes: zod.string().nullish(),
       createdAt: zod.coerce.date(),
     })
@@ -1173,6 +1233,14 @@ export const UpdateAppointmentResponse = zod.object({
         "grande_longo",
         "gigante",
       ]),
+      sex: zod
+        .union([zod.literal("macho"), zod.literal("femea"), zod.literal(null)])
+        .nullish(),
+      neutered: zod.boolean().optional(),
+      coat: zod.string().nullish(),
+      behavior: zod.string().nullish(),
+      healthNotes: zod.string().nullish(),
+      groomingPreferences: zod.string().nullish(),
       notes: zod.string().nullish(),
       createdAt: zod.coerce.date(),
     })
@@ -1255,6 +1323,14 @@ export const UpdateAppointmentStatusResponse = zod.object({
         "grande_longo",
         "gigante",
       ]),
+      sex: zod
+        .union([zod.literal("macho"), zod.literal("femea"), zod.literal(null)])
+        .nullish(),
+      neutered: zod.boolean().optional(),
+      coat: zod.string().nullish(),
+      behavior: zod.string().nullish(),
+      healthNotes: zod.string().nullish(),
+      groomingPreferences: zod.string().nullish(),
       notes: zod.string().nullish(),
       createdAt: zod.coerce.date(),
     })
@@ -1656,6 +1732,18 @@ export const GetDashboardResponse = zod.object({
               "grande_longo",
               "gigante",
             ]),
+            sex: zod
+              .union([
+                zod.literal("macho"),
+                zod.literal("femea"),
+                zod.literal(null),
+              ])
+              .nullish(),
+            neutered: zod.boolean().optional(),
+            coat: zod.string().nullish(),
+            behavior: zod.string().nullish(),
+            healthNotes: zod.string().nullish(),
+            groomingPreferences: zod.string().nullish(),
             notes: zod.string().nullish(),
             createdAt: zod.coerce.date(),
           })

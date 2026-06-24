@@ -1744,6 +1744,19 @@ components:
             - grande_curto
             - grande_longo
             - gigante
+        sex:
+          type: ["string", "null"]
+          enum: ["macho", "femea", null]
+        neutered:
+          type: boolean
+        coat:
+          type: ["string", "null"]
+        behavior:
+          type: ["string", "null"]
+        healthNotes:
+          type: ["string", "null"]
+        groomingPreferences:
+          type: ["string", "null"]
         notes:
           type: ["string", "null"]
         createdAt:
@@ -1772,6 +1785,19 @@ components:
             - grande_curto
             - grande_longo
             - gigante
+        sex:
+          type: string
+          enum: ["macho", "femea"]
+        neutered:
+          type: boolean
+        coat:
+          type: string
+        behavior:
+          type: string
+        healthNotes:
+          type: string
+        groomingPreferences:
+          type: string
         notes:
           type: string
 
@@ -1794,6 +1820,19 @@ components:
             - grande_curto
             - grande_longo
             - gigante
+        sex:
+          type: string
+          enum: ["macho", "femea"]
+        neutered:
+          type: boolean
+        coat:
+          type: string
+        behavior:
+          type: string
+        healthNotes:
+          type: string
+        groomingPreferences:
+          type: string
         notes:
           type: string
 

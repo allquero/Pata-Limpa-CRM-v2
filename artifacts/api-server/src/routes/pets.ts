@@ -38,12 +38,12 @@ router.get("/pets", async (req, res): Promise<void> => {
   }
 
   const pets = await db
-    .select({ id: petsTable.id, clientId: petsTable.clientId, name: petsTable.name, breed: petsTable.breed, size: petsTable.size, notes: petsTable.notes, createdAt: petsTable.createdAt, updatedAt: petsTable.updatedAt })
+    .select()
     .from(petsTable)
     .innerJoin(clientsTable, eq(petsTable.clientId, clientsTable.id))
     .where(eq(clientsTable.tenantId, req.tenantId!))
     .orderBy(petsTable.name);
-  res.json(pets);
+  res.json(pets.map(r => r.pets));
 });
 
 router.post("/pets", async (req, res): Promise<void> => {
@@ -71,7 +71,7 @@ router.get("/pets/:id", async (req, res): Promise<void> => {
     return;
   }
   const rows = await db
-    .select({ id: petsTable.id, clientId: petsTable.clientId, name: petsTable.name, breed: petsTable.breed, size: petsTable.size, notes: petsTable.notes, createdAt: petsTable.createdAt, updatedAt: petsTable.updatedAt })
+    .select()
     .from(petsTable)
     .innerJoin(clientsTable, and(eq(petsTable.clientId, clientsTable.id), eq(clientsTable.tenantId, req.tenantId!)))
     .where(eq(petsTable.id, params.data.id));
@@ -79,7 +79,7 @@ router.get("/pets/:id", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Pet não encontrado" });
     return;
   }
-  res.json(rows[0]);
+  res.json(rows[0].pets);
 });
 
 router.patch("/pets/:id", async (req, res): Promise<void> => {

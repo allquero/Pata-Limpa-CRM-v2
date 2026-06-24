@@ -5,11 +5,18 @@
  * Grooming CRM API
  * OpenAPI spec version: 0.1.0
  */
+import type { PetUpdateSex } from "./petUpdateSex";
 import type { PetUpdateSize } from "./petUpdateSize";
 
 export interface PetUpdate {
   name?: string;
   breed?: string;
   size?: PetUpdateSize;
+  sex?: PetUpdateSex;
+  neutered?: boolean;
+  coat?: string;
+  behavior?: string;
+  healthNotes?: string;
+  groomingPreferences?: string;
   notes?: string;
 }
