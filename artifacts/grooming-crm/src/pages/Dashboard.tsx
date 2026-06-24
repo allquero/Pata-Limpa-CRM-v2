@@ -875,7 +875,7 @@ export default function Dashboard() {
     const apptDate = format(tomorrow, "dd/MM/yyyy");
     const serviceName = service?.name ?? pkg?.name ?? "Serviço";
     const selectedTmpl = reminderTemplateId !== "default" ? reminderTemplates.find(t => String(t.id) === reminderTemplateId) : null;
-    const content = selectedTmpl?.content ?? `Olá {nome_cliente}! Lembramos que {nome_pet} tem agendamento amanhã, dia {data} às {horario}. Serviço: {servico}. Valor: {preco}. Aguardamos vocês! 🐾`;
+    const content = selectedTmpl?.content ?? `Olá {nome_cliente}! Lembramos que {nome_pet} tem agendamento amanhã, dia {data}${!isPeriodo ? " às {horario}" : ""}. Serviço: {servico}. Aguardamos vocês! 🐾`;
     return content
       .replace(/\{nome_cliente\}/g, client?.name ?? "").replace(/\{nome_pet\}/g, pet?.name ?? "")
       .replace(/\{data\}/g, apptDate).replace(/\{horario\}/g, apptTime)
@@ -1036,24 +1036,16 @@ export default function Dashboard() {
                   {sortedTomorrowAppts.map(appt => {
                     const pet = (allPets as Pet[]).find(p => p.id === appt.petId);
                     const client = (clients as Client[]).find(c => c.id === appt.clientId);
-                    const service = (services as Service[]).find(s => s.id === appt.serviceId);
-                    const pkg = (packages as Package[]).find(p => p.id === appt.packageId);
-                    const apptTime = new Date(appt.scheduledDate).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
                     const isNotified = notifiedIds.has(appt.id);
                     return (
                       <div key={appt.id} className={`flex items-center gap-2 px-2 py-2 transition-all ${isNotified ? "opacity-40" : "hover:bg-amber-100/50"}`}>
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground w-10 shrink-0">
-                          <Clock className="h-3 w-3" />{apptTime}
-                        </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1 min-w-0">
                             <PawPrint className="h-3 w-3 text-primary shrink-0" />
                             <span className="font-semibold text-xs truncate">{pet?.name ?? "Pet"}</span>
-                            {pet?.size && <Badge variant="outline" className="text-[10px] px-1 py-0 shrink-0">{PORTE_SIZES[pet.size as keyof typeof PORTE_SIZES] ?? pet.size}</Badge>}
                           </div>
                           <p className="text-[10px] text-muted-foreground truncate">{client?.name ?? ""}</p>
                         </div>
-                        <span className="text-[10px] font-semibold text-primary shrink-0">{formatBRL(Number(appt.totalPrice))}</span>
                         {isNotified ? (
                           <div className="flex items-center gap-1 shrink-0">
                             <span className="text-[10px] text-green-600 flex items-center gap-0.5"><CheckCheck className="h-3 w-3" />ok</span>
