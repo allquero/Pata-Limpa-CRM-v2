@@ -415,6 +415,7 @@ export const GetClientResponse = zod.object({
       behavior: zod.string().nullish(),
       healthNotes: zod.string().nullish(),
       groomingPreferences: zod.string().nullish(),
+      senior: zod.boolean().optional(),
       notes: zod.string().nullish(),
       createdAt: zod.coerce.date(),
     }),
@@ -510,6 +511,7 @@ export const ListPetsResponseItem = zod.object({
   behavior: zod.string().nullish(),
   healthNotes: zod.string().nullish(),
   groomingPreferences: zod.string().nullish(),
+  senior: zod.boolean().optional(),
   notes: zod.string().nullish(),
   createdAt: zod.coerce.date(),
 });
@@ -539,6 +541,7 @@ export const CreatePetBody = zod.object({
   behavior: zod.string().optional(),
   healthNotes: zod.string().optional(),
   groomingPreferences: zod.string().optional(),
+  senior: zod.boolean().optional(),
   notes: zod.string().optional(),
 });
 
@@ -573,6 +576,7 @@ export const GetPetResponse = zod.object({
   behavior: zod.string().nullish(),
   healthNotes: zod.string().nullish(),
   groomingPreferences: zod.string().nullish(),
+  senior: zod.boolean().optional(),
   notes: zod.string().nullish(),
   createdAt: zod.coerce.date(),
 });
@@ -606,6 +610,7 @@ export const UpdatePetBody = zod.object({
   behavior: zod.string().optional(),
   healthNotes: zod.string().optional(),
   groomingPreferences: zod.string().optional(),
+  senior: zod.boolean().optional(),
   notes: zod.string().optional(),
 });
 
@@ -633,6 +638,7 @@ export const UpdatePetResponse = zod.object({
   behavior: zod.string().nullish(),
   healthNotes: zod.string().nullish(),
   groomingPreferences: zod.string().nullish(),
+  senior: zod.boolean().optional(),
   notes: zod.string().nullish(),
   createdAt: zod.coerce.date(),
 });
@@ -1047,6 +1053,7 @@ export const ListAppointmentsResponseItem = zod.object({
       behavior: zod.string().nullish(),
       healthNotes: zod.string().nullish(),
       groomingPreferences: zod.string().nullish(),
+      senior: zod.boolean().optional(),
       notes: zod.string().nullish(),
       createdAt: zod.coerce.date(),
     })
@@ -1149,6 +1156,7 @@ export const GetAppointmentResponse = zod.object({
       behavior: zod.string().nullish(),
       healthNotes: zod.string().nullish(),
       groomingPreferences: zod.string().nullish(),
+      senior: zod.boolean().optional(),
       notes: zod.string().nullish(),
       createdAt: zod.coerce.date(),
     })
@@ -1241,6 +1249,7 @@ export const UpdateAppointmentResponse = zod.object({
       behavior: zod.string().nullish(),
       healthNotes: zod.string().nullish(),
       groomingPreferences: zod.string().nullish(),
+      senior: zod.boolean().optional(),
       notes: zod.string().nullish(),
       createdAt: zod.coerce.date(),
     })
@@ -1331,6 +1340,7 @@ export const UpdateAppointmentStatusResponse = zod.object({
       behavior: zod.string().nullish(),
       healthNotes: zod.string().nullish(),
       groomingPreferences: zod.string().nullish(),
+      senior: zod.boolean().optional(),
       notes: zod.string().nullish(),
       createdAt: zod.coerce.date(),
     })
@@ -1744,6 +1754,7 @@ export const GetDashboardResponse = zod.object({
             behavior: zod.string().nullish(),
             healthNotes: zod.string().nullish(),
             groomingPreferences: zod.string().nullish(),
+            senior: zod.boolean().optional(),
             notes: zod.string().nullish(),
             createdAt: zod.coerce.date(),
           })

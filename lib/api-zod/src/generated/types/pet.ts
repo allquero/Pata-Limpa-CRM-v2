@@ -26,6 +26,7 @@ export interface Pet {
   healthNotes?: string | null;
   /** @nullable */
   groomingPreferences?: string | null;
+  senior?: boolean;
   /** @nullable */
   notes?: string | null;
   createdAt: Date;

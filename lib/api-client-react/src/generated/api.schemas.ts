@@ -178,6 +178,7 @@ export interface Pet {
   healthNotes?: string | null;
   /** @nullable */
   groomingPreferences?: string | null;
+  senior?: boolean;
   /** @nullable */
   notes?: string | null;
   createdAt: string;
@@ -269,6 +270,7 @@ export interface PetInput {
   behavior?: string;
   healthNotes?: string;
   groomingPreferences?: string;
+  senior?: boolean;
   notes?: string;
 }
 
@@ -303,6 +305,7 @@ export interface PetUpdate {
   behavior?: string;
   healthNotes?: string;
   groomingPreferences?: string;
+  senior?: boolean;
   notes?: string;
 }
 

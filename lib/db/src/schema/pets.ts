@@ -42,6 +42,9 @@ export const petsTable = pgTable("pets", {
   // Preferências de tosa (registradas pelo tutor ou profissional)
   groomingPreferences: text("grooming_preferences"),
 
+  // Idoso — precisa de cuidados especiais
+  senior: boolean("senior").default(false),
+
   // Observações gerais (campo livre)
   notes: text("notes"),
 
