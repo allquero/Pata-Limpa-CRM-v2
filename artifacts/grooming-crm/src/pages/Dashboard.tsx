@@ -160,22 +160,22 @@ function AppointmentCard({ appt, clients, pets, services, packages, onDelete, on
           </button>
         </div>
       </div>
-      <div className="flex items-center mt-2 pt-2 border-t border-dashed">
-        {isEditingDate ? (
-          <div className="flex items-center gap-1 flex-1" onClick={e => e.stopPropagation()}>
-            <Input type="date" value={editDate ?? dateStr} onChange={e => onChangeEditDate?.(e.target.value, editTime ?? time)} className="h-6 text-[10px] px-1 py-0 w-[110px]" />
-            {!isPeriodo && <Input type="time" value={editTime ?? time} onChange={e => onChangeEditDate?.(editDate ?? dateStr, e.target.value)} className="h-6 text-[10px] px-1 py-0 w-[70px]" />}
-            <button onClick={e => { e.stopPropagation(); onSaveEditDate?.(); }} className="p-0.5 rounded hover:bg-green-50 text-green-600" title="Salvar"><CalendarCheck className="h-3 w-3" /></button>
-            <button onClick={e => { e.stopPropagation(); onCancelEditDate?.(); }} className="p-0.5 rounded hover:bg-red-50 text-red-500" title="Cancelar"><X className="h-3 w-3" /></button>
-          </div>
-        ) : (
-          !isPeriodo && (
+      {(isEditingDate || !isPeriodo) && (
+        <div className="flex items-center mt-2 pt-2 border-t border-dashed">
+          {isEditingDate ? (
+            <div className="flex items-center gap-1 flex-1" onClick={e => e.stopPropagation()}>
+              <Input type="date" value={editDate ?? dateStr} onChange={e => onChangeEditDate?.(e.target.value, editTime ?? time)} className="h-6 text-[10px] px-1 py-0 w-[110px]" />
+              {!isPeriodo && <Input type="time" value={editTime ?? time} onChange={e => onChangeEditDate?.(editDate ?? dateStr, e.target.value)} className="h-6 text-[10px] px-1 py-0 w-[70px]" />}
+              <button onClick={e => { e.stopPropagation(); onSaveEditDate?.(); }} className="p-0.5 rounded hover:bg-green-50 text-green-600" title="Salvar"><CalendarCheck className="h-3 w-3" /></button>
+              <button onClick={e => { e.stopPropagation(); onCancelEditDate?.(); }} className="p-0.5 rounded hover:bg-red-50 text-red-500" title="Cancelar"><X className="h-3 w-3" /></button>
+            </div>
+          ) : (
             <button onClick={e => { e.stopPropagation(); onStartEditDate?.(); }} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors" title="Editar data/hora">
               <Clock className="h-3 w-3" />{time}
             </button>
-          )
-        )}
-      </div>
+          )}
+        </div>
+      )}
       {onChangeStatus && appt.status !== "concluido" && appt.status !== "cancelado" && (
         <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-dashed" onClick={e => e.stopPropagation()}>
           {appt.status === "aguardando" && (
