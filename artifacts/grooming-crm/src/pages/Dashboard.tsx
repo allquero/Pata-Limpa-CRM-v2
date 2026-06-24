@@ -95,7 +95,7 @@ function formatBRL(v: number) {
 
 // ─── AppointmentCard ──────────────────────────────────────────────────────────
 
-function AppointmentCard({ appt, clients, pets, services, packages, onDelete, onPetPronto, onEditService, onChangeStatus, isDragging = false, isEditingDate, editDate, editTime, onStartEditDate, onChangeEditDate, onSaveEditDate, onCancelEditDate }: {
+function AppointmentCard({ appt, clients, pets, services, packages, onDelete, onPetPronto, onEditService, onChangeStatus, isDragging = false, isEditingDate, editDate, editTime, onStartEditDate, onChangeEditDate, onSaveEditDate, onCancelEditDate, isPeriodo = false }: {
   appt: Appointment;
   clients: Client[];
   pets: Pet[];
@@ -113,23 +113,26 @@ function AppointmentCard({ appt, clients, pets, services, packages, onDelete, on
   onChangeEditDate?: (date: string, time: string) => void;
   onSaveEditDate?: () => void;
   onCancelEditDate?: () => void;
+  isPeriodo?: boolean;
 }) {
   const pet = pets.find(p => p.id === appt.petId);
   const client = clients.find(c => c.id === appt.clientId);
   const service = services.find(s => s.id === appt.serviceId);
   const pkg = packages.find(p => p.id === appt.packageId);
+  const scheduledHour = new Date(appt.scheduledDate).getHours();
+  const periodLabel = scheduledHour < 12 ? "Manhã" : "Tarde";
   const time = new Date(appt.scheduledDate).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-  const price = Number(appt.totalPrice);
   const dateStr = new Date(appt.scheduledDate).toISOString().substring(0, 10);
 
   return (
     <div className="bg-white rounded-lg border shadow-sm p-3 cursor-grab active:cursor-grabbing select-none hover:shadow-md transition-shadow pl-[5px] pr-[5px] pt-[5px] pb-[5px]">
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 mb-1">
+          <div className="flex items-center gap-1.5 mb-1 flex-wrap">
             <PawPrint className="h-3.5 w-3.5 text-primary shrink-0" />
             <span className="font-semibold text-sm truncate">{pet?.name ?? "Pet"}</span>
             {pet?.size && <Badge variant="secondary" className="text-xs px-1 py-0">{PORTE_SIZES[pet.size] ?? pet.size}</Badge>}
+            {isPeriodo && <Badge variant="outline" className="text-xs px-1 py-0 text-amber-700 border-amber-300">{periodLabel}</Badge>}
           </div>
           <p className="text-xs text-muted-foreground truncate">{client?.name ?? "Cliente"}</p>
           <p className="text-xs text-muted-foreground">
@@ -157,20 +160,21 @@ function AppointmentCard({ appt, clients, pets, services, packages, onDelete, on
           </button>
         </div>
       </div>
-      <div className="flex items-center justify-between mt-2 pt-2 border-t border-dashed">
+      <div className="flex items-center mt-2 pt-2 border-t border-dashed">
         {isEditingDate ? (
           <div className="flex items-center gap-1 flex-1" onClick={e => e.stopPropagation()}>
             <Input type="date" value={editDate ?? dateStr} onChange={e => onChangeEditDate?.(e.target.value, editTime ?? time)} className="h-6 text-[10px] px-1 py-0 w-[110px]" />
-            <Input type="time" value={editTime ?? time} onChange={e => onChangeEditDate?.(editDate ?? dateStr, e.target.value)} className="h-6 text-[10px] px-1 py-0 w-[70px]" />
+            {!isPeriodo && <Input type="time" value={editTime ?? time} onChange={e => onChangeEditDate?.(editDate ?? dateStr, e.target.value)} className="h-6 text-[10px] px-1 py-0 w-[70px]" />}
             <button onClick={e => { e.stopPropagation(); onSaveEditDate?.(); }} className="p-0.5 rounded hover:bg-green-50 text-green-600" title="Salvar"><CalendarCheck className="h-3 w-3" /></button>
             <button onClick={e => { e.stopPropagation(); onCancelEditDate?.(); }} className="p-0.5 rounded hover:bg-red-50 text-red-500" title="Cancelar"><X className="h-3 w-3" /></button>
           </div>
         ) : (
-          <button onClick={e => { e.stopPropagation(); onStartEditDate?.(); }} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors" title="Editar data/hora">
-            <Clock className="h-3 w-3" />{time}
-          </button>
+          !isPeriodo && (
+            <button onClick={e => { e.stopPropagation(); onStartEditDate?.(); }} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors" title="Editar data/hora">
+              <Clock className="h-3 w-3" />{time}
+            </button>
+          )
         )}
-        <span className="text-xs font-semibold text-primary">{formatBRL(price)}</span>
       </div>
       {onChangeStatus && appt.status !== "concluido" && appt.status !== "cancelado" && (
         <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-dashed" onClick={e => e.stopPropagation()}>
@@ -205,7 +209,7 @@ function AppointmentCard({ appt, clients, pets, services, packages, onDelete, on
 
 // ─── DraggableCard ────────────────────────────────────────────────────────────
 
-function DraggableCard({ appt, clients, pets, services, packages, onDelete, onPetPronto, onEditService, onChangeStatus, isEditingDate, editDate, editTime, onStartEditDate, onChangeEditDate, onSaveEditDate, onCancelEditDate }: {
+function DraggableCard({ appt, clients, pets, services, packages, onDelete, onPetPronto, onEditService, onChangeStatus, isEditingDate, editDate, editTime, onStartEditDate, onChangeEditDate, onSaveEditDate, onCancelEditDate, isPeriodo }: {
   appt: Appointment;
   clients: Client[];
   pets: Pet[];
@@ -222,18 +226,19 @@ function DraggableCard({ appt, clients, pets, services, packages, onDelete, onPe
   onChangeEditDate?: (date: string, time: string) => void;
   onSaveEditDate?: () => void;
   onCancelEditDate?: () => void;
+  isPeriodo?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: appt.id });
   return (
     <div ref={setNodeRef} {...listeners} {...attributes}>
-      <AppointmentCard appt={appt} clients={clients} pets={pets} services={services} packages={packages} onDelete={onDelete} onPetPronto={onPetPronto} onEditService={onEditService} onChangeStatus={onChangeStatus} isDragging={isDragging} isEditingDate={isEditingDate} editDate={editDate} editTime={editTime} onStartEditDate={onStartEditDate} onChangeEditDate={onChangeEditDate} onSaveEditDate={onSaveEditDate} onCancelEditDate={onCancelEditDate} />
+      <AppointmentCard appt={appt} clients={clients} pets={pets} services={services} packages={packages} onDelete={onDelete} onPetPronto={onPetPronto} onEditService={onEditService} onChangeStatus={onChangeStatus} isDragging={isDragging} isEditingDate={isEditingDate} editDate={editDate} editTime={editTime} onStartEditDate={onStartEditDate} onChangeEditDate={onChangeEditDate} onSaveEditDate={onSaveEditDate} onCancelEditDate={onCancelEditDate} isPeriodo={isPeriodo} />
     </div>
   );
 }
 
 // ─── KanbanColumn ─────────────────────────────────────────────────────────────
 
-function KanbanColumn({ status, label, color, bg, appointments, clients, pets, services, packages, onDelete, onPetPronto, onEditService, onChangeStatus, editingApptId, editDate, editTime, onStartEditDate, onChangeEditDate, onSaveEditDate, onCancelEditDate }: {
+function KanbanColumn({ status, label, color, bg, appointments, clients, pets, services, packages, onDelete, onPetPronto, onEditService, onChangeStatus, editingApptId, editDate, editTime, onStartEditDate, onChangeEditDate, onSaveEditDate, onCancelEditDate, isPeriodo }: {
   status: AppStatus;
   label: string;
   color: string;
@@ -254,6 +259,7 @@ function KanbanColumn({ status, label, color, bg, appointments, clients, pets, s
   onChangeEditDate: (date: string, time: string) => void;
   onSaveEditDate: (appt: Appointment) => void;
   onCancelEditDate: () => void;
+  isPeriodo?: boolean;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
   return (
@@ -267,7 +273,7 @@ function KanbanColumn({ status, label, color, bg, appointments, clients, pets, s
           <div className="flex items-center justify-center h-20 text-xs text-muted-foreground">Nenhum agendamento</div>
         )}
         {appointments.map(appt => (
-          <DraggableCard key={appt.id} appt={appt} clients={clients} pets={pets} services={services} packages={packages} onDelete={onDelete} onPetPronto={onPetPronto} onEditService={onEditService} onChangeStatus={onChangeStatus} isEditingDate={editingApptId === appt.id} editDate={editDate} editTime={editTime} onStartEditDate={() => onStartEditDate(appt)} onChangeEditDate={onChangeEditDate} onSaveEditDate={() => onSaveEditDate(appt)} onCancelEditDate={onCancelEditDate} />
+          <DraggableCard key={appt.id} appt={appt} clients={clients} pets={pets} services={services} packages={packages} onDelete={onDelete} onPetPronto={onPetPronto} onEditService={onEditService} onChangeStatus={onChangeStatus} isEditingDate={editingApptId === appt.id} editDate={editDate} editTime={editTime} onStartEditDate={() => onStartEditDate(appt)} onChangeEditDate={onChangeEditDate} onSaveEditDate={() => onSaveEditDate(appt)} onCancelEditDate={onCancelEditDate} isPeriodo={isPeriodo} />
         ))}
       </div>
     </div>
@@ -925,6 +931,7 @@ export default function Dashboard() {
     onChangeEditDate: changeEditDate,
     onSaveEditDate: saveEditDate,
     onCancelEditDate: cancelEditDate,
+    isPeriodo,
   };
 
   return (
@@ -1068,7 +1075,7 @@ export default function Dashboard() {
         <DragOverlay>
           {activeAppt && (
             <div className="shadow-2xl rotate-1 scale-105">
-              <AppointmentCard appt={activeAppt} clients={clients as Client[]} pets={allPets as Pet[]} services={services as Service[]} packages={packages as Package[]} onDelete={() => {}} />
+              <AppointmentCard appt={activeAppt} clients={clients as Client[]} pets={allPets as Pet[]} services={services as Service[]} packages={packages as Package[]} onDelete={() => {}} isPeriodo={isPeriodo} />
             </div>
           )}
         </DragOverlay>
