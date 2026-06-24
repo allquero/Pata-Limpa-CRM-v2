@@ -246,20 +246,20 @@ export default function Clientes() {
 
   // ── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className="p-6 space-y-6 pl-[10px] pr-[10px] pt-[10px] pb-[10px]">
+    <div className="p-6 space-y-6 pl-[10px] pr-[10px] pt-[10px] pb-[10px] text-[14px]">
       <div className="flex items-center justify-between flex-wrap gap-3 mb-[13px] text-[14px]">
         <div>
           <h1 className="font-bold text-[22px]">Clientes</h1>
           <p className="text-muted-foreground">Gerencie seus clientes e pets</p>
         </div>
         <div className="flex items-center flex-wrap justify-start gap-[4px] text-[10px]">
-          <Button variant="outline" onClick={handleExport} className="text-[10px] pl-[10px] pr-[10px] pt-[8px] pb-[8px]">
+          <Button variant="outline" onClick={handleExport} className="pl-[10px] pr-[10px] pt-[8px] pb-[8px] text-[14px]">
             <Download className="h-4 w-4 mr-2" />Exportar CSV
           </Button>
-          <Button variant="outline" onClick={() => { setImportResult(null); setImportModalOpen(true); }} className="text-[10px] pl-[10px] pr-[10px]">
+          <Button variant="outline" onClick={() => { setImportResult(null); setImportModalOpen(true); }} className="pl-[10px] pr-[10px] text-[14px]">
             <Upload className="h-4 w-4 mr-2" />Importar CSV
           </Button>
-          <Button onClick={openCreate} className="text-[10px] pl-[10px] pr-[10px]"><Plus className="h-4 w-4 mr-2" />Novo Cliente</Button>
+          <Button onClick={openCreate} className="pl-[10px] pr-[10px] text-[14px]"><Plus className="h-4 w-4 mr-2" />Novo Cliente</Button>
         </div>
       </div>
       <Input placeholder="Buscar por nome ou telefone..." value={search}
