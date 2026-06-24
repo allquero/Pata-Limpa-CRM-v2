@@ -10,6 +10,7 @@ import {
   useListPackages, useCreateClient, useCreatePet, useSellPackage,
   getListPetsQueryKey, useListMessageTemplates,
   getListAppointmentsQueryKey, getListMessageTemplatesQueryKey,
+  useGetTenant,
 } from "@workspace/api-client-react";
 import type {
   Client, Pet, Service, Package, SellPackageResult, PetInputSize, MessageTemplate, AppointmentFull,
@@ -827,6 +828,10 @@ export default function Agendamentos() {
     endDate: new Date(queryEnd.getFullYear(), queryEnd.getMonth(), queryEnd.getDate(), 23, 59, 59).toISOString(),
   });
 
+  const { data: tenantData } = useGetTenant(tenantId!);
+  const schedulingMethod = (tenantData as any)?.schedulingMethod ?? "hora";
+  const isPeriodo = schedulingMethod === "periodo";
+
   const { data: clients = [] } = useListClients({ tenantId: tenantId! });
   const { data: allPets = [] } = useListPets({});
   const { data: services = [] } = useListServices({ tenantId: tenantId! });
@@ -1456,7 +1461,23 @@ export default function Agendamentos() {
                 )}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5"><Label>Data *</Label><Input type="date" value={casual.scheduledDate} onChange={e => setCasual(f => ({ ...f, scheduledDate: e.target.value }))} /></div>
-                  <div className="space-y-1.5"><Label>Horário *</Label><Input type="time" value={casual.scheduledTime} onChange={e => setCasual(f => ({ ...f, scheduledTime: e.target.value }))} /></div>
+                  {isPeriodo ? (
+                    <div className="space-y-1.5">
+                      <Label>Período *</Label>
+                      <Select
+                        value={casual.scheduledTime === "14:00" ? "tarde" : "manha"}
+                        onValueChange={v => setCasual(f => ({ ...f, scheduledTime: v === "tarde" ? "14:00" : "08:00" }))}
+                      >
+                        <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="manha">Manhã</SelectItem>
+                          <SelectItem value="tarde">Tarde</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5"><Label>Horário *</Label><Input type="time" value={casual.scheduledTime} onChange={e => setCasual(f => ({ ...f, scheduledTime: e.target.value }))} /></div>
+                  )}
                 </div>
                 <div className="space-y-1.5"><Label>Valor (R$) *</Label><Input type="number" step="0.01" min="0" placeholder="0,00" value={casual.totalPrice} onChange={e => setCasual(f => ({ ...f, totalPrice: e.target.value }))} /></div>
                 <div className="space-y-1.5"><Label>Observações</Label><Textarea placeholder="Observações adicionais" value={casual.notes} onChange={e => setCasual(f => ({ ...f, notes: e.target.value }))} rows={2} /></div>
@@ -1543,7 +1564,23 @@ export default function Agendamentos() {
             )}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5"><Label>Data do 1º agend. *</Label><Input type="date" value={sell.startDate} onChange={e => setSell(f => ({ ...f, startDate: e.target.value }))} /></div>
-              <div className="space-y-1.5"><Label>Horário *</Label><Input type="time" value={sell.startTime} onChange={e => setSell(f => ({ ...f, startTime: e.target.value }))} /></div>
+              {isPeriodo ? (
+                <div className="space-y-1.5">
+                  <Label>Período *</Label>
+                  <Select
+                    value={sell.startTime === "14:00" ? "tarde" : "manha"}
+                    onValueChange={v => setSell(f => ({ ...f, startTime: v === "tarde" ? "14:00" : "08:00" }))}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="manha">Manhã</SelectItem>
+                      <SelectItem value="tarde">Tarde</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                <div className="space-y-1.5"><Label>Horário *</Label><Input type="time" value={sell.startTime} onChange={e => setSell(f => ({ ...f, startTime: e.target.value }))} /></div>
+              )}
             </div>
             {sellSessions.length > 0 && sell.startDate && (
               <div className="space-y-2">
