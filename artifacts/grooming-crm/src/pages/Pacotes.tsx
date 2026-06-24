@@ -236,7 +236,7 @@ export default function Pacotes() {
   const isSaving = createPackage.isPending || updatePackage.isPending;
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 pl-[14px] pr-[14px] pt-[41px] pb-[41px]">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Pacotes</h1>
@@ -247,7 +247,6 @@ export default function Pacotes() {
           Novo Pacote
         </Button>
       </div>
-
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3].map(i => <Skeleton key={i} className="h-64 w-full rounded-xl" />)}
@@ -259,7 +258,7 @@ export default function Pacotes() {
           <Button variant="outline" onClick={openCreate}>Criar primeiro pacote</Button>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-[0px] pb-[0px]">
           {(packages as Pkg[]).map(pkg => {
             const prices = pkg.priceBySizes ?? [];
             const priceValues = prices.map(p => p.price).filter(p => p > 0);
@@ -268,7 +267,7 @@ export default function Pacotes() {
 
             return (
               <Card key={pkg.id} className="flex flex-col border hover:shadow-md transition-shadow">
-                <CardHeader className="pb-3">
+                <CardHeader className="pr-[14px] pt-[14px] pb-[14px]">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
                       <CardTitle className="text-lg leading-tight">{pkg.name}</CardTitle>
@@ -286,7 +285,7 @@ export default function Pacotes() {
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="flex-1 space-y-3">
+                <CardContent className="flex-1 space-y-3 pb-[14px] pr-[14px] pl-[14px]">
                   {/* Price range */}
                   <div>
                     {minPrice === maxPrice && minPrice > 0 ? (
@@ -342,7 +341,6 @@ export default function Pacotes() {
           })}
         </div>
       )}
-
       {/* Create / Edit Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
@@ -437,7 +435,6 @@ export default function Pacotes() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
       {/* Sell Modal */}
       <Dialog open={!!sellTarget} onOpenChange={o => !o && setSellTarget(null)}>
         <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
@@ -571,7 +568,6 @@ export default function Pacotes() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
       {/* Delete Confirm */}
       <AlertDialog open={!!deleteTarget} onOpenChange={o => !o && setDeleteTarget(null)}>
         <AlertDialogContent>
