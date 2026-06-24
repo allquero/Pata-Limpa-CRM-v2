@@ -25,12 +25,11 @@ export default function Relatorios() {
   const { data: topClients, isLoading: topLoading } = useGetTopClientsReport({ tenantId: tenantId!, limit: 10 });
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 pl-[14px] pr-[14px] pt-[14px] pb-[14px]">
       <div>
         <h1 className="text-2xl font-bold">Relatórios</h1>
         <p className="text-muted-foreground">Análises e indicadores do negócio</p>
       </div>
-
       <div className="flex gap-4 items-end">
         <div>
           <Label>De</Label>
@@ -41,7 +40,6 @@ export default function Relatorios() {
           <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-40" />
         </div>
       </div>
-
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="pb-2 flex flex-row items-center justify-between">
@@ -71,7 +69,6 @@ export default function Relatorios() {
           </CardContent>
         </Card>
       </div>
-
       <Tabs defaultValue="receita">
         <TabsList>
           <TabsTrigger value="receita">Receita por Período</TabsTrigger>
