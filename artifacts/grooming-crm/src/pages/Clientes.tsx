@@ -273,7 +273,7 @@ export default function Clientes() {
           {filtered.map(client => (
             <Card key={client.id}>
               <CardContent className="p-0">
-                <div className="flex items-center p-4 pl-[6px] pr-[6px] pt-[6px] pb-[6px] justify-between text-left text-[14px]">
+                <div className="flex items-center p-4 pt-[6px] pb-[6px] justify-between text-left text-[14px] pl-[12px] pr-[12px]">
                   <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setExpandedClient(expandedClient === client.id ? null : client.id)}>
                     <p className="font-semibold truncate">{client.name}</p>
                     <p className="text-sm text-muted-foreground">
