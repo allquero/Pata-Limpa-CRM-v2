@@ -558,7 +558,10 @@ function ConfirmacaoWhatsAppModal({
     if (!appt || !client) return "";
     const apptTime = new Date(appt.scheduledDate).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
     const apptDate = format(new Date(appt.scheduledDate), "dd/MM/yyyy");
-    const serviceName = service?.name ?? pkg?.name ?? "Serviço";
+    const extraNames = (appt.extraServiceIds ?? [])
+      .map(id => services.find(s => s.id === id)?.name)
+      .filter(Boolean) as string[];
+    const serviceName = [service?.name ?? pkg?.name ?? "Serviço", ...extraNames].join(" + ");
     const price = formatBRL(overridePrice !== undefined ? overridePrice : Number(appt.totalPrice));
 
     const allAppts = (clientAppts as Appointment[])
