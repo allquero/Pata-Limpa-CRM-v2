@@ -11,10 +11,12 @@ import {
   X,
   RefreshCw,
   KeyRound,
+  Settings,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useAppAuth } from "@/lib/auth-context";
@@ -116,6 +118,45 @@ export default function Admin() {
   >(null);
   const [newPassword, setNewPassword] = useState("");
 
+  const [configPhone, setConfigPhone] = useState("");
+  const [configMessage, setConfigMessage] = useState("");
+  const [configSaving, setConfigSaving] = useState(false);
+
+  const fetchConfig = useCallback(async () => {
+    try {
+      const r = await fetch("/api/admin/config", { credentials: "include" });
+      if (r.ok) {
+        const d = await r.json() as { landing_whatsapp_phone: string; landing_whatsapp_message: string };
+        setConfigPhone(d.landing_whatsapp_phone ?? "");
+        setConfigMessage(d.landing_whatsapp_message ?? "");
+      }
+    } catch {}
+  }, []);
+
+  async function handleSaveConfig() {
+    setConfigSaving(true);
+    try {
+      const res = await fetch("/api/admin/config", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          landing_whatsapp_phone: configPhone,
+          landing_whatsapp_message: configMessage,
+        }),
+      });
+      if (res.ok) {
+        toast({ title: "Configurações salvas com sucesso" });
+      } else {
+        toast({ title: "Erro ao salvar configurações", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Erro ao salvar configurações", variant: "destructive" });
+    } finally {
+      setConfigSaving(false);
+    }
+  }
+
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
@@ -138,7 +179,8 @@ export default function Admin() {
 
   useEffect(() => {
     fetchAll();
-  }, [fetchAll]);
+    fetchConfig();
+  }, [fetchAll, fetchConfig]);
 
   async function handleSaveTenant() {
     if (!editingTenant) return;
@@ -355,6 +397,10 @@ export default function Admin() {
             <TabsTrigger value="financeiro">
               <DollarSign className="h-4 w-4 mr-2" />
               Financeiro
+            </TabsTrigger>
+            <TabsTrigger value="configuracoes">
+              <Settings className="h-4 w-4 mr-2" />
+              Configurações
             </TabsTrigger>
           </TabsList>
 
@@ -897,6 +943,58 @@ export default function Admin() {
                   Nenhuma venda registrada ainda.
                 </div>
               )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="configuracoes">
+            <div className="bg-white border rounded-xl p-6 flex flex-col gap-6 max-w-lg">
+              <div>
+                <h3 className="text-base font-semibold text-gray-900 mb-1">
+                  WhatsApp da landing page
+                </h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Número e mensagem usados nos botões "Quero conhecer" e "Falar com a gente" da página inicial.
+                </p>
+
+                <div className="flex flex-col gap-4">
+                  <div>
+                    <Label htmlFor="cfg-phone">
+                      Número de WhatsApp (somente dígitos, com DDI)
+                    </Label>
+                    <Input
+                      id="cfg-phone"
+                      placeholder="5511999999999"
+                      value={configPhone}
+                      onChange={(e) => setConfigPhone(e.target.value.replace(/\D/g, ""))}
+                      className="mt-1 font-mono"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Exemplo: 5548999887766 (55 = Brasil, 48 = DDD, resto = número)
+                    </p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="cfg-message">Mensagem padrão dos botões</Label>
+                    <Textarea
+                      id="cfg-message"
+                      placeholder="Olá! Quero conhecer o Pata Limpa CRM para meu pet shop."
+                      value={configMessage}
+                      onChange={(e) => setConfigMessage(e.target.value)}
+                      className="mt-1 min-h-[100px] resize-none"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Esta mensagem será pré-preenchida ao abrir o WhatsApp.
+                    </p>
+                  </div>
+
+                  <div className="flex justify-end">
+                    <Button onClick={handleSaveConfig} disabled={configSaving}>
+                      <Check className="h-4 w-4 mr-2" />
+                      {configSaving ? "Salvando..." : "Salvar configurações"}
+                    </Button>
+                  </div>
+                </div>
+              </div>
             </div>
           </TabsContent>
         </Tabs>

@@ -27,7 +27,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useAppAuth } from "@/lib/auth-context";
-import { buildWhatsAppUrl } from "@/lib/admin-config";
+import { useLandingConfig, buildWhatsAppUrl } from "@/lib/admin-config";
 
 const gains = [
   {
@@ -229,9 +229,11 @@ function LoginDropdown() {
 }
 
 export default function Login() {
+  const { phone, message } = useLandingConfig();
+
   const openWhatsApp = () =>
     window.open(
-      buildWhatsAppUrl("Olá! Quero conhecer o Pata Limpa CRM para meu pet shop."),
+      buildWhatsAppUrl(message, phone),
       "_blank",
       "noopener,noreferrer",
     );
