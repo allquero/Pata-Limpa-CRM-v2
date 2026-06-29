@@ -46,7 +46,7 @@ const gains = [
     description:
       "Kanban visual por status — veja de relance quem está aguardando, em atendimento e pronto para buscar. Recorrência automática para clientes fixos.",
     color: "text-blue-600",
-    bg: "bg-blue-50",
+    bg: "bg-[#0d542b47]",
   },
   {
     icon: DollarSign,
@@ -246,7 +246,6 @@ export default function Login() {
         </div>
         <LoginDropdown />
       </header>
-
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
       <section className="bg-gradient-to-br from-primary/5 via-white to-teal-50 px-6 py-20 sm:py-28">
         <div className="max-w-4xl mx-auto flex flex-col items-center text-center gap-8">
@@ -261,18 +260,18 @@ export default function Login() {
               <span className="text-primary">Mais tempo atendendo.</span>
             </h1>
             <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-              O <strong className="text-gray-700">Pata Limpa</strong> organiza toda a agenda do seu pet shop em segundos —
+              O <strong className="text-gray-700">Pata Limpa</strong> organiza toda a agenda do seu pet shop em segundos
               agendamentos, clientes, financeiro e WhatsApp em um só lugar.
             </p>
           </div>
 
           <Button
             size="lg"
-            className="px-10 text-base border-green-600 bg-green-600 hover:bg-green-700 text-white shadow-sm"
+            className="px-10 text-base border-[color:var(--color-teal-600)] hover:bg-green-700 shadow-sm bg-[color:var(--color-green-100)] text-[#0d968b]"
             onClick={openWhatsApp}
           >
             <MessageCircle className="h-5 w-5 mr-2" />
-            Quero conhecer — Fale com a gente
+            Quero conhecer
           </Button>
 
           <p className="text-xs text-muted-foreground">
@@ -280,7 +279,6 @@ export default function Login() {
           </p>
         </div>
       </section>
-
       {/* ── O que você ganha ──────────────────────────────────────────────── */}
       <section className="px-6 py-16 sm:py-20 max-w-6xl mx-auto">
         <div className="text-center mb-12">
@@ -289,7 +287,7 @@ export default function Login() {
             O que você ganha com o Pata Limpa
           </h2>
           <p className="text-muted-foreground mt-3 max-w-xl mx-auto">
-            Tempo é dinheiro — e no seu pet shop, cada minuto perdido com papelada é um atendimento a menos no dia.
+            Tempo é dinheiro e no seu pet shop, cada minuto perdido com papelada é um atendimento a menos no dia.
           </p>
         </div>
 
@@ -303,7 +301,7 @@ export default function Login() {
                 <g.icon className={`h-8 w-8 ${g.color}`} />
               </div>
               <div>
-                <p className={`text-4xl font-extrabold ${g.color}`}>{g.number}</p>
+                <p className="text-4xl font-extrabold text-[#000000]">{g.number}</p>
                 <p className="text-sm font-semibold text-gray-700 mt-0.5">{g.label}</p>
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed">{g.description}</p>
@@ -311,7 +309,6 @@ export default function Login() {
           ))}
         </div>
       </section>
-
       {/* ── Funcionalidades ───────────────────────────────────────────────── */}
       <section className="px-6 py-16 sm:py-20 bg-gray-50">
         <div className="max-w-6xl mx-auto">
@@ -321,7 +318,7 @@ export default function Login() {
               Um sistema completo para seu pet shop
             </h2>
             <p className="text-muted-foreground mt-3 max-w-xl mx-auto">
-              Do agendamento ao financeiro, do cliente ao WhatsApp — tudo integrado, sem complicação.
+              Do agendamento ao financeiro, do cliente ao WhatsApp tudo integrado, sem complicação.
             </p>
           </div>
 
@@ -345,7 +342,6 @@ export default function Login() {
           </div>
         </div>
       </section>
-
       {/* ── Como funciona ─────────────────────────────────────────────────── */}
       <section className="px-6 py-16 sm:py-20 max-w-6xl mx-auto">
         <div className="text-center mb-12">
@@ -373,7 +369,6 @@ export default function Login() {
           ))}
         </div>
       </section>
-
       {/* ── Faixa de confiança ────────────────────────────────────────────── */}
       <section className="bg-primary px-6 py-14">
         <div className="max-w-4xl mx-auto flex flex-col items-center gap-8">
@@ -402,7 +397,6 @@ export default function Login() {
           </div>
         </div>
       </section>
-
       {/* ── CTA final ─────────────────────────────────────────────────────── */}
       <section className="px-6 py-20 bg-gradient-to-br from-gray-50 to-teal-50">
         <div className="max-w-2xl mx-auto flex flex-col items-center text-center gap-6">
@@ -422,7 +416,7 @@ export default function Login() {
 
           <Button
             size="lg"
-            className="px-10 text-base bg-green-600 hover:bg-green-700 text-white shadow-sm"
+            className="px-10 text-base hover:bg-green-700 shadow-sm bg-[color:var(--color-green-100)] text-[color:var(--color-teal-600)]"
             onClick={openWhatsApp}
           >
             <MessageCircle className="h-5 w-5 mr-2" />
@@ -442,7 +436,6 @@ export default function Login() {
           </div>
         </div>
       </section>
-
       {/* ── Footer ────────────────────────────────────────────────────────── */}
       <footer className="text-center py-8 text-xs text-muted-foreground border-t bg-white">
         <div className="flex items-center justify-center gap-1.5 mb-1">
@@ -450,7 +443,7 @@ export default function Login() {
           <span className="font-semibold text-gray-700">Pata Limpa</span>
         </div>
         © {new Date().getFullYear()} Pata Limpa — CRM para Banho e Tosa
-        {" · "}Feito especialmente para pet shops brasileiros 🐾
+        {" · "}Feito de dentro de uma estética animal para o sua 🐾
         <div className="mt-2 flex justify-center gap-4">
           <button
             onClick={openWhatsApp}
