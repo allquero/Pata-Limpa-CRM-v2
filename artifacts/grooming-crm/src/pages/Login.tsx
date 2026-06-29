@@ -14,13 +14,18 @@ import {
   Kanban,
   Package,
   TrendingUp,
-  ChevronRight,
   Repeat2,
   Zap,
+  ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { useAppAuth } from "@/lib/auth-context";
 import { buildWhatsAppUrl } from "@/lib/admin-config";
 
@@ -125,9 +130,9 @@ const trustItems = [
   "Acesso seguro por senha — cada pet shop vê só os seus dados",
 ];
 
-export default function Login() {
+function LoginDropdown() {
   const { login } = useAppAuth();
-  const [showForm, setShowForm] = useState(false);
+  const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -143,19 +148,92 @@ export default function Login() {
     if (result.error) {
       setError(result.error);
     }
+    // On success, auth state updates automatically → Router redirects
   }
 
-  const openLogin = () => {
-    setShowForm(true);
-    setTimeout(() => {
-      document.getElementById("login-form-section")?.scrollIntoView({ behavior: "smooth", block: "center" });
-    }, 50);
-  };
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button size="sm">
+          <LogIn className="h-4 w-4 mr-1.5" />
+          Entrar
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80 p-6" align="end">
+        <div className="flex flex-col gap-5">
+          <div className="flex flex-col items-center gap-1.5 text-center">
+            <PawPrint className="h-7 w-7 text-primary" />
+            <h2 className="text-base font-bold text-gray-900">Acessar o sistema</h2>
+            <p className="text-xs text-muted-foreground">
+              Use o e-mail e senha fornecidos pelo administrador
+            </p>
+          </div>
 
+          <form onSubmit={handleLogin} className="flex flex-col gap-3">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="login-email" className="text-sm">E-mail</Label>
+              <Input
+                id="login-email"
+                type="email"
+                autoComplete="email"
+                placeholder="seu@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                disabled={loading}
+                className="h-9"
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="login-password" className="text-sm">Senha</Label>
+              <div className="relative">
+                <Input
+                  id="login-password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  disabled={loading}
+                  className="pr-10 h-9"
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  onClick={() => setShowPassword((v) => !v)}
+                  tabIndex={-1}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {error && (
+              <p className="text-xs text-red-600 text-center">{error}</p>
+            )}
+
+            <Button type="submit" className="w-full h-9" disabled={loading}>
+              {loading ? "Entrando..." : "Entrar"}
+            </Button>
+          </form>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+export default function Login() {
   const openWhatsApp = () =>
     window.open(
       buildWhatsAppUrl("Olá! Quero conhecer o Pata Limpa CRM para meu pet shop."),
       "_blank",
+      "noopener,noreferrer",
     );
 
   return (
@@ -166,21 +244,7 @@ export default function Login() {
           <PawPrint className="h-6 w-6" />
           <span>Pata Limpa</span>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            onClick={openWhatsApp}
-            variant="ghost"
-            size="sm"
-            className="hidden sm:flex text-green-700 hover:text-green-800 hover:bg-green-50"
-          >
-            <MessageCircle className="h-4 w-4 mr-1.5" />
-            Falar com a gente
-          </Button>
-          <Button onClick={openLogin} size="sm">
-            <LogIn className="h-4 w-4 mr-1.5" />
-            Entrar
-          </Button>
-        </div>
+        <LoginDropdown />
       </header>
 
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
@@ -202,103 +266,20 @@ export default function Login() {
             </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-            <Button onClick={openLogin} size="lg" className="px-8 text-base shadow-sm">
-              <LogIn className="h-5 w-5 mr-2" />
-              Entrar no sistema
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="px-8 text-base border-green-600 text-green-700 hover:bg-green-50"
-              onClick={openWhatsApp}
-            >
-              <MessageCircle className="h-5 w-5 mr-2" />
-              Quero conhecer
-            </Button>
-          </div>
+          <Button
+            size="lg"
+            className="px-10 text-base border-green-600 bg-green-600 hover:bg-green-700 text-white shadow-sm"
+            onClick={openWhatsApp}
+          >
+            <MessageCircle className="h-5 w-5 mr-2" />
+            Quero conhecer — Fale com a gente
+          </Button>
 
           <p className="text-xs text-muted-foreground">
             Acesso exclusivo para pet shops de banho e tosa cadastrados.
           </p>
         </div>
       </section>
-
-      {/* ── Login form (inline, aparece ao clicar em Entrar) ──────────────── */}
-      {showForm && (
-        <section
-          id="login-form-section"
-          className="px-6 py-12 bg-gray-50 border-y flex justify-center"
-        >
-          <div className="bg-white rounded-2xl border shadow-md p-8 flex flex-col gap-6 w-full max-w-sm">
-            <div className="flex flex-col items-center gap-2 text-center">
-              <PawPrint className="h-8 w-8 text-primary" />
-              <h2 className="text-xl font-bold text-gray-900">Acessar o sistema</h2>
-              <p className="text-sm text-muted-foreground">
-                Use o e-mail e senha fornecidos pelo administrador
-              </p>
-            </div>
-
-            <form onSubmit={handleLogin} className="flex flex-col gap-4">
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="email">E-mail</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  autoComplete="email"
-                  placeholder="seu@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  disabled={loading}
-                />
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="password">Senha</Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    autoComplete="current-password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    disabled={loading}
-                    className="pr-10"
-                  />
-                  <button
-                    type="button"
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    onClick={() => setShowPassword((v) => !v)}
-                    tabIndex={-1}
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
-
-              {error && <p className="text-sm text-red-600 text-center">{error}</p>}
-
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Entrando..." : "Entrar"}
-              </Button>
-            </form>
-
-            <div className="text-center">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-xs text-muted-foreground"
-                onClick={() => setShowForm(false)}
-              >
-                Voltar
-              </Button>
-            </div>
-          </div>
-        </section>
-      )}
 
       {/* ── O que você ganha ──────────────────────────────────────────────── */}
       <section className="px-6 py-16 sm:py-20 max-w-6xl mx-auto">
@@ -376,7 +357,6 @@ export default function Login() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 relative">
-          {/* linha conectora (desktop) */}
           <div className="hidden sm:block absolute top-10 left-[calc(16.6%+1rem)] right-[calc(16.6%+1rem)] h-0.5 bg-primary/20" />
 
           {steps.map((s) => (
@@ -440,26 +420,25 @@ export default function Login() {
             </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-            <Button onClick={openLogin} size="lg" className="px-10 text-base shadow-sm">
-              <LogIn className="h-5 w-5 mr-2" />
-              Entrar no sistema
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="px-10 text-base border-green-600 text-green-700 hover:bg-green-50"
-              onClick={openWhatsApp}
-            >
-              <MessageCircle className="h-5 w-5 mr-2" />
-              Falar com a gente
-            </Button>
-          </div>
+          <Button
+            size="lg"
+            className="px-10 text-base bg-green-600 hover:bg-green-700 text-white shadow-sm"
+            onClick={openWhatsApp}
+          >
+            <MessageCircle className="h-5 w-5 mr-2" />
+            Falar com a gente pelo WhatsApp
+          </Button>
 
           <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs text-muted-foreground mt-2">
-            <span className="flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5 text-green-500" />Acesso imediato</span>
-            <span className="flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5 text-green-500" />Suporte pelo WhatsApp</span>
-            <span className="flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5 text-green-500" />Dados seguros</span>
+            <span className="flex items-center gap-1">
+              <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />Acesso imediato
+            </span>
+            <span className="flex items-center gap-1">
+              <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />Suporte pelo WhatsApp
+            </span>
+            <span className="flex items-center gap-1">
+              <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />Dados seguros
+            </span>
           </div>
         </div>
       </section>
@@ -473,12 +452,6 @@ export default function Login() {
         © {new Date().getFullYear()} Pata Limpa — CRM para Banho e Tosa
         {" · "}Feito especialmente para pet shops brasileiros 🐾
         <div className="mt-2 flex justify-center gap-4">
-          <button
-            onClick={openLogin}
-            className="hover:text-primary transition-colors flex items-center gap-1"
-          >
-            <ChevronRight className="h-3 w-3" /> Entrar no sistema
-          </button>
           <button
             onClick={openWhatsApp}
             className="hover:text-green-600 transition-colors flex items-center gap-1"
