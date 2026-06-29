@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import { Router, type IRouter } from "express";
 import { eq, desc } from "drizzle-orm";
-import { db, tenantsTable, usersTable, adminSalesTable } from "@workspace/db";
+import { db, tenantsTable, usersTable, adminSalesTable, settingsTable } from "@workspace/db";
 import { requireAdmin } from "../middlewares/requireAdmin";
 
 const router: IRouter = Router();
@@ -329,6 +329,31 @@ router.delete("/sales/:id", async (req, res): Promise<void> => {
   }
   await db.delete(adminSalesTable).where(eq(adminSalesTable.id, id));
   res.status(204).end();
+});
+
+const CONFIG_KEYS = ["landing_whatsapp_phone", "landing_whatsapp_message"] as const;
+
+router.get("/config", async (_req, res): Promise<void> => {
+  const rows = await db.select().from(settingsTable);
+  const map: Record<string, string> = {};
+  for (const row of rows) map[row.key] = row.value;
+  res.json({
+    landing_whatsapp_phone: map["landing_whatsapp_phone"] ?? "",
+    landing_whatsapp_message: map["landing_whatsapp_message"] ?? "",
+  });
+});
+
+router.put("/config", async (req, res): Promise<void> => {
+  const body = req.body as Record<string, unknown>;
+  for (const key of CONFIG_KEYS) {
+    const val = body[key];
+    if (typeof val !== "string") continue;
+    await db
+      .insert(settingsTable)
+      .values({ key, value: val })
+      .onConflictDoUpdate({ target: settingsTable.key, set: { value: val } });
+  }
+  res.json({ ok: true });
 });
 
 export default router;

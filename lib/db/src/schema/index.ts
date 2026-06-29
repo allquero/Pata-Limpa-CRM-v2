@@ -8,3 +8,4 @@ export * from "./packages";
 export * from "./appointments";
 export * from "./financial";
 export * from "./message-templates";
+export * from "./settings";
