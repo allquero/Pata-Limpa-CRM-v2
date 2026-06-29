@@ -274,9 +274,6 @@ export default function Login() {
             Quero conhecer
           </Button>
 
-          <p className="text-xs text-muted-foreground">
-            Acesso exclusivo para pet shops de banho e tosa cadastrados.
-          </p>
         </div>
       </section>
       {/* ── O que você ganha ──────────────────────────────────────────────── */}
