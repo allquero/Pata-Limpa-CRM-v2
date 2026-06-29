@@ -267,7 +267,7 @@ export default function Login() {
 
           <Button
             size="lg"
-            className="px-10 text-base border-[color:var(--color-teal-600)] hover:bg-green-700 shadow-sm bg-[color:var(--color-green-100)] text-[#0d968b]"
+            className="px-10 text-base border-[color:var(--color-teal-600)] hover:bg-green-700 shadow-sm bg-[color:var(--color-teal-600)] text-[color:var(--color-teal-50)]"
             onClick={openWhatsApp}
           >
             <MessageCircle className="h-5 w-5 mr-2" />
@@ -294,7 +294,7 @@ export default function Login() {
               key={g.label}
               className="flex flex-col items-center text-center gap-4 p-8 rounded-2xl border bg-white shadow-sm hover:shadow-md transition-shadow"
             >
-              <div className={`${g.bg} rounded-full p-4`}>
+              <div className="rounded-full p-4 bg-[#f0fdfa]">
                 <g.icon className={`h-8 w-8 ${g.color}`} />
               </div>
               <div>
@@ -413,7 +413,7 @@ export default function Login() {
 
           <Button
             size="lg"
-            className="px-10 text-base hover:bg-green-700 shadow-sm bg-[color:var(--color-green-100)] text-[color:var(--color-teal-600)]"
+            className="px-10 text-base hover:bg-green-700 shadow-sm text-[color:var(--color-teal-50)] bg-[color:var(--color-teal-600)]"
             onClick={openWhatsApp}
           >
             <MessageCircle className="h-5 w-5 mr-2" />
