@@ -2,7 +2,7 @@ name: Build and Package for Hostinger
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "fix-main" ]
 
 jobs:
   build:
