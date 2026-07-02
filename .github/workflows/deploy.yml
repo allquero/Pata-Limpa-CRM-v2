@@ -2,7 +2,7 @@ name: Build and Package for Hostinger
 
 on:
   push:
-    branches: [ "fix-main" ]
+    branches: [ "main" ]
 
 jobs:
   build:
@@ -18,13 +18,13 @@ jobs:
           node-version: 20
 
       - name: Enable corepack (pnpm)
-  run: |
-    corepack enable
-    corepack prepare pnpm@9.15.0 --activate
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
 
-- name: Install dependencies
-  run: pnpm install --frozen-lockfile
-
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        
       # BUILD FRONTEND (VITE)
       - name: Build grooming-crm (frontend)
         run: |
