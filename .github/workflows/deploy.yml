@@ -1,0 +1,65 @@
+name: Build and Package for Hostinger
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Enable corepack (pnpm)
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # BUILD FRONTEND (VITE)
+      - name: Build grooming-crm (frontend)
+        run: |
+          cd artifacts/grooming-crm
+          pnpm install
+          pnpm run build
+
+      # BUILD BACKEND
+      - name: Build api-server
+        run: |
+          cd artifacts/api-server
+          pnpm install
+          pnpm run build
+
+      # PREPARA RELEASE FINAL
+      - name: Create release folder
+        run: |
+          rm -rf release
+          mkdir -p release
+
+          # backend
+          cp -r artifacts/api-server/dist release/api-server
+          cp artifacts/api-server/package.json release/api-server/
+
+          # frontend build
+          mkdir -p release/client
+          cp -r artifacts/grooming-crm/dist release/client
+
+      # CRIA ZIP FINAL
+      - name: Zip release
+        run: |
+          cd release
+          zip -r ../deploy.zip .
+
+      # UPLOAD DO ARTEFATO
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy-package
+          path: deploy.zip
