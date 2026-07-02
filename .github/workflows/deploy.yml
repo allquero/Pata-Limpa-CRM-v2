@@ -23,20 +23,20 @@ jobs:
           corepack prepare pnpm@9.15.0 --activate
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
         
       # BUILD FRONTEND (VITE)
       - name: Build grooming-crm (frontend)
         run: |
           cd artifacts/grooming-crm
-          pnpm install
+          pnpm install --no-frozen-lockfile
           pnpm run build
 
       # BUILD BACKEND
       - name: Build api-server
         run: |
           cd artifacts/api-server
-          pnpm install
+          pnpm install --no-frozen-lockfile
           pnpm run build
 
       # PREPARA RELEASE FINAL
