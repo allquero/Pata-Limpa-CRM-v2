@@ -15,7 +15,11 @@ import {
 function setSessionCookie(res: Response, sid: string) {
   res.cookie(SESSION_COOKIE, sid, {
     httpOnly: true,
-    secure: true,
+    // Em produção atrás de HTTPS (Hostinger/Nginx/Cloudflare): secure=true.
+    // Em desenvolvimento (HTTP local ou Replit dev): secure=false para o cookie
+    // ser enviado normalmente. Com trust proxy ativo, req.secure já reflete o
+    // protocolo real percebido pelo usuário.
+    secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
     maxAge: SESSION_TTL,

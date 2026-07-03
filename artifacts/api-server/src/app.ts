@@ -10,6 +10,10 @@ import { authMiddleware } from "./middlewares/authMiddleware";
 
 const app: Express = express();
 
+// Necessário para funcionar atrás de proxy reverso (Nginx, Cloudflare, Hostinger).
+// Faz req.ip, req.secure e req.protocol refletirem os headers X-Forwarded-* do proxy.
+app.set("trust proxy", 1);
+
 app.use(
   pinoHttp({
     logger,
