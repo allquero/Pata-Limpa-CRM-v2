@@ -13,7 +13,7 @@
  *        NODE_ENV=production DATABASE_URL=... node dist/index.mjs
  */
 
-import { cp, mkdir, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, rm, writeFile, readdir } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -58,6 +58,18 @@ await mkdir(RELEASE_DIR, { recursive: true });
 
 await cp(BACKEND_DIST, path.join(RELEASE_DIR, "dist"), { recursive: true });
 
+// Remove source maps — não devem ser expostos em produção.
+// (O esbuild já não gera .map com NODE_ENV=production; este passo é uma garantia extra.)
+const distDir = path.join(RELEASE_DIR, "dist");
+const distEntries = await readdir(distDir);
+const mapFiles = distEntries.filter((f) => f.endsWith(".map"));
+if (mapFiles.length > 0) {
+  console.log(`\n▶ Removendo source maps da release: ${mapFiles.join(", ")}`);
+  await Promise.all(mapFiles.map((f) => rm(path.join(distDir, f))));
+} else {
+  console.log("\n▶ Nenhum source map encontrado na release (esbuild não gerou em prod).");
+}
+
 await writeFile(
   path.join(RELEASE_DIR, "package.json"),
   JSON.stringify(
@@ -83,8 +95,7 @@ Estrutura:
   release/
     package.json        ← só o script start
     dist/
-      index.mjs         ← servidor Express (bundle ESM)
-      index.mjs.map     ← source map
+      index.mjs         ← servidor Express (bundle ESM, sem source map)
       public/           ← frontend React compilado
         index.html
         assets/
