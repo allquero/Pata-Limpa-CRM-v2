@@ -1,67 +1,65 @@
-name: Build and Package for Hostinger
+name: Build Release
 
 on:
   push:
-    branches: [ "fix-main" ]
+    branches:
+      - main
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: "10"
+
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-
-      - name: Enable corepack (pnpm)
-        run: |
-          corepack enable
-          corepack prepare pnpm@9.15.0 --activate
+          node-version: "22"
+          cache: "pnpm"
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
-        
-      # BUILD FRONTEND (VITE)
-      - name: Build grooming-crm (frontend)
-        run: |
-          cd artifacts/grooming-crm
-          pnpm install --no-frozen-lockfile
-          pnpm run build
+        run: pnpm install --frozen-lockfile
 
-      # BUILD BACKEND
-      - name: Build api-server
-        run: |
-          cd artifacts/api-server
-          pnpm install --no-frozen-lockfile
-          pnpm run build
+      - name: Build release
+        run: node scripts/build-release.mjs
+        env:
+          NODE_ENV: production
+          BASE_PATH: /
 
-      # PREPARA RELEASE FINAL
-      - name: Create release folder
-        run: |
-          rm -rf release
-          mkdir -p release
-
-          # backend
-          cp -r artifacts/api-server/dist release/api-server
-          cp artifacts/api-server/package.json release/api-server/
-
-          # frontend build
-          mkdir -p release/client
-          cp -r artifacts/grooming-crm/dist release/client
-
-      # CRIA ZIP FINAL
-      - name: Zip release
+      - name: Create ZIP archive
         run: |
           cd release
-          zip -r ../deploy.zip .
+          zip -r ../pata-limpa-crm.zip .
+          echo "Arquivos no ZIP: $(unzip -l ../pata-limpa-crm.zip | tail -1)"
 
-      # UPLOAD DO ARTEFATO
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: deploy-package
-          path: deploy.zip
+          name: pata-limpa-crm-${{ github.sha }}
+          path: pata-limpa-crm.zip
+          retention-days: 30
+
+      - name: Build summary
+        run: |
+          echo "## Build de Produção ✅" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Deploy na Hostinger" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "1. Baixe o artefato \`pata-limpa-crm.zip\`" >> $GITHUB_STEP_SUMMARY
+          echo "2. Extraia no servidor e configure as variáveis de ambiente:" >> $GITHUB_STEP_SUMMARY
+          echo "   - \`NODE_ENV=production\`" >> $GITHUB_STEP_SUMMARY
+          echo "   - \`DATABASE_URL=postgres://...\`" >> $GITHUB_STEP_SUMMARY
+          echo "   - \`PORT=3000\` (opcional, padrão: 3000)" >> $GITHUB_STEP_SUMMARY
+          echo "   - \`ADMIN_EMAIL=...\`" >> $GITHUB_STEP_SUMMARY
+          echo "   - \`ADMIN_PASSWORD=...\`" >> $GITHUB_STEP_SUMMARY
+          echo "3. Inicie com: \`node dist/index.mjs\`" >> $GITHUB_STEP_SUMMARY
