@@ -99,7 +99,14 @@ NODE_ENV=production
 PORT=3000
 ADMIN_EMAIL=admin@suaempresa.com.br
 ADMIN_PASSWORD=senha-forte-aqui
+SESSION_SECRET=<gerado-com-openssl-rand-base64-32>
 ```
+
+Para gerar um `SESSION_SECRET` seguro, rode no terminal:
+```bash
+openssl rand -base64 32
+```
+Cole o resultado diretamente no `.env`.
 
 > **Segurança:** O arquivo `.env` nunca deve ser exposto publicamente nem versionado no Git.
 

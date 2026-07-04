@@ -779,20 +779,6 @@ COPY public.services (id, tenant_id, name, description, size, price, duration_mi
 
 
 --
--- Data for Name: sessions; Type: TABLE DATA; Schema: public; Owner: -
---
-
-COPY public.sessions (sid, sess, expire) FROM stdin;
-0de4e3f20d4261d518495135027186050892802d2649541cced28c80a968d82a	{"user": {"id": "37402339", "email": "allquero@gmail.com", "lastName": "Rodrigues", "firstName": "Allysson", "profileImageUrl": "https://lh3.googleusercontent.com/a/ACg8ocIGtqARTY4C5JX8rkCD0Rx3ahutYHte_uwdQhNAkStjfh-EqllafQ=s96-c"}, "expires_at": 1779179282, "access_token": "8PgC00UZ9mqPqJLOVi2iDb6w7b4qJJpVIQp0IwHZWy_", "refresh_token": "ozRUb-nRlCwZVQICbX9KV3kgA8b1giHKw1-W7R1yBWb"}	2026-05-26 07:28:03.823
-5f131f0d4c62eaca228822559d90944241edc5bde6ef4ed43e394226786039bc	{"user": {"id": "4bfbbe00-7caa-40cd-8fd3-73b25b991c07", "email": "contato@dogwash.pet", "isAdmin": false, "lastName": null, "firstName": "Dog Wash", "profileImageUrl": null}}	2026-08-01 05:43:43.503
-ce6b5895abd71df24a5b54cfca1ad2e4c6f82772b01663ce2c104ef9aeeb999f	{"user": {"id": "4bfbbe00-7caa-40cd-8fd3-73b25b991c07", "email": "contato@dogwash.pet", "isAdmin": false, "lastName": null, "firstName": "Dog Wash", "profileImageUrl": null}}	2026-08-01 16:32:21.31
-bbd9dafcc9d28b6e650a0d0549f86d91d23f2c3d8f0df3ff1b1ecb1d8fd3115e	{"user": {"id": "4bfbbe00-7caa-40cd-8fd3-73b25b991c07", "email": "contato@dogwash.pet", "isAdmin": false, "lastName": null, "firstName": "Dog Wash", "profileImageUrl": null}}	2026-08-02 14:31:58.448
-113f15b0a4fae2bc7533e10ee421fd908924e613878063fc9294e90fea6c462f	{"user": {"id": "4bfbbe00-7caa-40cd-8fd3-73b25b991c07", "email": "contato@dogwash.pet", "isAdmin": false, "lastName": null, "firstName": "Dog Wash", "profileImageUrl": null}}	2026-08-02 14:32:38.486
-8006931edb46f5bddd19412d63ec855859ddb9ae1dff4a66fff1c27f909caf23	{"user": {"id": "4bfbbe00-7caa-40cd-8fd3-73b25b991c07", "email": "contato@dogwash.pet", "isAdmin": false, "lastName": null, "firstName": "Dog Wash", "profileImageUrl": null}}	2026-08-02 14:42:52.462
-\.
-
-
---
 -- Data for Name: settings; Type: TABLE DATA; Schema: public; Owner: -
 --
 
@@ -1115,5 +1101,5 @@ ALTER TABLE ONLY public.services
 -- PostgreSQL database dump complete
 --
 
-\unrestrict hdpmLThgmcTMI4PRdX4udHga7k5TEkVzAln4ehHVR5Te5Wbf6UfOGe7LJ2HfWi0
+\unrestrict N3o20ejbayejCGAPIloB5Hpu0ZpmmMhdy6Cr2vyaplHb6A1yXGvviQAnACZpzWC
 
