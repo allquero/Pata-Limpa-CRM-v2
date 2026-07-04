@@ -2,7 +2,20 @@
 
 Este guia explica como fazer o deploy do **Pata Limpa CRM** em qualquer servidor Node.js padrão — Hostinger, Railway, Render, VPS com Ubuntu/Debian, etc.
 
-O arquivo `pata-limpa-crm.zip` contém tudo que você precisa. Nenhuma etapa de compilação é necessária no servidor.
+## Gerar o pacote de deploy (`.zip`)
+
+Execute este comando **dentro do Replit** (onde o banco de dados está acessível):
+
+```bash
+node scripts/build-release.mjs
+```
+
+Isso gera automaticamente três arquivos (fora do repositório git):
+- `release/` — pasta com o servidor bundlado
+- `pata-limpa-crm.sql` — dump do banco (schema + dados, sem tokens de sessão)
+- `pata-limpa-crm.zip` — pacote completo para download
+
+Após rodar o script, baixe `pata-limpa-crm.zip` pelo painel de arquivos do Replit e siga os passos abaixo.
 
 ---
 
