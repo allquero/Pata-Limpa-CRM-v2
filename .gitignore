@@ -47,3 +47,9 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# Deploy artifacts — gerados localmente, não devem ir para o repositório
+# (contêm dados reais do banco e binários compilados)
+pata-limpa-crm.sql
+pata-limpa-crm.zip
+release/
