@@ -92,13 +92,16 @@ export default function Clientes() {
   const { data: pets = [], refetch: refetchPets } = useListPets(petsParams, {
     query: { queryKey: getListPetsQueryKey(petsParams), enabled: !!expandedClient },
   });
+  const { data: allPets = [] } = useListPets({});
   const createPet = useCreatePet();
   const updatePet = useUpdatePet();
   const deletePet = useDeletePet();
 
-  const filtered = (clients as Client[]).filter(c =>
-    c.name.toLowerCase().includes(search.toLowerCase()) || c.phone.includes(search)
-  );
+  const searchLower = search.toLowerCase();
+  const filtered = (clients as Client[]).filter(c => {
+    if (c.name.toLowerCase().includes(searchLower) || c.phone.includes(search)) return true;
+    return (allPets as Pet[]).some(p => p.clientId === c.id && p.name.toLowerCase().includes(searchLower));
+  });
 
   // ── Handlers clientes ────────────────────────────────────────────────────
   const openCreate = () => { setEditingClient(null); setForm(emptyClient); setModalOpen(true); };

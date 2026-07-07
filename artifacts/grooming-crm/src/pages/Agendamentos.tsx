@@ -809,6 +809,12 @@ export default function Agendamentos() {
   const [confirmacaoOverridePrice, setConfirmacaoOverridePrice] = useState<number | undefined>(undefined);
   const [confirmacaoOverrideClient, setConfirmacaoOverrideClient] = useState<Pick<Client, "id" | "name" | "phone"> | undefined>(undefined);
 
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [cancellingAppt, setCancellingAppt] = useState<Appointment | null>(null);
+  const [reschedDate, setReschedDate] = useState("");
+  const [reschedTime, setReschedTime] = useState("09:00");
+  const [reschedMode, setReschedMode] = useState<"cancel" | "resched">("cancel");
+
   const openConfirmacao = (appt: Appointment) => {
     setConfirmacaoMode("conclusao");
     setConfirmacaoOverridePrice(undefined);
@@ -958,33 +964,33 @@ export default function Agendamentos() {
     }));
   })();
 
+  const confirmPresence = useConfirmAppointmentPresence();
+
   const handleDragStart = (event: DragStartEvent) => setActiveId(event.active.id as number);
 
   const handleStatusChange = useCallback(async (appt: Appointment, newStatus: AppStatus) => {
     if (appt.status === newStatus) return;
-    if (newStatus === "concluido" && !appt.confirmedAt) {
-      toast({
-        title: "Confirme a presença primeiro",
-        description: "Use o ícone ✓ no card para confirmar a presença antes de concluir.",
-        variant: "destructive",
-      });
+    if (newStatus === "cancelado") {
+      setCancellingAppt(appt);
+      setReschedDate(new Date(appt.scheduledDate).toISOString().substring(0, 10));
+      setReschedTime(new Date(appt.scheduledDate).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", hour12: false }));
+      setReschedMode("cancel");
+      setCancelDialogOpen(true);
       return;
     }
     try {
+      if ((newStatus === "em_atendimento" || newStatus === "concluido") && !appt.confirmedAt) {
+        await confirmPresence.mutateAsync({ id: appt.id, data: { confirmed: true } });
+      }
       await updateStatus.mutateAsync({ id: appt.id, data: { status: newStatus } });
       refetch();
       if (newStatus === "concluido") {
         openConfirmacao(appt);
       }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "";
-      if (msg.includes("422") || msg.toLowerCase().includes("confirme")) {
-        toast({ title: "Confirme a presença antes de concluir", variant: "destructive" });
-      } else {
-        toast({ title: "Erro ao atualizar status", variant: "destructive" });
-      }
+    } catch {
+      toast({ title: "Erro ao atualizar status", variant: "destructive" });
     }
-  }, [updateStatus, refetch, toast]);
+  }, [updateStatus, confirmPresence, refetch, toast, openConfirmacao]);
 
   const handleDragEnd = useCallback(async (event: DragEndEvent) => {
     setActiveId(null);
@@ -1002,7 +1008,44 @@ export default function Agendamentos() {
     refetch();
   };
 
-  const confirmPresence = useConfirmAppointmentPresence();
+  const handleCancelConfirm = async () => {
+    if (!cancellingAppt) return;
+    if (reschedMode === "resched") {
+      if (!reschedDate || !reschedTime) {
+        toast({ title: "Informe a data e horário do reagendamento", variant: "destructive" });
+        return;
+      }
+      try {
+        const dt = new Date(`${reschedDate}T${reschedTime}:00`);
+        await createAppointment.mutateAsync({
+          data: {
+            tenantId: tenantId!,
+            petId: cancellingAppt.petId,
+            clientId: cancellingAppt.clientId,
+            ...(cancellingAppt.serviceId ? { serviceId: cancellingAppt.serviceId } : {}),
+            ...(cancellingAppt.packageId ? { packageId: cancellingAppt.packageId } : {}),
+            ...(cancellingAppt.extraServiceIds?.length ? { extraServiceIds: cancellingAppt.extraServiceIds } : {}),
+            scheduledDate: dt.toISOString(),
+            totalPrice: Number(cancellingAppt.totalPrice),
+            ...(cancellingAppt.notes ? { notes: cancellingAppt.notes } : {}),
+          },
+        });
+      } catch {
+        toast({ title: "Erro ao criar reagendamento", variant: "destructive" });
+        return;
+      }
+    }
+    try {
+      await updateStatus.mutateAsync({ id: cancellingAppt.id, data: { status: "cancelado" } });
+      refetch();
+      toast({ title: reschedMode === "resched" ? "Reagendado com sucesso!" : "Agendamento cancelado." });
+    } catch {
+      toast({ title: "Erro ao cancelar agendamento", variant: "destructive" });
+    }
+    setCancelDialogOpen(false);
+    setCancellingAppt(null);
+  };
+
   const handleConfirmPresence = useCallback(async (appt: Appointment) => {
     const newConfirmed = !appt.confirmedAt;
     if (!newConfirmed) {
@@ -1364,6 +1407,59 @@ export default function Agendamentos() {
         onSave={handleEditServicoSave}
         onClose={() => setEditServicoAppt(null)}
       />
+
+      {/* ── Modal: Cancelamento ─────────────────────────────────────────────── */}
+      <Dialog open={cancelDialogOpen} onOpenChange={v => { if (!v) { setCancelDialogOpen(false); setCancellingAppt(null); } }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <X className="h-5 w-5 text-red-500" />
+              Cancelar Agendamento
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">Haverá reagendamento para outra data?</p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setReschedMode("cancel")}
+                className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-colors ${reschedMode === "cancel" ? "bg-red-50 border-red-300 text-red-700" : "hover:bg-muted"}`}
+              >
+                Cancelar sem reagendar
+              </button>
+              <button
+                onClick={() => setReschedMode("resched")}
+                className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-colors ${reschedMode === "resched" ? "bg-blue-50 border-blue-300 text-blue-700" : "hover:bg-muted"}`}
+              >
+                Reagendar
+              </button>
+            </div>
+            {reschedMode === "resched" && (
+              <div className="space-y-3 pt-1">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Nova data e horário</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-xs">Data *</Label>
+                    <Input type="date" value={reschedDate} onChange={e => setReschedDate(e.target.value)} className="h-8 text-sm" />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Horário *</Label>
+                    <Input type="time" value={reschedTime} onChange={e => setReschedTime(e.target.value)} className="h-8 text-sm" />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => { setCancelDialogOpen(false); setCancellingAppt(null); }}>Voltar</Button>
+            <Button
+              variant={reschedMode === "resched" ? "default" : "destructive"}
+              onClick={handleCancelConfirm}
+            >
+              {reschedMode === "resched" ? "Confirmar Reagendamento" : "Confirmar Cancelamento"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* ── Modal: Confirmação / Pet Pronto / Agradecimento WhatsApp ─────── */}
       <ConfirmacaoWhatsAppModal
