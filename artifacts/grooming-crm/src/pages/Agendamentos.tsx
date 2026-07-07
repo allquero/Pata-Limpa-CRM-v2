@@ -133,7 +133,7 @@ function AppointmentCard({ appt, clients, pets, services, packages, onDelete, on
           </p>
         </div>
         <div className="flex items-center gap-0.5">
-          {onConfirm && (appt.status === "aguardando" || appt.status === "em_atendimento") && (
+          {onConfirm && appt.status !== "concluido" && appt.status !== "cancelado" && (
             <button
               onClick={e => { e.stopPropagation(); onConfirm(appt); }}
               className={`p-1 rounded transition-colors ${
