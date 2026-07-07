@@ -57,6 +57,18 @@ export const GetMyTenantResponse = zod.object({
       schedulingMethod: zod
         .enum(["hora", "periodo"])
         .default(getMyTenantResponseTenantOneSchedulingMethodDefault),
+      petSizes: zod
+        .array(zod.string())
+        .nullish()
+        .describe(
+          'Portes configurados pelo pet shop (ex [\"mini\",\"pequeno\",\"medio\",\"grande\",\"gigante\"])',
+        ),
+      coatTypes: zod
+        .array(zod.string())
+        .nullish()
+        .describe(
+          'Pelagens configuradas pelo pet shop (ex [\"curto\",\"longo\"])',
+        ),
       createdAt: zod.coerce.date(),
     }),
     zod.null(),
@@ -137,6 +149,16 @@ export const AdminListTenantsResponseItem = zod.object({
   schedulingMethod: zod
     .enum(["hora", "periodo"])
     .default(adminListTenantsResponseSchedulingMethodDefault),
+  petSizes: zod
+    .array(zod.string())
+    .nullish()
+    .describe(
+      'Portes configurados pelo pet shop (ex [\"mini\",\"pequeno\",\"medio\",\"grande\",\"gigante\"])',
+    ),
+  coatTypes: zod
+    .array(zod.string())
+    .nullish()
+    .describe('Pelagens configuradas pelo pet shop (ex [\"curto\",\"longo\"])'),
   createdAt: zod.coerce.date(),
 });
 export const AdminListTenantsResponse = zod.array(AdminListTenantsResponseItem);
@@ -184,6 +206,16 @@ export const AdminUpdateTenantResponse = zod.object({
   schedulingMethod: zod
     .enum(["hora", "periodo"])
     .default(adminUpdateTenantResponseSchedulingMethodDefault),
+  petSizes: zod
+    .array(zod.string())
+    .nullish()
+    .describe(
+      'Portes configurados pelo pet shop (ex [\"mini\",\"pequeno\",\"medio\",\"grande\",\"gigante\"])',
+    ),
+  coatTypes: zod
+    .array(zod.string())
+    .nullish()
+    .describe('Pelagens configuradas pelo pet shop (ex [\"curto\",\"longo\"])'),
   createdAt: zod.coerce.date(),
 });
 
@@ -265,6 +297,16 @@ export const ListTenantsResponseItem = zod.object({
   schedulingMethod: zod
     .enum(["hora", "periodo"])
     .default(listTenantsResponseSchedulingMethodDefault),
+  petSizes: zod
+    .array(zod.string())
+    .nullish()
+    .describe(
+      'Portes configurados pelo pet shop (ex [\"mini\",\"pequeno\",\"medio\",\"grande\",\"gigante\"])',
+    ),
+  coatTypes: zod
+    .array(zod.string())
+    .nullish()
+    .describe('Pelagens configuradas pelo pet shop (ex [\"curto\",\"longo\"])'),
   createdAt: zod.coerce.date(),
 });
 export const ListTenantsResponse = zod.array(ListTenantsResponseItem);
@@ -300,6 +342,16 @@ export const GetTenantResponse = zod.object({
   schedulingMethod: zod
     .enum(["hora", "periodo"])
     .default(getTenantResponseSchedulingMethodDefault),
+  petSizes: zod
+    .array(zod.string())
+    .nullish()
+    .describe(
+      'Portes configurados pelo pet shop (ex [\"mini\",\"pequeno\",\"medio\",\"grande\",\"gigante\"])',
+    ),
+  coatTypes: zod
+    .array(zod.string())
+    .nullish()
+    .describe('Pelagens configuradas pelo pet shop (ex [\"curto\",\"longo\"])'),
   createdAt: zod.coerce.date(),
 });
 
@@ -316,6 +368,8 @@ export const UpdateTenantBody = zod.object({
   email: zod.string().optional(),
   address: zod.string().optional(),
   schedulingMethod: zod.enum(["hora", "periodo"]).optional(),
+  petSizes: zod.array(zod.string()).optional(),
+  coatTypes: zod.array(zod.string()).optional(),
 });
 
 export const updateTenantResponseSchedulingMethodDefault = `hora`;
@@ -332,6 +386,16 @@ export const UpdateTenantResponse = zod.object({
   schedulingMethod: zod
     .enum(["hora", "periodo"])
     .default(updateTenantResponseSchedulingMethodDefault),
+  petSizes: zod
+    .array(zod.string())
+    .nullish()
+    .describe(
+      'Portes configurados pelo pet shop (ex [\"mini\",\"pequeno\",\"medio\",\"grande\",\"gigante\"])',
+    ),
+  coatTypes: zod
+    .array(zod.string())
+    .nullish()
+    .describe('Pelagens configuradas pelo pet shop (ex [\"curto\",\"longo\"])'),
   createdAt: zod.coerce.date(),
 });
 
@@ -503,22 +567,21 @@ export const GetClientResponse = zod.object({
       clientId: zod.number(),
       name: zod.string(),
       breed: zod.string().nullish(),
-      size: zod.enum([
-        "mini_curto",
-        "mini_longo",
-        "pequeno_curto",
-        "pequeno_longo",
-        "medio_curto",
-        "medio_longo",
-        "grande_curto",
-        "grande_longo",
-        "gigante",
-      ]),
+      size: zod
+        .string()
+        .describe(
+          'Porte do pet (ex \"pequeno\", \"medio\") — configurado pelo pet shop',
+        ),
+      coat: zod
+        .string()
+        .nullish()
+        .describe(
+          'Pelagem do pet (ex \"curto\", \"longo\") — configurado pelo pet shop',
+        ),
       sex: zod
         .union([zod.literal("macho"), zod.literal("femea"), zod.literal(null)])
         .nullish(),
       neutered: zod.boolean().optional(),
-      coat: zod.string().nullish(),
       behavior: zod.string().nullish(),
       healthNotes: zod.string().nullish(),
       groomingPreferences: zod.string().nullish(),
@@ -599,22 +662,21 @@ export const ListPetsResponseItem = zod.object({
   clientId: zod.number(),
   name: zod.string(),
   breed: zod.string().nullish(),
-  size: zod.enum([
-    "mini_curto",
-    "mini_longo",
-    "pequeno_curto",
-    "pequeno_longo",
-    "medio_curto",
-    "medio_longo",
-    "grande_curto",
-    "grande_longo",
-    "gigante",
-  ]),
+  size: zod
+    .string()
+    .describe(
+      'Porte do pet (ex \"pequeno\", \"medio\") — configurado pelo pet shop',
+    ),
+  coat: zod
+    .string()
+    .nullish()
+    .describe(
+      'Pelagem do pet (ex \"curto\", \"longo\") — configurado pelo pet shop',
+    ),
   sex: zod
     .union([zod.literal("macho"), zod.literal("femea"), zod.literal(null)])
     .nullish(),
   neutered: zod.boolean().optional(),
-  coat: zod.string().nullish(),
   behavior: zod.string().nullish(),
   healthNotes: zod.string().nullish(),
   groomingPreferences: zod.string().nullish(),
@@ -631,20 +693,19 @@ export const CreatePetBody = zod.object({
   clientId: zod.number(),
   name: zod.string(),
   breed: zod.string().optional(),
-  size: zod.enum([
-    "mini_curto",
-    "mini_longo",
-    "pequeno_curto",
-    "pequeno_longo",
-    "medio_curto",
-    "medio_longo",
-    "grande_curto",
-    "grande_longo",
-    "gigante",
-  ]),
+  size: zod
+    .string()
+    .describe(
+      'Porte do pet (ex \"pequeno\") — valor configurado pelo pet shop',
+    ),
+  coat: zod
+    .string()
+    .optional()
+    .describe(
+      'Pelagem do pet (ex \"curto\") — valor configurado pelo pet shop',
+    ),
   sex: zod.enum(["macho", "femea"]).optional(),
   neutered: zod.boolean().optional(),
-  coat: zod.string().optional(),
   behavior: zod.string().optional(),
   healthNotes: zod.string().optional(),
   groomingPreferences: zod.string().optional(),
@@ -664,22 +725,21 @@ export const GetPetResponse = zod.object({
   clientId: zod.number(),
   name: zod.string(),
   breed: zod.string().nullish(),
-  size: zod.enum([
-    "mini_curto",
-    "mini_longo",
-    "pequeno_curto",
-    "pequeno_longo",
-    "medio_curto",
-    "medio_longo",
-    "grande_curto",
-    "grande_longo",
-    "gigante",
-  ]),
+  size: zod
+    .string()
+    .describe(
+      'Porte do pet (ex \"pequeno\", \"medio\") — configurado pelo pet shop',
+    ),
+  coat: zod
+    .string()
+    .nullish()
+    .describe(
+      'Pelagem do pet (ex \"curto\", \"longo\") — configurado pelo pet shop',
+    ),
   sex: zod
     .union([zod.literal("macho"), zod.literal("femea"), zod.literal(null)])
     .nullish(),
   neutered: zod.boolean().optional(),
-  coat: zod.string().nullish(),
   behavior: zod.string().nullish(),
   healthNotes: zod.string().nullish(),
   groomingPreferences: zod.string().nullish(),
@@ -699,21 +759,19 @@ export const UpdatePetBody = zod.object({
   name: zod.string().optional(),
   breed: zod.string().optional(),
   size: zod
-    .enum([
-      "mini_curto",
-      "mini_longo",
-      "pequeno_curto",
-      "pequeno_longo",
-      "medio_curto",
-      "medio_longo",
-      "grande_curto",
-      "grande_longo",
-      "gigante",
-    ])
-    .optional(),
+    .string()
+    .optional()
+    .describe(
+      'Porte do pet (ex \"pequeno\") — valor configurado pelo pet shop',
+    ),
+  coat: zod
+    .string()
+    .optional()
+    .describe(
+      'Pelagem do pet (ex \"curto\") — valor configurado pelo pet shop',
+    ),
   sex: zod.enum(["macho", "femea"]).optional(),
   neutered: zod.boolean().optional(),
-  coat: zod.string().optional(),
   behavior: zod.string().optional(),
   healthNotes: zod.string().optional(),
   groomingPreferences: zod.string().optional(),
@@ -726,22 +784,21 @@ export const UpdatePetResponse = zod.object({
   clientId: zod.number(),
   name: zod.string(),
   breed: zod.string().nullish(),
-  size: zod.enum([
-    "mini_curto",
-    "mini_longo",
-    "pequeno_curto",
-    "pequeno_longo",
-    "medio_curto",
-    "medio_longo",
-    "grande_curto",
-    "grande_longo",
-    "gigante",
-  ]),
+  size: zod
+    .string()
+    .describe(
+      'Porte do pet (ex \"pequeno\", \"medio\") — configurado pelo pet shop',
+    ),
+  coat: zod
+    .string()
+    .nullish()
+    .describe(
+      'Pelagem do pet (ex \"curto\", \"longo\") — configurado pelo pet shop',
+    ),
   sex: zod
     .union([zod.literal("macho"), zod.literal("femea"), zod.literal(null)])
     .nullish(),
   neutered: zod.boolean().optional(),
-  coat: zod.string().nullish(),
   behavior: zod.string().nullish(),
   healthNotes: zod.string().nullish(),
   groomingPreferences: zod.string().nullish(),
@@ -769,17 +826,12 @@ export const ListServicesResponseItem = zod.object({
   tenantId: zod.number(),
   name: zod.string(),
   description: zod.string().nullish(),
-  size: zod.enum([
-    "mini_curto",
-    "mini_longo",
-    "pequeno_curto",
-    "pequeno_longo",
-    "medio_curto",
-    "medio_longo",
-    "grande_curto",
-    "grande_longo",
-    "gigante",
-  ]),
+  size: zod
+    .string()
+    .describe('Porte (ex \"pequeno\") — configurado pelo pet shop'),
+  coat: zod
+    .string()
+    .describe('Pelagem (ex \"curto\") — configurado pelo pet shop'),
   price: zod.number(),
   durationMinutes: zod.number().nullish(),
   createdAt: zod.coerce.date(),
@@ -793,17 +845,8 @@ export const CreateServiceBody = zod.object({
   tenantId: zod.number(),
   name: zod.string(),
   description: zod.string().optional(),
-  size: zod.enum([
-    "mini_curto",
-    "mini_longo",
-    "pequeno_curto",
-    "pequeno_longo",
-    "medio_curto",
-    "medio_longo",
-    "grande_curto",
-    "grande_longo",
-    "gigante",
-  ]),
+  size: zod.string().describe('Porte (ex \"pequeno\")'),
+  coat: zod.string().describe('Pelagem (ex \"curto\")'),
   price: zod.number(),
   durationMinutes: zod.number().optional(),
 });
@@ -820,17 +863,12 @@ export const GetServiceResponse = zod.object({
   tenantId: zod.number(),
   name: zod.string(),
   description: zod.string().nullish(),
-  size: zod.enum([
-    "mini_curto",
-    "mini_longo",
-    "pequeno_curto",
-    "pequeno_longo",
-    "medio_curto",
-    "medio_longo",
-    "grande_curto",
-    "grande_longo",
-    "gigante",
-  ]),
+  size: zod
+    .string()
+    .describe('Porte (ex \"pequeno\") — configurado pelo pet shop'),
+  coat: zod
+    .string()
+    .describe('Pelagem (ex \"curto\") — configurado pelo pet shop'),
   price: zod.number(),
   durationMinutes: zod.number().nullish(),
   createdAt: zod.coerce.date(),
@@ -846,19 +884,8 @@ export const UpdateServiceParams = zod.object({
 export const UpdateServiceBody = zod.object({
   name: zod.string().optional(),
   description: zod.string().optional(),
-  size: zod
-    .enum([
-      "mini_curto",
-      "mini_longo",
-      "pequeno_curto",
-      "pequeno_longo",
-      "medio_curto",
-      "medio_longo",
-      "grande_curto",
-      "grande_longo",
-      "gigante",
-    ])
-    .optional(),
+  size: zod.string().optional(),
+  coat: zod.string().optional(),
   price: zod.number().optional(),
   durationMinutes: zod.number().optional(),
 });
@@ -868,17 +895,12 @@ export const UpdateServiceResponse = zod.object({
   tenantId: zod.number(),
   name: zod.string(),
   description: zod.string().nullish(),
-  size: zod.enum([
-    "mini_curto",
-    "mini_longo",
-    "pequeno_curto",
-    "pequeno_longo",
-    "medio_curto",
-    "medio_longo",
-    "grande_curto",
-    "grande_longo",
-    "gigante",
-  ]),
+  size: zod
+    .string()
+    .describe('Porte (ex \"pequeno\") — configurado pelo pet shop'),
+  coat: zod
+    .string()
+    .describe('Pelagem (ex \"curto\") — configurado pelo pet shop'),
   price: zod.number(),
   durationMinutes: zod.number().nullish(),
   createdAt: zod.coerce.date(),
@@ -920,7 +942,11 @@ export const ListPackagesResponseItem = zod.object({
   ),
   priceBySizes: zod.array(
     zod.object({
-      size: zod.string(),
+      size: zod.string().describe('Porte (ex \"pequeno\")'),
+      coat: zod
+        .string()
+        .optional()
+        .describe('Pelagem (ex \"curto\") — opcional para pacotes legados'),
       price: zod.number(),
     }),
   ),
@@ -964,7 +990,11 @@ export const CreatePackageBody = zod.object({
   priceBySizes: zod
     .array(
       zod.object({
-        size: zod.string(),
+        size: zod.string().describe('Porte (ex \"pequeno\")'),
+        coat: zod
+          .string()
+          .optional()
+          .describe('Pelagem (ex \"curto\") — opcional para pacotes legados'),
         price: zod.number(),
       }),
     )
@@ -1001,7 +1031,11 @@ export const GetPackageResponse = zod.object({
   ),
   priceBySizes: zod.array(
     zod.object({
-      size: zod.string(),
+      size: zod.string().describe('Porte (ex \"pequeno\")'),
+      coat: zod
+        .string()
+        .optional()
+        .describe('Pelagem (ex \"curto\") — opcional para pacotes legados'),
       price: zod.number(),
     }),
   ),
@@ -1047,7 +1081,11 @@ export const UpdatePackageBody = zod.object({
   priceBySizes: zod
     .array(
       zod.object({
-        size: zod.string(),
+        size: zod.string().describe('Porte (ex \"pequeno\")'),
+        coat: zod
+          .string()
+          .optional()
+          .describe('Pelagem (ex \"curto\") — opcional para pacotes legados'),
         price: zod.number(),
       }),
     )
@@ -1077,7 +1115,11 @@ export const UpdatePackageResponse = zod.object({
   ),
   priceBySizes: zod.array(
     zod.object({
-      size: zod.string(),
+      size: zod.string().describe('Porte (ex \"pequeno\")'),
+      coat: zod
+        .string()
+        .optional()
+        .describe('Pelagem (ex \"curto\") — opcional para pacotes legados'),
       price: zod.number(),
     }),
   ),
@@ -1148,22 +1190,21 @@ export const ListAppointmentsResponseItem = zod.object({
       clientId: zod.number(),
       name: zod.string(),
       breed: zod.string().nullish(),
-      size: zod.enum([
-        "mini_curto",
-        "mini_longo",
-        "pequeno_curto",
-        "pequeno_longo",
-        "medio_curto",
-        "medio_longo",
-        "grande_curto",
-        "grande_longo",
-        "gigante",
-      ]),
+      size: zod
+        .string()
+        .describe(
+          'Porte do pet (ex \"pequeno\", \"medio\") — configurado pelo pet shop',
+        ),
+      coat: zod
+        .string()
+        .nullish()
+        .describe(
+          'Pelagem do pet (ex \"curto\", \"longo\") — configurado pelo pet shop',
+        ),
       sex: zod
         .union([zod.literal("macho"), zod.literal("femea"), zod.literal(null)])
         .nullish(),
       neutered: zod.boolean().optional(),
-      coat: zod.string().nullish(),
       behavior: zod.string().nullish(),
       healthNotes: zod.string().nullish(),
       groomingPreferences: zod.string().nullish(),
@@ -1258,22 +1299,21 @@ export const GetAppointmentResponse = zod.object({
       clientId: zod.number(),
       name: zod.string(),
       breed: zod.string().nullish(),
-      size: zod.enum([
-        "mini_curto",
-        "mini_longo",
-        "pequeno_curto",
-        "pequeno_longo",
-        "medio_curto",
-        "medio_longo",
-        "grande_curto",
-        "grande_longo",
-        "gigante",
-      ]),
+      size: zod
+        .string()
+        .describe(
+          'Porte do pet (ex \"pequeno\", \"medio\") — configurado pelo pet shop',
+        ),
+      coat: zod
+        .string()
+        .nullish()
+        .describe(
+          'Pelagem do pet (ex \"curto\", \"longo\") — configurado pelo pet shop',
+        ),
       sex: zod
         .union([zod.literal("macho"), zod.literal("femea"), zod.literal(null)])
         .nullish(),
       neutered: zod.boolean().optional(),
-      coat: zod.string().nullish(),
       behavior: zod.string().nullish(),
       healthNotes: zod.string().nullish(),
       groomingPreferences: zod.string().nullish(),
@@ -1364,22 +1404,21 @@ export const UpdateAppointmentResponse = zod.object({
       clientId: zod.number(),
       name: zod.string(),
       breed: zod.string().nullish(),
-      size: zod.enum([
-        "mini_curto",
-        "mini_longo",
-        "pequeno_curto",
-        "pequeno_longo",
-        "medio_curto",
-        "medio_longo",
-        "grande_curto",
-        "grande_longo",
-        "gigante",
-      ]),
+      size: zod
+        .string()
+        .describe(
+          'Porte do pet (ex \"pequeno\", \"medio\") — configurado pelo pet shop',
+        ),
+      coat: zod
+        .string()
+        .nullish()
+        .describe(
+          'Pelagem do pet (ex \"curto\", \"longo\") — configurado pelo pet shop',
+        ),
       sex: zod
         .union([zod.literal("macho"), zod.literal("femea"), zod.literal(null)])
         .nullish(),
       neutered: zod.boolean().optional(),
-      coat: zod.string().nullish(),
       behavior: zod.string().nullish(),
       healthNotes: zod.string().nullish(),
       groomingPreferences: zod.string().nullish(),
@@ -1468,22 +1507,21 @@ export const UpdateAppointmentStatusResponse = zod.object({
       clientId: zod.number(),
       name: zod.string(),
       breed: zod.string().nullish(),
-      size: zod.enum([
-        "mini_curto",
-        "mini_longo",
-        "pequeno_curto",
-        "pequeno_longo",
-        "medio_curto",
-        "medio_longo",
-        "grande_curto",
-        "grande_longo",
-        "gigante",
-      ]),
+      size: zod
+        .string()
+        .describe(
+          'Porte do pet (ex \"pequeno\", \"medio\") — configurado pelo pet shop',
+        ),
+      coat: zod
+        .string()
+        .nullish()
+        .describe(
+          'Pelagem do pet (ex \"curto\", \"longo\") — configurado pelo pet shop',
+        ),
       sex: zod
         .union([zod.literal("macho"), zod.literal("femea"), zod.literal(null)])
         .nullish(),
       neutered: zod.boolean().optional(),
-      coat: zod.string().nullish(),
       behavior: zod.string().nullish(),
       healthNotes: zod.string().nullish(),
       groomingPreferences: zod.string().nullish(),
@@ -1559,22 +1597,21 @@ export const ConfirmAppointmentPresenceResponse = zod.object({
       clientId: zod.number(),
       name: zod.string(),
       breed: zod.string().nullish(),
-      size: zod.enum([
-        "mini_curto",
-        "mini_longo",
-        "pequeno_curto",
-        "pequeno_longo",
-        "medio_curto",
-        "medio_longo",
-        "grande_curto",
-        "grande_longo",
-        "gigante",
-      ]),
+      size: zod
+        .string()
+        .describe(
+          'Porte do pet (ex \"pequeno\", \"medio\") — configurado pelo pet shop',
+        ),
+      coat: zod
+        .string()
+        .nullish()
+        .describe(
+          'Pelagem do pet (ex \"curto\", \"longo\") — configurado pelo pet shop',
+        ),
       sex: zod
         .union([zod.literal("macho"), zod.literal("femea"), zod.literal(null)])
         .nullish(),
       neutered: zod.boolean().optional(),
-      coat: zod.string().nullish(),
       behavior: zod.string().nullish(),
       healthNotes: zod.string().nullish(),
       groomingPreferences: zod.string().nullish(),
@@ -1993,17 +2030,17 @@ export const GetDashboardResponse = zod.object({
             clientId: zod.number(),
             name: zod.string(),
             breed: zod.string().nullish(),
-            size: zod.enum([
-              "mini_curto",
-              "mini_longo",
-              "pequeno_curto",
-              "pequeno_longo",
-              "medio_curto",
-              "medio_longo",
-              "grande_curto",
-              "grande_longo",
-              "gigante",
-            ]),
+            size: zod
+              .string()
+              .describe(
+                'Porte do pet (ex \"pequeno\", \"medio\") — configurado pelo pet shop',
+              ),
+            coat: zod
+              .string()
+              .nullish()
+              .describe(
+                'Pelagem do pet (ex \"curto\", \"longo\") — configurado pelo pet shop',
+              ),
             sex: zod
               .union([
                 zod.literal("macho"),
@@ -2012,7 +2049,6 @@ export const GetDashboardResponse = zod.object({
               ])
               .nullish(),
             neutered: zod.boolean().optional(),
-            coat: zod.string().nullish(),
             behavior: zod.string().nullish(),
             healthNotes: zod.string().nullish(),
             groomingPreferences: zod.string().nullish(),

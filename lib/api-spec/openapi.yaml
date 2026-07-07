@@ -1691,6 +1691,16 @@ components:
           type: string
           enum: [hora, periodo]
           default: hora
+        petSizes:
+          type: ["array", "null"]
+          items:
+            type: string
+          description: Portes configurados pelo pet shop (ex ["mini","pequeno","medio","grande","gigante"])
+        coatTypes:
+          type: ["array", "null"]
+          items:
+            type: string
+          description: Pelagens configuradas pelo pet shop (ex ["curto","longo"])
         createdAt:
           type: string
           format: date-time
@@ -1722,6 +1732,14 @@ components:
         schedulingMethod:
           type: string
           enum: [hora, periodo]
+        petSizes:
+          type: array
+          items:
+            type: string
+        coatTypes:
+          type: array
+          items:
+            type: string
 
     # Client
     Client:
@@ -1849,23 +1867,15 @@ components:
           type: ["string", "null"]
         size:
           type: string
-          enum:
-            - mini_curto
-            - mini_longo
-            - pequeno_curto
-            - pequeno_longo
-            - medio_curto
-            - medio_longo
-            - grande_curto
-            - grande_longo
-            - gigante
+          description: Porte do pet (ex "pequeno", "medio") — configurado pelo pet shop
+        coat:
+          type: ["string", "null"]
+          description: Pelagem do pet (ex "curto", "longo") — configurado pelo pet shop
         sex:
           type: ["string", "null"]
           enum: ["macho", "femea", null]
         neutered:
           type: boolean
-        coat:
-          type: ["string", "null"]
         behavior:
           type: ["string", "null"]
         healthNotes:
@@ -1892,23 +1902,15 @@ components:
           type: string
         size:
           type: string
-          enum:
-            - mini_curto
-            - mini_longo
-            - pequeno_curto
-            - pequeno_longo
-            - medio_curto
-            - medio_longo
-            - grande_curto
-            - grande_longo
-            - gigante
+          description: Porte do pet (ex "pequeno") — valor configurado pelo pet shop
+        coat:
+          type: string
+          description: Pelagem do pet (ex "curto") — valor configurado pelo pet shop
         sex:
           type: string
           enum: ["macho", "femea"]
         neutered:
           type: boolean
-        coat:
-          type: string
         behavior:
           type: string
         healthNotes:
@@ -1929,23 +1931,15 @@ components:
           type: string
         size:
           type: string
-          enum:
-            - mini_curto
-            - mini_longo
-            - pequeno_curto
-            - pequeno_longo
-            - medio_curto
-            - medio_longo
-            - grande_curto
-            - grande_longo
-            - gigante
+          description: Porte do pet (ex "pequeno") — valor configurado pelo pet shop
+        coat:
+          type: string
+          description: Pelagem do pet (ex "curto") — valor configurado pelo pet shop
         sex:
           type: string
           enum: ["macho", "femea"]
         neutered:
           type: boolean
-        coat:
-          type: string
         behavior:
           type: string
         healthNotes:
@@ -1960,7 +1954,7 @@ components:
     # Service
     Service:
       type: object
-      required: [id, tenantId, name, size, price, createdAt]
+      required: [id, tenantId, name, size, coat, price, createdAt]
       properties:
         id:
           type: integer
@@ -1972,16 +1966,10 @@ components:
           type: ["string", "null"]
         size:
           type: string
-          enum:
-            - mini_curto
-            - mini_longo
-            - pequeno_curto
-            - pequeno_longo
-            - medio_curto
-            - medio_longo
-            - grande_curto
-            - grande_longo
-            - gigante
+          description: Porte (ex "pequeno") — configurado pelo pet shop
+        coat:
+          type: string
+          description: Pelagem (ex "curto") — configurado pelo pet shop
         price:
           type: number
         durationMinutes:
@@ -1992,7 +1980,7 @@ components:
 
     ServiceInput:
       type: object
-      required: [tenantId, name, size, price]
+      required: [tenantId, name, size, coat, price]
       properties:
         tenantId:
           type: integer
@@ -2002,16 +1990,10 @@ components:
           type: string
         size:
           type: string
-          enum:
-            - mini_curto
-            - mini_longo
-            - pequeno_curto
-            - pequeno_longo
-            - medio_curto
-            - medio_longo
-            - grande_curto
-            - grande_longo
-            - gigante
+          description: Porte (ex "pequeno")
+        coat:
+          type: string
+          description: Pelagem (ex "curto")
         price:
           type: number
         durationMinutes:
@@ -2026,16 +2008,8 @@ components:
           type: string
         size:
           type: string
-          enum:
-            - mini_curto
-            - mini_longo
-            - pequeno_curto
-            - pequeno_longo
-            - medio_curto
-            - medio_longo
-            - grande_curto
-            - grande_longo
-            - gigante
+        coat:
+          type: string
         price:
           type: number
         durationMinutes:
@@ -2060,6 +2034,10 @@ components:
       properties:
         size:
           type: string
+          description: Porte (ex "pequeno")
+        coat:
+          type: string
+          description: Pelagem (ex "curto") — opcional para pacotes legados
         price:
           type: number
 

@@ -7,6 +7,9 @@
  */
 
 export interface PriceBySize {
+  /** Porte (ex "pequeno") */
   size: string;
+  /** Pelagem (ex "curto") — opcional para pacotes legados */
+  coat?: string;
   price: number;
 }

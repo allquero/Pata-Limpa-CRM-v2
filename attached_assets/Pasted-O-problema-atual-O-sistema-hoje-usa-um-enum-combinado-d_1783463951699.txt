@@ -1,0 +1,42 @@
+O problema atual
+O sistema hoje usa um enum combinado de 9 valores (mini_curto, mini_longo, pequeno_curto…) para representar porte + pelagem juntos. Isso significa:
+
+No cadastro do pet, o campo "Porte / Pelagem" é uma lista de combinações pré-fixadas — você não consegue ter "gigante longo" porque o enum nunca previu isso
+Nos serviços, cada linha da tabela já carrega o porte+pelagem embutido — rígido
+Não existe como um pet shop definir os próprios portes ou pelagens
+O design proposto
+A mudança mais limpa — sem criar novas tabelas, aproveitando o que já existe:
+
+1. Portes e pelagens configuráveis por empresa
+Adicionar duas colunas JSONB na tabela tenants:
+
+petSizes → lista de portes do pet shop (padrão: ["mini","pequeno","medio","grande","gigante"])
+coatTypes → lista de pelagens (padrão: ["curto","longo"])
+Cada empresa define os seus. Na tela de Configurações da Empresa aparece um editor onde dá pra adicionar, remover e reordenar.
+
+2. Pet — dois campos separados e obrigatórios
+size continua existindo, mas passa a guardar só o porte ("pequeno")
+coat se torna obrigatório e guarda só a pelagem ("curto")
+Os dois viram dropdowns independentes no cadastro do pet, populados com os valores que a empresa configurou.
+
+3. Serviços — mesma estrutura, novos campos
+A tabela services já tem uma linha por combinação — é a estrutura certa. Só muda:
+
+size passa a guardar só o porte (ex: "pequeno")
+adiciona-se coluna coat (pelagem, ex: "curto")
+A tela de serviços exibe a matriz porte × pelagem de forma clara.
+
+4. Pacotes — JSONB atualizado
+priceBySizes muda de [{size: "mini_curto", price: 80}] para [{size: "mini", coat: "curto", price: 80}].
+
+5. Migração dos dados existentes
+Um script divide os valores antigos automaticamente:
+
+mini_curto → size=mini, coat=curto
+pequeno_longo → size=pequeno, coat=longo
+gigante (caso especial) → size=gigante, coat=curto
+O que NÃO muda
+Não criam-se novas tabelas
+A estrutura de uma linha por combinação nos serviços continua igual
+Os dados existentes são migrados automaticamente
+Com isso você teria 5 × 2 = 10 combinações configuradas para o seu pet shop, e qualquer outro pet shop poderia ter as suas próprias. Faz sentido seguir por esse caminho?

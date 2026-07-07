@@ -6,7 +6,6 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { PetSex } from "./petSex";
-import type { PetSize } from "./petSize";
 
 export interface Pet {
   id: number;
@@ -14,12 +13,16 @@ export interface Pet {
   name: string;
   /** @nullable */
   breed?: string | null;
-  size: PetSize;
+  /** Porte do pet (ex "pequeno", "medio") — configurado pelo pet shop */
+  size: string;
+  /**
+   * Pelagem do pet (ex "curto", "longo") — configurado pelo pet shop
+   * @nullable
+   */
+  coat?: string | null;
   /** @nullable */
   sex?: PetSex;
   neutered?: boolean;
-  /** @nullable */
-  coat?: string | null;
   /** @nullable */
   behavior?: string | null;
   /** @nullable */

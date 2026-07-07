@@ -14,9 +14,9 @@ import {
   useConfirmAppointmentPresence,
 } from "@workspace/api-client-react";
 import type {
-  Client, Pet, Service, Package, SellPackageResult, PetInputSize, MessageTemplate, AppointmentFull,
+  Client, Pet, Service, Package, SellPackageResult, MessageTemplate, AppointmentFull,
 } from "@workspace/api-client-react";
-import { PORTE_SIZES } from "@/lib/constants";
+import { DEFAULT_PORTE_ORDER, DEFAULT_COAT_LABELS, getPorteLabel, getCoatLabel } from "@/lib/constants";
 import { useAppAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -117,7 +117,7 @@ function AppointmentCard({ appt, clients, pets, services, packages, onDelete, on
           <div className="flex items-center gap-1.5 mb-1">
             <PawPrint className="h-3.5 w-3.5 text-primary shrink-0" />
             <span className="font-semibold text-sm truncate">{pet?.name ?? "Pet"}</span>
-            {pet?.size && <Badge variant="secondary" className="text-xs px-1 py-0">{PORTE_SIZES[pet.size] ?? pet.size}</Badge>}
+            {pet?.size && <Badge variant="secondary" className="text-xs px-1 py-0">{getPorteLabel(pet.size)}{pet.coat ? ` · ${getCoatLabel(pet.coat)}` : ""}</Badge>}
             {appt.confirmedAt && (
               <span title="Presença confirmada" className="text-green-600">
                 <UserCheck className="h-3.5 w-3.5" />
@@ -440,7 +440,7 @@ function GerenciarServicosModal({
             <div className="flex items-center gap-2 p-2 bg-muted/40 rounded-lg text-sm">
               <PawPrint className="h-4 w-4 text-primary shrink-0" />
               <span className="font-medium">{pet?.name ?? "Pet"}</span>
-              {pet?.size && <span className="text-xs text-muted-foreground">({PORTE_SIZES[pet.size] ?? pet.size})</span>}
+              {pet?.size && <span className="text-xs text-muted-foreground">({getPorteLabel(pet.size)}{pet.coat ? ` · ${getCoatLabel(pet.coat)}` : ""})</span>}
             </div>
 
             <div>
@@ -729,7 +729,8 @@ const emptyCasual = {
   clientPhone: "",
   petName: "",
   petBreed: "",
-  petSize: "" as PetInputSize | "",
+  petSize: "",
+  petCoat: "",
   serviceId: "",
   extraServiceIds: [] as number[],
   scheduledDate: new Date().toISOString().substring(0, 10),
@@ -866,6 +867,8 @@ export default function Agendamentos() {
   const { data: tenantData } = useGetTenant(tenantId!);
   const schedulingMethod = (tenantData as any)?.schedulingMethod ?? "hora";
   const isPeriodo = schedulingMethod === "periodo";
+  const tenantPortes: string[] = (tenantData as any)?.petSizes ?? DEFAULT_PORTE_ORDER;
+  const tenantCoats: string[] = (tenantData as any)?.coatTypes ?? Object.keys(DEFAULT_COAT_LABELS);
 
   const { data: clients = [] } = useListClients({ tenantId: tenantId! });
   const { data: allPets = [] } = useListPets({});
@@ -936,7 +939,9 @@ export default function Agendamentos() {
   };
 
   const casualFilteredServices = casual.petSize
-    ? (services as Service[]).filter(s => s.size === casual.petSize)
+    ? (services as Service[]).filter(s =>
+        s.size === casual.petSize && (!casual.petCoat || s.coat === casual.petCoat)
+      )
     : (services as Service[]);
   const casualExtraAvailable = casualFilteredServices.filter(
     s => s.id !== Number(casual.serviceId) && !casual.extraServiceIds.includes(s.id),
@@ -945,8 +950,13 @@ export default function Agendamentos() {
   const selectedPkg = (packages as Package[]).find(p => p.id === Number(sell.packageId));
   const sellPet = (sellClientPets as Pet[]).find(p => p.id === Number(sell.petId));
   const sellPetSize = sellPet?.size;
+  const sellPetCoat = sellPet?.coat;
   const priceForPet = sellPetSize && selectedPkg
-    ? (selectedPkg.priceBySizes.find(p => p.size === sellPetSize)?.price ?? null)
+    ? (
+        selectedPkg.priceBySizes.find(p => p.size === sellPetSize && p.coat === sellPetCoat)?.price ??
+        selectedPkg.priceBySizes.find(p => p.size === sellPetSize)?.price ??
+        null
+      )
     : null;
 
   const sellSessions = (() => {
@@ -1105,14 +1115,14 @@ export default function Agendamentos() {
         if (casualSelectedPetId && casualSelectedPetId !== "new") {
           resolvedPetId = Number(casualSelectedPetId);
         } else {
-          const newPet: Pet = await createPet.mutateAsync({ data: { clientId: resolvedClientId, name: casual.petName.trim(), breed: casual.petBreed.trim() || undefined, size: casual.petSize } });
+          const newPet: Pet = await createPet.mutateAsync({ data: { clientId: resolvedClientId, name: casual.petName.trim(), breed: casual.petBreed.trim() || undefined, size: casual.petSize, coat: casual.petCoat || undefined } });
           resolvedPetId = newPet.id;
         }
       } else {
         const newClient: Client = await createClient.mutateAsync({ data: { tenantId: tenantId!, name: casual.clientName.trim(), phone: casual.clientPhone.trim() } });
         resolvedClientId = newClient.id;
         setConfirmacaoOverrideClient({ id: newClient.id, name: newClient.name, phone: newClient.phone });
-        const newPet: Pet = await createPet.mutateAsync({ data: { clientId: resolvedClientId, name: casual.petName.trim(), breed: casual.petBreed.trim() || undefined, size: casual.petSize } });
+        const newPet: Pet = await createPet.mutateAsync({ data: { clientId: resolvedClientId, name: casual.petName.trim(), breed: casual.petBreed.trim() || undefined, size: casual.petSize, coat: casual.petCoat || undefined } });
         resolvedPetId = newPet.id;
       }
       const dt = new Date(`${casual.scheduledDate}T${casual.scheduledTime}:00`);
@@ -1373,7 +1383,7 @@ export default function Agendamentos() {
                       <div className="flex items-center gap-1.5 flex-1 min-w-0">
                         <PawPrint className="h-3.5 w-3.5 text-primary shrink-0" />
                         <span className="font-semibold text-sm truncate">{pet?.name ?? "Pet"}</span>
-                        {pet?.size && (<Badge variant="outline" className="text-xs px-1 py-0 shrink-0">{PORTE_SIZES[pet.size as keyof typeof PORTE_SIZES] ?? pet.size}</Badge>)}
+                        {pet?.size && (<Badge variant="outline" className="text-xs px-1 py-0 shrink-0">{getPorteLabel(pet.size)}{pet.coat ? ` · ${getCoatLabel(pet.coat)}` : ""}</Badge>)}
                         <span className="text-xs text-muted-foreground truncate">· {client?.name ?? "Cliente"}</span>
                       </div>
                       <span className="text-xs text-muted-foreground hidden sm:block truncate max-w-[120px]">{service?.name ?? pkg?.name ?? ""}</span>
@@ -1549,9 +1559,16 @@ export default function Agendamentos() {
                 <div className="space-y-1.5"><Label>Raça</Label><Input placeholder="Ex: Labrador" value={casual.petBreed} onChange={e => setCasual(f => ({ ...f, petBreed: e.target.value }))} /></div>
                 <div className="space-y-1.5">
                   <Label>Porte *</Label>
-                  <Select value={casual.petSize} onValueChange={v => setCasual(f => ({ ...f, petSize: v as PetInputSize, serviceId: "", totalPrice: "" }))}>
+                  <Select value={casual.petSize} onValueChange={v => setCasual(f => ({ ...f, petSize: v, serviceId: "", totalPrice: "" }))}>
                     <SelectTrigger><SelectValue placeholder="Selecione o porte" /></SelectTrigger>
-                    <SelectContent>{(Object.entries(PORTE_SIZES) as [PetInputSize, string][]).map(([val, lbl]) => (<SelectItem key={val} value={val}>{lbl}</SelectItem>))}</SelectContent>
+                    <SelectContent>{tenantPortes.map((val: string) => (<SelectItem key={val} value={val}>{getPorteLabel(val)}</SelectItem>))}</SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Pelagem</Label>
+                  <Select value={casual.petCoat} onValueChange={v => setCasual(f => ({ ...f, petCoat: v, serviceId: "", totalPrice: "" }))}>
+                    <SelectTrigger><SelectValue placeholder="Selecione a pelagem" /></SelectTrigger>
+                    <SelectContent>{tenantCoats.map((val: string) => (<SelectItem key={val} value={val}>{getCoatLabel(val)}</SelectItem>))}</SelectContent>
                   </Select>
                 </div>
               </>
@@ -1561,10 +1578,10 @@ export default function Agendamentos() {
                 {casualFoundClient && (
                   <div className="space-y-1.5">
                     <Label>Pet *</Label>
-                    <Select value={casualSelectedPetId} onValueChange={v => { setCasualSelectedPetId(v); if (v !== "new") { const pet = (casualClientPets as Pet[]).find(p => p.id === Number(v)); if (pet) setCasual(f => ({ ...f, petSize: pet.size as PetInputSize, serviceId: "", totalPrice: "" })); } else { setCasual(f => ({ ...f, petSize: "" as PetInputSize | "", serviceId: "", totalPrice: "" })); } }}>
+                    <Select value={casualSelectedPetId} onValueChange={v => { setCasualSelectedPetId(v); if (v !== "new") { const pet = (casualClientPets as Pet[]).find(p => p.id === Number(v)); if (pet) setCasual(f => ({ ...f, petSize: pet.size, petCoat: pet.coat ?? "", serviceId: "", totalPrice: "" })); } else { setCasual(f => ({ ...f, petSize: "", petCoat: "", serviceId: "", totalPrice: "" })); } }}>
                       <SelectTrigger><SelectValue placeholder="Selecione o pet" /></SelectTrigger>
                       <SelectContent>
-                        {(casualClientPets as Pet[]).map(p => (<SelectItem key={p.id} value={String(p.id)}>{p.name} — {PORTE_SIZES[p.size] ?? p.size}</SelectItem>))}
+                        {(casualClientPets as Pet[]).map(p => (<SelectItem key={p.id} value={String(p.id)}>{p.name} — {getPorteLabel(p.size)}{p.coat ? ` · ${getCoatLabel(p.coat)}` : ""}</SelectItem>))}
                         <SelectItem value="new">+ Novo pet</SelectItem>
                       </SelectContent>
                     </Select>
@@ -1576,9 +1593,16 @@ export default function Agendamentos() {
                     <div className="space-y-1.5"><Label>Raça</Label><Input placeholder="Ex: Labrador" value={casual.petBreed} onChange={e => setCasual(f => ({ ...f, petBreed: e.target.value }))} /></div>
                     <div className="space-y-1.5">
                       <Label>Porte *</Label>
-                      <Select value={casual.petSize} onValueChange={v => setCasual(f => ({ ...f, petSize: v as PetInputSize, serviceId: "", totalPrice: "" }))}>
+                      <Select value={casual.petSize} onValueChange={v => setCasual(f => ({ ...f, petSize: v, serviceId: "", totalPrice: "" }))}>
                         <SelectTrigger><SelectValue placeholder="Selecione o porte" /></SelectTrigger>
-                        <SelectContent>{(Object.entries(PORTE_SIZES) as [PetInputSize, string][]).map(([val, lbl]) => (<SelectItem key={val} value={val}>{lbl}</SelectItem>))}</SelectContent>
+                        <SelectContent>{tenantPortes.map((val: string) => (<SelectItem key={val} value={val}>{getPorteLabel(val)}</SelectItem>))}</SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Pelagem</Label>
+                      <Select value={casual.petCoat} onValueChange={v => setCasual(f => ({ ...f, petCoat: v, serviceId: "", totalPrice: "" }))}>
+                        <SelectTrigger><SelectValue placeholder="Selecione a pelagem" /></SelectTrigger>
+                        <SelectContent>{tenantCoats.map((val: string) => (<SelectItem key={val} value={val}>{getCoatLabel(val)}</SelectItem>))}</SelectContent>
                       </Select>
                     </div>
                   </>
@@ -1592,7 +1616,7 @@ export default function Agendamentos() {
                       {casualFilteredServices.map(s => (<SelectItem key={s.id} value={String(s.id)}>{s.name} — {formatBRL(s.price)}</SelectItem>))}
                     </SelectContent>
                   </Select>
-                  {casual.petSize && <p className="text-xs text-muted-foreground">Serviços filtrados para porte: <span className="font-medium">{PORTE_SIZES[casual.petSize]}</span></p>}
+                  {casual.petSize && <p className="text-xs text-muted-foreground">Serviços filtrados: <span className="font-medium">{getPorteLabel(casual.petSize)}{casual.petCoat ? ` · ${getCoatLabel(casual.petCoat)}` : ""}</span></p>}
                 </div>
                 {casual.serviceId && (
                   <div className="space-y-1.5">
@@ -1708,7 +1732,7 @@ export default function Agendamentos() {
               <Label>Pet *</Label>
               <Select value={sell.petId} onValueChange={v => setSell(f => ({ ...f, petId: v }))} disabled={!sell.clientId}>
                 <SelectTrigger><SelectValue placeholder={sell.clientId ? "Selecione o pet" : "Selecione um cliente primeiro"} /></SelectTrigger>
-                <SelectContent>{(sellClientPets as Pet[]).map(p => (<SelectItem key={p.id} value={String(p.id)}>{p.name} — {PORTE_SIZES[p.size] ?? p.size}</SelectItem>))}</SelectContent>
+                <SelectContent>{(sellClientPets as Pet[]).map(p => (<SelectItem key={p.id} value={String(p.id)}>{p.name} — {getPorteLabel(p.size)}{p.coat ? ` · ${getCoatLabel(p.coat)}` : ""}</SelectItem>))}</SelectContent>
               </Select>
             </div>
             {sell.petId && sell.packageId && (

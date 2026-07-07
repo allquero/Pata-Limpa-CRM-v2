@@ -5,13 +5,15 @@
  * Grooming CRM API
  * OpenAPI spec version: 0.1.0
  */
-import type { ServiceInputSize } from "./serviceInputSize";
 
 export interface ServiceInput {
   tenantId: number;
   name: string;
   description?: string;
-  size: ServiceInputSize;
+  /** Porte (ex "pequeno") */
+  size: string;
+  /** Pelagem (ex "curto") */
+  coat: string;
   price: number;
   durationMinutes?: number;
 }

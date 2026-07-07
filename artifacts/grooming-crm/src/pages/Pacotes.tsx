@@ -4,7 +4,7 @@ import {
   useListServices, useListClients, useListPets, useSellPackage,
   getListPetsQueryKey,
 } from "@workspace/api-client-react";
-import { PORTE_SIZES } from "@/lib/constants";
+import { DEFAULT_PORTE_ORDER, getPorteLabel, getCoatLabel } from "@/lib/constants";
 import { useAppAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,7 +21,7 @@ import { Plus, Pencil, Trash2, Package, X, ShoppingCart, CalendarCheck } from "l
 import { format } from "date-fns";
 
 type ServiceItem = { serviceName: string; quantity: number };
-type PriceBySize = { size: string; price: number };
+type PriceBySize = { size: string; coat?: string; price: number };
 
 type Pkg = {
   id: number;
@@ -31,10 +31,8 @@ type Pkg = {
   priceBySizes: PriceBySize[];
 };
 
-const ALL_SIZES = Object.entries(PORTE_SIZES) as [string, string][];
-
 const emptyPriceBySizes = (): PriceBySize[] =>
-  ALL_SIZES.map(([size]) => ({ size, price: 0 }));
+  DEFAULT_PORTE_ORDER.map(size => ({ size, price: 0 }));
 
 const emptyForm = {
   name: "",
@@ -123,7 +121,7 @@ export default function Pacotes() {
   const openEdit = (pkg: Pkg) => {
     setEditing(pkg);
     const savedMap = Object.fromEntries((pkg.priceBySizes ?? []).map(p => [p.size, p.price]));
-    const priceBySizes = ALL_SIZES.map(([size]) => ({ size, price: savedMap[size] ?? 0 }));
+    const priceBySizes = DEFAULT_PORTE_ORDER.map(size => ({ size, price: savedMap[size] ?? 0 }));
     setForm({
       name: pkg.name,
       description: pkg.description ?? "",
@@ -318,7 +316,7 @@ export default function Pacotes() {
                       <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
                         {prices.map(p => (
                           <div key={p.size} className="flex items-center justify-between text-xs">
-                            <span className="text-muted-foreground capitalize">{PORTE_SIZES[p.size as keyof typeof PORTE_SIZES] ?? p.size}</span>
+                            <span className="text-muted-foreground capitalize">{getPorteLabel(p.size)}{p.coat ? ` · ${getCoatLabel(p.coat)}` : ""}</span>
                             <span className="font-medium">{formatBRL(p.price)}</span>
                           </div>
                         ))}
@@ -409,7 +407,7 @@ export default function Pacotes() {
               <div className="rounded-lg border divide-y">
                 {form.priceBySizes.map(({ size, price }) => (
                   <div key={size} className="flex items-center justify-between px-3 py-2 gap-3">
-                    <span className="text-sm w-32 shrink-0">{PORTE_SIZES[size as keyof typeof PORTE_SIZES] ?? size}</span>
+                    <span className="text-sm w-32 shrink-0">{getPorteLabel(size)}</span>
                     <div className="flex items-center gap-1.5 flex-1">
                       <span className="text-sm text-muted-foreground">R$</span>
                       <Input
@@ -481,7 +479,7 @@ export default function Pacotes() {
                 <SelectContent>
                   {(clientPets as any[]).map((p: any) => (
                     <SelectItem key={p.id} value={String(p.id)}>
-                      {p.name} — {PORTE_SIZES[p.size as keyof typeof PORTE_SIZES] ?? p.size}
+                      {p.name} — {getPorteLabel(p.size)}{(p as any).coat ? ` · ${getCoatLabel((p as any).coat)}` : ""}
                     </SelectItem>
                   ))}
                 </SelectContent>

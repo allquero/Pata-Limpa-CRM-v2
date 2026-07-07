@@ -1,6 +1,9 @@
-import { pgTable, serial, text, timestamp, uniqueIndex, varchar, date } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, timestamp, uniqueIndex, varchar, date, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+
+export const DEFAULT_PET_SIZES = ["mini", "pequeno", "medio", "grande", "gigante"] as const;
+export const DEFAULT_COAT_TYPES = ["curto", "longo"] as const;
 
 export const tenantsTable = pgTable("tenants", {
   id: serial("id").primaryKey(),
@@ -12,6 +15,8 @@ export const tenantsTable = pgTable("tenants", {
   accessStart: date("access_start"),
   accessEnd: date("access_end"),
   schedulingMethod: varchar("scheduling_method", { length: 20 }).notNull().default("hora"),
+  petSizes: jsonb("pet_sizes").$type<string[]>().default(["mini", "pequeno", "medio", "grande", "gigante"]),
+  coatTypes: jsonb("coat_types").$type<string[]>().default(["curto", "longo"]),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (table) => [

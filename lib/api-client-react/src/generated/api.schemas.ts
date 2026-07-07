@@ -95,6 +95,16 @@ export interface Tenant {
   /** @nullable */
   accessEnd?: string | null;
   schedulingMethod?: TenantSchedulingMethod;
+  /**
+   * Portes configurados pelo pet shop (ex ["mini","pequeno","medio","grande","gigante"])
+   * @nullable
+   */
+  petSizes?: string[] | null;
+  /**
+   * Pelagens configuradas pelo pet shop (ex ["curto","longo"])
+   * @nullable
+   */
+  coatTypes?: string[] | null;
   createdAt: string;
 }
 
@@ -119,6 +129,8 @@ export interface TenantUpdate {
   email?: string;
   address?: string;
   schedulingMethod?: TenantUpdateSchedulingMethod;
+  petSizes?: string[];
+  coatTypes?: string[];
 }
 
 export interface Client {
@@ -136,20 +148,6 @@ export interface Client {
   createdAt: string;
 }
 
-export type PetSize = (typeof PetSize)[keyof typeof PetSize];
-
-export const PetSize = {
-  mini_curto: "mini_curto",
-  mini_longo: "mini_longo",
-  pequeno_curto: "pequeno_curto",
-  pequeno_longo: "pequeno_longo",
-  medio_curto: "medio_curto",
-  medio_longo: "medio_longo",
-  grande_curto: "grande_curto",
-  grande_longo: "grande_longo",
-  gigante: "gigante",
-} as const;
-
 /**
  * @nullable
  */
@@ -166,12 +164,16 @@ export interface Pet {
   name: string;
   /** @nullable */
   breed?: string | null;
-  size: PetSize;
+  /** Porte do pet (ex "pequeno", "medio") — configurado pelo pet shop */
+  size: string;
+  /**
+   * Pelagem do pet (ex "curto", "longo") — configurado pelo pet shop
+   * @nullable
+   */
+  coat?: string | null;
   /** @nullable */
   sex?: PetSex;
   neutered?: boolean;
-  /** @nullable */
-  coat?: string | null;
   /** @nullable */
   behavior?: string | null;
   /** @nullable */
@@ -238,20 +240,6 @@ export interface ImportResult {
   errors: ImportResultErrorsItem[];
 }
 
-export type PetInputSize = (typeof PetInputSize)[keyof typeof PetInputSize];
-
-export const PetInputSize = {
-  mini_curto: "mini_curto",
-  mini_longo: "mini_longo",
-  pequeno_curto: "pequeno_curto",
-  pequeno_longo: "pequeno_longo",
-  medio_curto: "medio_curto",
-  medio_longo: "medio_longo",
-  grande_curto: "grande_curto",
-  grande_longo: "grande_longo",
-  gigante: "gigante",
-} as const;
-
 export type PetInputSex = (typeof PetInputSex)[keyof typeof PetInputSex];
 
 export const PetInputSex = {
@@ -263,30 +251,18 @@ export interface PetInput {
   clientId: number;
   name: string;
   breed?: string;
-  size: PetInputSize;
+  /** Porte do pet (ex "pequeno") — valor configurado pelo pet shop */
+  size: string;
+  /** Pelagem do pet (ex "curto") — valor configurado pelo pet shop */
+  coat?: string;
   sex?: PetInputSex;
   neutered?: boolean;
-  coat?: string;
   behavior?: string;
   healthNotes?: string;
   groomingPreferences?: string;
   senior?: boolean;
   notes?: string;
 }
-
-export type PetUpdateSize = (typeof PetUpdateSize)[keyof typeof PetUpdateSize];
-
-export const PetUpdateSize = {
-  mini_curto: "mini_curto",
-  mini_longo: "mini_longo",
-  pequeno_curto: "pequeno_curto",
-  pequeno_longo: "pequeno_longo",
-  medio_curto: "medio_curto",
-  medio_longo: "medio_longo",
-  grande_curto: "grande_curto",
-  grande_longo: "grande_longo",
-  gigante: "gigante",
-} as const;
 
 export type PetUpdateSex = (typeof PetUpdateSex)[keyof typeof PetUpdateSex];
 
@@ -298,10 +274,12 @@ export const PetUpdateSex = {
 export interface PetUpdate {
   name?: string;
   breed?: string;
-  size?: PetUpdateSize;
+  /** Porte do pet (ex "pequeno") — valor configurado pelo pet shop */
+  size?: string;
+  /** Pelagem do pet (ex "curto") — valor configurado pelo pet shop */
+  coat?: string;
   sex?: PetUpdateSex;
   neutered?: boolean;
-  coat?: string;
   behavior?: string;
   healthNotes?: string;
   groomingPreferences?: string;
@@ -309,76 +287,39 @@ export interface PetUpdate {
   notes?: string;
 }
 
-export type ServiceSize = (typeof ServiceSize)[keyof typeof ServiceSize];
-
-export const ServiceSize = {
-  mini_curto: "mini_curto",
-  mini_longo: "mini_longo",
-  pequeno_curto: "pequeno_curto",
-  pequeno_longo: "pequeno_longo",
-  medio_curto: "medio_curto",
-  medio_longo: "medio_longo",
-  grande_curto: "grande_curto",
-  grande_longo: "grande_longo",
-  gigante: "gigante",
-} as const;
-
 export interface Service {
   id: number;
   tenantId: number;
   name: string;
   /** @nullable */
   description?: string | null;
-  size: ServiceSize;
+  /** Porte (ex "pequeno") — configurado pelo pet shop */
+  size: string;
+  /** Pelagem (ex "curto") — configurado pelo pet shop */
+  coat: string;
   price: number;
   /** @nullable */
   durationMinutes?: number | null;
   createdAt: string;
 }
 
-export type ServiceInputSize =
-  (typeof ServiceInputSize)[keyof typeof ServiceInputSize];
-
-export const ServiceInputSize = {
-  mini_curto: "mini_curto",
-  mini_longo: "mini_longo",
-  pequeno_curto: "pequeno_curto",
-  pequeno_longo: "pequeno_longo",
-  medio_curto: "medio_curto",
-  medio_longo: "medio_longo",
-  grande_curto: "grande_curto",
-  grande_longo: "grande_longo",
-  gigante: "gigante",
-} as const;
-
 export interface ServiceInput {
   tenantId: number;
   name: string;
   description?: string;
-  size: ServiceInputSize;
+  /** Porte (ex "pequeno") */
+  size: string;
+  /** Pelagem (ex "curto") */
+  coat: string;
   price: number;
   durationMinutes?: number;
 }
 
-export type ServiceUpdateSize =
-  (typeof ServiceUpdateSize)[keyof typeof ServiceUpdateSize];
-
-export const ServiceUpdateSize = {
-  mini_curto: "mini_curto",
-  mini_longo: "mini_longo",
-  pequeno_curto: "pequeno_curto",
-  pequeno_longo: "pequeno_longo",
-  medio_curto: "medio_curto",
-  medio_longo: "medio_longo",
-  grande_curto: "grande_curto",
-  grande_longo: "grande_longo",
-  gigante: "gigante",
-} as const;
-
 export interface ServiceUpdate {
   name?: string;
   description?: string;
-  size?: ServiceUpdateSize;
+  size?: string;
+  coat?: string;
   price?: number;
   durationMinutes?: number;
 }
@@ -394,7 +335,10 @@ export interface ServiceItem {
 }
 
 export interface PriceBySize {
+  /** Porte (ex "pequeno") */
   size: string;
+  /** Pelagem (ex "curto") — opcional para pacotes legados */
+  coat?: string;
   price: number;
 }
 

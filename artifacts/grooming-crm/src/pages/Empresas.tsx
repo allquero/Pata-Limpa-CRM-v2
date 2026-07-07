@@ -6,8 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Building2, Save, Clock, Sun } from "lucide-react";
+import { Building2, Save, Clock, Sun, PawPrint, X, Plus } from "lucide-react";
+import { DEFAULT_PORTE_ORDER, DEFAULT_COAT_LABELS } from "@/lib/constants";
 
 export default function Empresas() {
   const { tenantId } = useAppAuth();
@@ -15,17 +17,28 @@ export default function Empresas() {
   const { data: tenant, isLoading, refetch } = useGetTenant(tenantId!);
   const updateTenant = useUpdateTenant();
 
-  const [form, setForm] = useState({ name: "", phone: "", email: "", address: "", schedulingMethod: "hora" as "hora" | "periodo" });
+  const [form, setForm] = useState({
+    name: "", phone: "", email: "", address: "",
+    schedulingMethod: "hora" as "hora" | "periodo",
+  });
+
+  const [petSizes, setPetSizes] = useState<string[]>(DEFAULT_PORTE_ORDER.slice());
+  const [coatTypes, setCoatTypes] = useState<string[]>(Object.keys(DEFAULT_COAT_LABELS));
+  const [newSize, setNewSize] = useState("");
+  const [newCoat, setNewCoat] = useState("");
 
   useEffect(() => {
     if (tenant) {
+      const t = tenant as any;
       setForm({
-        name: (tenant as any).name ?? "",
-        phone: (tenant as any).phone ?? "",
-        email: (tenant as any).email ?? "",
-        address: (tenant as any).address ?? "",
-        schedulingMethod: ((tenant as any).schedulingMethod ?? "hora") as "hora" | "periodo",
+        name: t.name ?? "",
+        phone: t.phone ?? "",
+        email: t.email ?? "",
+        address: t.address ?? "",
+        schedulingMethod: (t.schedulingMethod ?? "hora") as "hora" | "periodo",
       });
+      if (Array.isArray(t.petSizes) && t.petSizes.length > 0) setPetSizes(t.petSizes);
+      if (Array.isArray(t.coatTypes) && t.coatTypes.length > 0) setCoatTypes(t.coatTypes);
     }
   }, [tenant]);
 
@@ -39,6 +52,45 @@ export default function Empresas() {
     }
   };
 
+  const handleSaveSizes = async () => {
+    if (petSizes.length === 0) {
+      toast({ title: "Informe ao menos um porte", variant: "destructive" });
+      return;
+    }
+    if (coatTypes.length === 0) {
+      toast({ title: "Informe ao menos uma pelagem", variant: "destructive" });
+      return;
+    }
+    try {
+      await updateTenant.mutateAsync({
+        id: tenantId!,
+        data: { petSizes, coatTypes } as any,
+      });
+      toast({ title: "Portes e pelagens atualizados!" });
+      refetch();
+    } catch {
+      toast({ title: "Erro ao salvar", variant: "destructive" });
+    }
+  };
+
+  const addSize = () => {
+    const v = newSize.trim().toLowerCase().replace(/\s+/g, "_");
+    if (!v || petSizes.includes(v)) return;
+    setPetSizes(s => [...s, v]);
+    setNewSize("");
+  };
+
+  const removeSize = (v: string) => setPetSizes(s => s.filter(x => x !== v));
+
+  const addCoat = () => {
+    const v = newCoat.trim().toLowerCase().replace(/\s+/g, "_");
+    if (!v || coatTypes.includes(v)) return;
+    setCoatTypes(s => [...s, v]);
+    setNewCoat("");
+  };
+
+  const removeCoat = (v: string) => setCoatTypes(s => s.filter(x => x !== v));
+
   return (
     <div className="p-6 space-y-6">
       <div>
@@ -46,6 +98,7 @@ export default function Empresas() {
         <p className="text-muted-foreground">Dados do seu pet shop</p>
       </div>
 
+      {/* ── Informações Gerais ── */}
       <Card className="max-w-lg">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -73,6 +126,7 @@ export default function Empresas() {
         </CardContent>
       </Card>
 
+      {/* ── Método de Agendamento ── */}
       <Card className="max-w-lg">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -120,6 +174,98 @@ export default function Empresas() {
                 className="w-full"
               >
                 <Save className="h-4 w-4 mr-2" />Salvar Método
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ── Portes e Pelagens ── */}
+      <Card className="max-w-lg">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <PawPrint className="h-5 w-5 text-primary" />
+            Portes e Pelagens
+          </CardTitle>
+          <CardDescription>
+            Defina os portes e tipos de pelagem disponíveis no seu pet shop. Esses valores são usados nos
+            cadastros de pets e na tabela de preços dos serviços.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="space-y-4">
+              <Skeleton className="h-20 w-full" />
+              <Skeleton className="h-20 w-full" />
+            </div>
+          ) : (
+            <div className="space-y-5">
+              {/* Portes */}
+              <div className="space-y-2">
+                <Label className="font-semibold">Portes</Label>
+                <p className="text-xs text-muted-foreground">Arraste para reordenar (use os nomes em minúsculas, ex: mini, pequeno, medio).</p>
+                <div className="flex flex-wrap gap-2 min-h-[40px] p-2 border rounded-lg bg-muted/20">
+                  {petSizes.map(p => (
+                    <Badge key={p} variant="secondary" className="gap-1 pr-1">
+                      {p}
+                      <button
+                        onClick={() => removeSize(p)}
+                        className="ml-1 hover:text-destructive transition-colors"
+                        title="Remover"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Novo porte (ex: extra_grande)"
+                    value={newSize}
+                    onChange={e => setNewSize(e.target.value)}
+                    onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addSize(); } }}
+                    className="h-8 text-sm"
+                  />
+                  <Button variant="outline" size="sm" onClick={addSize} disabled={!newSize.trim()}>
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Pelagens */}
+              <div className="space-y-2">
+                <Label className="font-semibold">Pelagens</Label>
+                <p className="text-xs text-muted-foreground">Tipos de pelagem aceitos no seu pet shop (ex: curto, longo, duplo).</p>
+                <div className="flex flex-wrap gap-2 min-h-[40px] p-2 border rounded-lg bg-muted/20">
+                  {coatTypes.map(c => (
+                    <Badge key={c} variant="outline" className="gap-1 pr-1">
+                      {c}
+                      <button
+                        onClick={() => removeCoat(c)}
+                        className="ml-1 hover:text-destructive transition-colors"
+                        title="Remover"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Nova pelagem (ex: duplo, crespo)"
+                    value={newCoat}
+                    onChange={e => setNewCoat(e.target.value)}
+                    onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addCoat(); } }}
+                    className="h-8 text-sm"
+                  />
+                  <Button variant="outline" size="sm" onClick={addCoat} disabled={!newCoat.trim()}>
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              <Button onClick={handleSaveSizes} disabled={updateTenant.isPending} className="w-full">
+                <Save className="h-4 w-4 mr-2" />Salvar Portes e Pelagens
               </Button>
             </div>
           )}

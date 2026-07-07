@@ -24,6 +24,7 @@ const ServiceItemSchema = zod.object({
 
 const PriceBySizeSchema = zod.object({
   size: zod.string().min(1).max(50),
+  coat: zod.string().max(50).optional(),
   price: zod.number().min(0),
 });
 
@@ -185,7 +186,9 @@ router.post("/packages/:id/sell", async (req, res): Promise<void> => {
     return;
   }
 
-  const priceEntry = priceBySizes.find(p => p.size === pet.size);
+  const priceEntry =
+    priceBySizes.find(p => p.size === pet.size && p.coat === pet.coat) ??
+    priceBySizes.find(p => p.size === pet.size);
   const packagePrice = priceEntry ? priceEntry.price : 0;
 
   const sortedItems = [...serviceItems].sort((a, b) => b.quantity - a.quantity);

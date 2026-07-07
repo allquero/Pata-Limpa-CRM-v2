@@ -5,7 +5,6 @@
  * Grooming CRM API
  * OpenAPI spec version: 0.1.0
  */
-import type { ServiceSize } from "./serviceSize";
 
 export interface Service {
   id: number;
@@ -13,7 +12,10 @@ export interface Service {
   name: string;
   /** @nullable */
   description?: string | null;
-  size: ServiceSize;
+  /** Porte (ex "pequeno") — configurado pelo pet shop */
+  size: string;
+  /** Pelagem (ex "curto") — configurado pelo pet shop */
+  coat: string;
   price: number;
   /** @nullable */
   durationMinutes?: number | null;

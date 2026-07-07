@@ -5,12 +5,12 @@
  * Grooming CRM API
  * OpenAPI spec version: 0.1.0
  */
-import type { ServiceUpdateSize } from "./serviceUpdateSize";
 
 export interface ServiceUpdate {
   name?: string;
   description?: string;
-  size?: ServiceUpdateSize;
+  size?: string;
+  coat?: string;
   price?: number;
   durationMinutes?: number;
 }

@@ -1,7 +1,6 @@
 import { useState, useRef } from "react";
-import { useListClients, useCreateClient, useUpdateClient, useDeleteClient, useListPets, useCreatePet, useUpdatePet, useDeletePet, getListPetsQueryKey } from "@workspace/api-client-react";
-import type { PetInputSize } from "@workspace/api-client-react";
-import { PORTE_SIZES } from "@/lib/constants";
+import { useListClients, useCreateClient, useUpdateClient, useDeleteClient, useListPets, useCreatePet, useUpdatePet, useDeletePet, getListPetsQueryKey, useGetTenant } from "@workspace/api-client-react";
+import { DEFAULT_PORTE_LABELS, DEFAULT_COAT_LABELS, DEFAULT_PORTE_ORDER, getPorteLabel, getCoatLabel } from "@/lib/constants";
 import { useAppAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,24 +38,20 @@ type ImportResult = {
 };
 
 // ── Constantes ───────────────────────────────────────────────────────────────
-const COAT_OPTIONS = [
-  "Curta", "Longa", "Crespa / Encaracolada", "Dupla (undercoat)", "Lisa", "Áspera",
-];
-
 const emptyClient = { name: "", phone: "", email: "", address: "", notes: "" };
 
 const emptyPet = {
-  name: "", breed: "", size: "pequeno_curto", notes: "",
+  name: "", breed: "", size: "pequeno", coat: "curto", notes: "",
   sex: "", neutered: false,
-  coat: "", behavior: "", healthNotes: "",
+  behavior: "", healthNotes: "",
   photoUrl: "", groomingPreferences: "",
   senior: false,
 };
 
-const CSV_MODELO = `nome_cliente,telefone,email,endereco,notas_cliente,nome_pet,raca,porte,sexo,castrado,pelagem,comportamento,saude,preferencias_tosa,notas_pet
-Maria Silva,(44) 99999-0001,maria@email.com,Rua das Flores 10,,Rex,Poodle,pequeno_longo,macho,nao,longa,agitado,,tosa curta no corpo,
-Maria Silva,(44) 99999-0001,,,, Mel,Shih Tzu,mini_longo,femea,sim,longa,,alergia a shampoo forte,,
-João Costa,(44) 99999-0002,,,,Thor,Labrador,grande_curto,macho,nao,curta,,,, 
+const CSV_MODELO = `nome_cliente,telefone,email,endereco,notas_cliente,nome_pet,raca,porte,pelagem,sexo,castrado,comportamento,saude,preferencias_tosa,notas_pet
+Maria Silva,(44) 99999-0001,maria@email.com,Rua das Flores 10,,Rex,Poodle,pequeno,longo,macho,nao,agitado,,tosa curta no corpo,
+Maria Silva,(44) 99999-0001,,,,Mel,Shih Tzu,mini,longo,femea,sim,,alergia a shampoo forte,,
+João Costa,(44) 99999-0002,,,,Thor,Labrador,grande,curto,macho,nao,,,,
 `;
 
 // ── Componente principal ─────────────────────────────────────────────────────
@@ -64,6 +59,7 @@ export default function Clientes() {
   const { tenantId } = useAppAuth();
   const { toast } = useToast();
   const { data: clients = [], isLoading, refetch } = useListClients({ tenantId: tenantId! });
+  const { data: tenant } = useGetTenant(tenantId!);
   const createClient = useCreateClient();
   const updateClient = useUpdateClient();
   const deleteClient = useDeleteClient();
@@ -87,6 +83,10 @@ export default function Clientes() {
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // ── Tenant config ────────────────────────────────────────────────────────
+  const tenantPortes = (tenant as any)?.petSizes ?? DEFAULT_PORTE_ORDER;
+  const tenantCoats = (tenant as any)?.coatTypes ?? Object.keys(DEFAULT_COAT_LABELS);
 
   const petsParams = expandedClient ? { clientId: expandedClient } : { clientId: 0 };
   const { data: pets = [], refetch: refetchPets } = useListPets(petsParams, {
@@ -137,7 +137,7 @@ export default function Clientes() {
   const openAddPet = (clientId: number) => {
     setEditingPet(null);
     setPetClientId(clientId);
-    setPetForm(emptyPet);
+    setPetForm({ ...emptyPet, size: tenantPortes[0] ?? "pequeno", coat: tenantCoats[0] ?? "curto" });
     setPetModalOpen(true);
   };
 
@@ -148,10 +148,10 @@ export default function Clientes() {
       name: pet.name,
       breed: pet.breed ?? "",
       size: pet.size,
+      coat: pet.coat ?? tenantCoats[0] ?? "curto",
       notes: pet.notes ?? "",
       sex: pet.sex ?? "",
       neutered: pet.neutered ?? false,
-      coat: pet.coat ?? "",
       behavior: pet.behavior ?? "",
       healthNotes: pet.healthNotes ?? "",
       photoUrl: pet.photoUrl ?? "",
@@ -166,11 +166,11 @@ export default function Clientes() {
     const payload = {
       name: petForm.name,
       breed: petForm.breed || undefined,
-      size: petForm.size as PetInputSize,
+      size: petForm.size,
+      coat: petForm.coat || undefined,
       notes: petForm.notes || undefined,
       sex: (petForm.sex || undefined) as "macho" | "femea" | undefined,
       neutered: petForm.neutered,
-      coat: petForm.coat || undefined,
       behavior: petForm.behavior || undefined,
       healthNotes: petForm.healthNotes || undefined,
       photoUrl: petForm.photoUrl || undefined,
@@ -178,19 +178,17 @@ export default function Clientes() {
       senior: petForm.senior,
       clientId: petClientId,
     };
-
     try {
       if (editingPet) {
         await updatePet.mutateAsync({ id: editingPet.id, data: payload });
         toast({ title: "Pet atualizado!" });
       } else {
         await createPet.mutateAsync({ data: payload });
-        toast({ title: "Pet adicionado!" });
+        toast({ title: "Pet cadastrado!" });
       }
       setPetModalOpen(false);
-      setPetForm(emptyPet);
       setEditingPet(null);
-      if (expandedClient === petClientId) refetchPets();
+      refetchPets();
     } catch {
       toast({ title: "Erro ao salvar pet", variant: "destructive" });
     }
@@ -326,8 +324,13 @@ export default function Clientes() {
                             {pet.senior && <Badge className="text-xs bg-amber-100 text-amber-700 border border-amber-300 px-1.5 py-0">Idoso</Badge>}
                             {pet.breed && <span className="text-xs text-muted-foreground">{pet.breed}</span>}
                             <Badge variant="secondary" className="text-xs">
-                              {PORTE_SIZES[pet.size as keyof typeof PORTE_SIZES] ?? pet.size}
+                              {getPorteLabel(pet.size)}
                             </Badge>
+                            {pet.coat && (
+                              <Badge variant="outline" className="text-xs">
+                                {getCoatLabel(pet.coat)}
+                              </Badge>
+                            )}
                             <Button variant="ghost" size="icon" className="h-5 w-5"
                               onClick={() => openEditPet(pet)}><Pencil className="h-3 w-3" /></Button>
                             <Button variant="ghost" size="icon" className="h-5 w-5"
@@ -385,11 +388,24 @@ export default function Clientes() {
                 <Input value={petForm.breed} onChange={e => setPetForm(f => ({ ...f, breed: e.target.value }))} />
               </div>
               <div>
-                <Label>Porte / Pelagem *</Label>
+                <Label>Porte *</Label>
                 <Select value={petForm.size} onValueChange={v => setPetForm(f => ({ ...f, size: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {Object.entries(PORTE_SIZES).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+                    {tenantPortes.map((p: string) => (
+                      <SelectItem key={p} value={p}>{getPorteLabel(p)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Pelagem *</Label>
+                <Select value={petForm.coat} onValueChange={v => setPetForm(f => ({ ...f, coat: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {tenantCoats.map((c: string) => (
+                      <SelectItem key={c} value={c}>{getCoatLabel(c)}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -429,17 +445,9 @@ export default function Clientes() {
               </div>
             </div>
 
-            {/* Pelagem e saúde */}
+            {/* Saúde e comportamento */}
             <div>
-              <Label>Tipo de Pelagem</Label>
-              <Select value={petForm.coat} onValueChange={v => setPetForm(f => ({ ...f, coat: v }))}>
-                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                <SelectContent>
-                  {COAT_OPTIONS.map(o => <SelectItem key={o} value={o.toLowerCase()}>{o}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div><Label>Comportamento</Label>
+              <Label>Comportamento</Label>
               <Input placeholder="Ex: agitado, morde, assustado..." value={petForm.behavior}
                 onChange={e => setPetForm(f => ({ ...f, behavior: e.target.value }))} />
             </div>
@@ -514,15 +522,13 @@ export default function Clientes() {
                   <p className="font-medium">Campos aceitos:</p>
                   <p className="font-mono bg-muted rounded p-2 text-[10px] leading-relaxed break-all">
                     nome_cliente, telefone, email, endereco, notas_cliente,<br />
-                    nome_pet, raca, porte, sexo, castrado, pelagem, comportamento,<br />
-                    saude, preferencias_tosa, tipo_pet, frequencia, dia_semana,<br />
-                    preco_por_visita, notas_pet
+                    nome_pet, raca, porte, pelagem, sexo, castrado, comportamento,<br />
+                    saude, preferencias_tosa, notas_pet
                   </p>
                 </div>
               </>
             ) : (
               <div className="space-y-4">
-                {/* Resumo */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                     <div className="flex items-center gap-2 mb-1">
@@ -550,7 +556,6 @@ export default function Clientes() {
                   </div>
                 </div>
 
-                {/* Erros */}
                 {importResult.errors.length > 0 && (
                   <div className="space-y-1.5">
                     <p className="text-xs font-semibold text-destructive">

@@ -6,15 +6,16 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { PetUpdateSex } from "./petUpdateSex";
-import type { PetUpdateSize } from "./petUpdateSize";
 
 export interface PetUpdate {
   name?: string;
   breed?: string;
-  size?: PetUpdateSize;
+  /** Porte do pet (ex "pequeno") — valor configurado pelo pet shop */
+  size?: string;
+  /** Pelagem do pet (ex "curto") — valor configurado pelo pet shop */
+  coat?: string;
   sex?: PetUpdateSex;
   neutered?: boolean;
-  coat?: string;
   behavior?: string;
   healthNotes?: string;
   groomingPreferences?: string;

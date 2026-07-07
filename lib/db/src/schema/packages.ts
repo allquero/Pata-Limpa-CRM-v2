@@ -11,6 +11,7 @@ export type ServiceItem = z.infer<typeof serviceItemSchema>;
 
 export const priceBySize = z.object({
   size: z.string(),
+  coat: z.string().optional(),
   price: z.number(),
 });
 export type PriceBySize = z.infer<typeof priceBySize>;

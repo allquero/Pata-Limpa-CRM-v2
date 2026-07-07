@@ -13,4 +13,6 @@ export interface TenantUpdate {
   email?: string;
   address?: string;
   schedulingMethod?: TenantUpdateSchedulingMethod;
+  petSizes?: string[];
+  coatTypes?: string[];
 }

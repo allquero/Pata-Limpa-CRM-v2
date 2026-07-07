@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { useListServices, useCreateService, useUpdateService, useDeleteService } from "@workspace/api-client-react";
-import type { ServiceInputSize } from "@workspace/api-client-react";
-import { PORTE_SIZES } from "@/lib/constants";
+import { useListServices, useCreateService, useUpdateService, useDeleteService, useGetTenant } from "@workspace/api-client-react";
+import { DEFAULT_PORTE_ORDER, DEFAULT_COAT_LABELS, getPorteLabel, getCoatLabel } from "@/lib/constants";
 import { useAppAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,22 +13,32 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 
-type Service = { id: number; name: string; size: string; price: number; durationMinutes: number | null };
+type Service = { id: number; name: string; size: string; coat: string; price: number; durationMinutes: number | null };
 
-const ALL_SIZES = Object.entries(PORTE_SIZES) as [string, string][];
-
-type BulkPrices = Record<string, string>;
+type BulkPrices = Record<string, string>; // key = "size|coat"
 
 const emptyBulkForm = { name: "", durationMinutes: 60, prices: {} as BulkPrices };
-const emptyEditForm = { name: "", size: "mini_longo", price: "", durationMinutes: 60 };
+const emptyEditForm = { name: "", size: "pequeno", coat: "curto", price: "", durationMinutes: 60 };
+
+function sizeCoatKey(size: string, coat: string) { return `${size}|${coat}`; }
 
 export default function Servicos() {
   const { tenantId } = useAppAuth();
   const { toast } = useToast();
+  const { data: tenant } = useGetTenant(tenantId!);
   const { data: services = [], isLoading, refetch } = useListServices({ tenantId: tenantId! });
   const createService = useCreateService();
   const updateService = useUpdateService();
   const deleteService = useDeleteService();
+
+  // ── Tenant config ─────────────────────────────────────────────────────────
+  const tenantPortes: string[] = (tenant as any)?.petSizes ?? DEFAULT_PORTE_ORDER;
+  const tenantCoats: string[] = (tenant as any)?.coatTypes ?? Object.keys(DEFAULT_COAT_LABELS);
+
+  // combinações porte × pelagem
+  const allCombos: [string, string, string][] = tenantPortes.flatMap(p =>
+    tenantCoats.map(c => [p, c, `${getPorteLabel(p)} · ${getCoatLabel(c)}`] as [string, string, string])
+  );
 
   const [createOpen, setCreateOpen] = useState(false);
   const [bulkForm, setBulkForm] = useState(emptyBulkForm);
@@ -48,12 +57,12 @@ export default function Servicos() {
 
   const openEdit = (s: Service) => {
     setEditing(s);
-    setEditForm({ name: s.name, size: s.size, price: String(s.price), durationMinutes: s.durationMinutes ?? 60 });
+    setEditForm({ name: s.name, size: s.size, coat: s.coat ?? "curto", price: String(s.price), durationMinutes: s.durationMinutes ?? 60 });
     setEditOpen(true);
   };
 
-  const setBulkPrice = (size: string, value: string) => {
-    setBulkForm(f => ({ ...f, prices: { ...f.prices, [size]: value } }));
+  const setBulkPrice = (key: string, value: string) => {
+    setBulkForm(f => ({ ...f, prices: { ...f.prices, [key]: value } }));
   };
 
   const handleCreate = async () => {
@@ -66,23 +75,24 @@ export default function Servicos() {
       toast({ title: "Duração deve ser maior que zero", variant: "destructive" });
       return;
     }
-    const toCreate = ALL_SIZES.filter(([size]) => {
-      const val = parseFloat(bulkForm.prices[size] ?? "");
+    const toCreate = allCombos.filter(([size, coat]) => {
+      const val = parseFloat(bulkForm.prices[sizeCoatKey(size, coat)] ?? "");
       return !isNaN(val) && val > 0;
     });
     if (toCreate.length === 0) {
-      toast({ title: "Informe o preço de pelo menos um porte", variant: "destructive" });
+      toast({ title: "Informe o preço de pelo menos uma combinação", variant: "destructive" });
       return;
     }
     setIsSaving(true);
     const results = await Promise.allSettled(
-      toCreate.map(([size]) =>
+      toCreate.map(([size, coat]) =>
         createService.mutateAsync({
           data: {
             tenantId: tenantId!,
             name: bulkForm.name.trim(),
-            size: size as ServiceInputSize,
-            price: parseFloat(bulkForm.prices[size]!),
+            size,
+            coat,
+            price: parseFloat(bulkForm.prices[sizeCoatKey(size, coat)]!),
             durationMinutes: duration,
           },
         })
@@ -92,14 +102,14 @@ export default function Servicos() {
     const succeeded = results.filter(r => r.status === "fulfilled").length;
     const failed = results.filter(r => r.status === "rejected").length;
     if (failed === 0) {
-      toast({ title: `Serviço criado para ${succeeded} porte${succeeded !== 1 ? "s" : ""}!` });
+      toast({ title: `Serviço criado para ${succeeded} combinação${succeeded !== 1 ? "ões" : ""}!` });
       setCreateOpen(false);
     } else if (succeeded === 0) {
-      toast({ title: "Erro ao salvar os portes", variant: "destructive" });
+      toast({ title: "Erro ao salvar", variant: "destructive" });
     } else {
       toast({
-        title: `${succeeded} porte${succeeded !== 1 ? "s" : ""} criado${succeeded !== 1 ? "s" : ""}`,
-        description: `${failed} porte${failed !== 1 ? "s" : ""} não foi salvo. Tente novamente.`,
+        title: `${succeeded} criado${succeeded !== 1 ? "s" : ""}`,
+        description: `${failed} não foi salvo. Tente novamente.`,
         variant: "destructive",
       });
       setCreateOpen(false);
@@ -119,7 +129,8 @@ export default function Servicos() {
         id: editing.id,
         data: {
           name: editForm.name,
-          size: editForm.size as ServiceInputSize,
+          size: editForm.size,
+          coat: editForm.coat,
           price: Number(editForm.price),
           durationMinutes: duration,
         },
@@ -161,7 +172,9 @@ export default function Servicos() {
           <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos</SelectItem>
-            {Object.entries(PORTE_SIZES).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+            {tenantPortes.map((p: string) => (
+              <SelectItem key={p} value={p}>{getPorteLabel(p)}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -179,19 +192,29 @@ export default function Servicos() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {items.sort((a, b) => Object.keys(PORTE_SIZES).indexOf(a.size) - Object.keys(PORTE_SIZES).indexOf(b.size)).map(s => (
-                    <div key={s.id} className="flex items-center justify-between p-3 border rounded-lg bg-card hover:bg-accent/30 transition-colors">
-                      <div>
-                        <Badge variant="secondary" className="mb-1">{PORTE_SIZES[s.size as keyof typeof PORTE_SIZES] ?? s.size}</Badge>
-                        <p className="font-semibold text-primary">{Number(s.price).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</p>
-                        <p className="text-xs text-muted-foreground">{s.durationMinutes} min</p>
+                  {items
+                    .sort((a, b) => {
+                      const ai = tenantPortes.indexOf(a.size);
+                      const bi = tenantPortes.indexOf(b.size);
+                      if (ai !== bi) return ai - bi;
+                      return tenantCoats.indexOf(a.coat) - tenantCoats.indexOf(b.coat);
+                    })
+                    .map(s => (
+                      <div key={s.id} className="flex items-center justify-between p-3 border rounded-lg bg-card hover:bg-accent/30 transition-colors">
+                        <div>
+                          <div className="flex gap-1 mb-1">
+                            <Badge variant="secondary">{getPorteLabel(s.size)}</Badge>
+                            {s.coat && <Badge variant="outline">{getCoatLabel(s.coat)}</Badge>}
+                          </div>
+                          <p className="font-semibold text-primary">{Number(s.price).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</p>
+                          <p className="text-xs text-muted-foreground">{s.durationMinutes} min</p>
+                        </div>
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => openEdit(s)}><Pencil className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleDelete(s.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                        </div>
                       </div>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => openEdit(s)}><Pencil className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(s.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
                 </div>
               </CardContent>
             </Card>
@@ -199,7 +222,7 @@ export default function Servicos() {
         </div>
       )}
 
-      {/* Modal de Criação em Massa */}
+      {/* ── Modal de Criação em Massa ── */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -224,14 +247,14 @@ export default function Servicos() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Preço por porte *</Label>
+              <Label>Preço por porte · pelagem *</Label>
               <p className="text-xs text-muted-foreground">
-                Deixe em branco os portes que não se aplicam a este serviço.
+                Deixe em branco as combinações que não se aplicam a este serviço.
               </p>
               <div className="rounded-lg border divide-y">
-                {ALL_SIZES.map(([size, label]) => (
-                  <div key={size} className="flex items-center justify-between px-3 py-2 gap-3">
-                    <span className="text-sm w-36 shrink-0">{label}</span>
+                {allCombos.map(([size, coat, label]) => (
+                  <div key={`${size}|${coat}`} className="flex items-center justify-between px-3 py-2 gap-3">
+                    <span className="text-sm w-40 shrink-0">{label}</span>
                     <div className="flex items-center gap-1.5 flex-1">
                       <span className="text-sm text-muted-foreground">R$</span>
                       <Input
@@ -239,8 +262,8 @@ export default function Servicos() {
                         step="0.01"
                         min="0"
                         placeholder="0,00"
-                        value={bulkForm.prices[size] ?? ""}
-                        onChange={e => setBulkPrice(size, e.target.value)}
+                        value={bulkForm.prices[sizeCoatKey(size, coat)] ?? ""}
+                        onChange={e => setBulkPrice(sizeCoatKey(size, coat), e.target.value)}
                         className="h-8 text-sm"
                       />
                     </div>
@@ -258,7 +281,7 @@ export default function Servicos() {
         </DialogContent>
       </Dialog>
 
-      {/* Modal de Edição Individual */}
+      {/* ── Modal de Edição Individual ── */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent>
           <DialogHeader>
@@ -269,14 +292,29 @@ export default function Servicos() {
               <Label>Nome do Serviço *</Label>
               <Input value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} />
             </div>
-            <div>
-              <Label>Porte / Pelagem *</Label>
-              <Select value={editForm.size} onValueChange={v => setEditForm(f => ({ ...f, size: v }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {Object.entries(PORTE_SIZES).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Porte *</Label>
+                <Select value={editForm.size} onValueChange={v => setEditForm(f => ({ ...f, size: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {tenantPortes.map((p: string) => (
+                      <SelectItem key={p} value={p}>{getPorteLabel(p)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Pelagem *</Label>
+                <Select value={editForm.coat} onValueChange={v => setEditForm(f => ({ ...f, coat: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {tenantCoats.map((c: string) => (
+                      <SelectItem key={c} value={c}>{getCoatLabel(c)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div>
               <Label>Preço (R$) *</Label>

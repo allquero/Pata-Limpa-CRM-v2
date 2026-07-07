@@ -23,5 +23,15 @@ export interface Tenant {
   /** @nullable */
   accessEnd?: Date | null;
   schedulingMethod?: TenantSchedulingMethod;
+  /**
+   * Portes configurados pelo pet shop (ex ["mini","pequeno","medio","grande","gigante"])
+   * @nullable
+   */
+  petSizes?: string[] | null;
+  /**
+   * Pelagens configuradas pelo pet shop (ex ["curto","longo"])
+   * @nullable
+   */
+  coatTypes?: string[] | null;
   createdAt: Date;
 }
