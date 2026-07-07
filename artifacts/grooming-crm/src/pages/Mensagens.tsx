@@ -22,13 +22,13 @@ const DEFAULT_TEMPLATES: { name: string; type: string; content: string }[] = [
     name: "Confirmação de Presença",
     type: "confirmacao",
     content:
-      "Olá {nome_cliente}! 🐾 Tudo bem?\n\nPassando para confirmar o agendamento do(a) {nome_pet} em {data} às {horario}.\n\nResponda SIM para confirmar ou nos avise para remarcarmos. Obrigado! 😊",
+      "Olá {nome_cliente}! 🐾 Tudo bem?\n\nPassando para confirmar o agendamento do(a) {nome_pet} em {data} — {periodo}.\n\nResponda SIM para confirmar ou nos avise para remarcarmos. Obrigado! 😊",
   },
   {
     name: "Lembrete de Agendamento",
     type: "lembrete",
     content:
-      "Oi {nome_cliente}! 🐾 Lembrando que o(a) {nome_pet} tem {servico} agendado para amanhã, {data} às {horario}.\n\nNos vemos em breve! 🐶✂️",
+      "Oi {nome_cliente}! 🐾 Lembrando que o(a) {nome_pet} tem {servico} agendado para amanhã, {data} — {periodo}.\n\nNos vemos em breve! 🐶✂️",
   },
   {
     name: "Agradecimento após atendimento",
@@ -58,7 +58,7 @@ const typeColors: Record<string, string> = {
   pet_pronto: "bg-amber-100 text-amber-800",
 };
 
-const variables = ["{nome_cliente}", "{nome_pet}", "{data}", "{horario}", "{servico}", "{preco}", "{datas}"];
+const variables = ["{nome_cliente}", "{nome_pet}", "{data}", "{horario}", "{periodo}", "{servico}", "{preco}", "{datas}"];
 
 export default function Mensagens() {
   const { tenantId } = useAppAuth();

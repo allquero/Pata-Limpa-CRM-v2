@@ -2,9 +2,9 @@ import { useState } from "react";
 import {
   useListPackages, useCreatePackage, useUpdatePackage, useDeletePackage,
   useListServices, useListClients, useListPets, useSellPackage,
-  getListPetsQueryKey,
+  getListPetsQueryKey, useGetTenant,
 } from "@workspace/api-client-react";
-import { DEFAULT_PORTE_ORDER, getPorteLabel, getCoatLabel } from "@/lib/constants";
+import { DEFAULT_PORTE_ORDER, DEFAULT_COAT_LABELS, getPorteLabel, getCoatLabel } from "@/lib/constants";
 import { useAppAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,14 +31,12 @@ type Pkg = {
   priceBySizes: PriceBySize[];
 };
 
-const emptyPriceBySizes = (): PriceBySize[] =>
-  DEFAULT_PORTE_ORDER.map(size => ({ size, price: 0 }));
+function sizeCoatKey(size: string, coat: string) { return `${size}|${coat}`; }
 
-const emptyForm = {
+const emptyBaseForm = {
   name: "",
   description: "",
   serviceItems: [] as ServiceItem[],
-  priceBySizes: emptyPriceBySizes(),
 };
 
 const emptySellForm = {
@@ -56,6 +54,7 @@ function formatBRL(v: number) {
 export default function Pacotes() {
   const { tenantId } = useAppAuth();
   const { toast } = useToast();
+  const { data: tenantData } = useGetTenant(tenantId!);
   const { data: packages = [], isLoading, refetch } = useListPackages({ tenantId: tenantId! });
   const { data: services = [] } = useListServices({ tenantId: tenantId! });
   const { data: clients = [] } = useListClients({ tenantId: tenantId! });
@@ -64,10 +63,18 @@ export default function Pacotes() {
   const deletePackage = useDeletePackage();
   const sellPackage = useSellPackage();
 
+  // Tenant config
+  const tenantPortes: string[] = (tenantData as any)?.petSizes ?? DEFAULT_PORTE_ORDER;
+  const tenantCoats: string[] = (tenantData as any)?.coatTypes ?? Object.keys(DEFAULT_COAT_LABELS);
+  const allCombos: [string, string][] = tenantPortes.flatMap(s => tenantCoats.map(c => [s, c] as [string, string]));
+
   // Package create/edit modal
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Pkg | null>(null);
-  const [form, setForm] = useState(emptyForm);
+  const [form, setForm] = useState<typeof emptyBaseForm & { priceBySizes: PriceBySize[] }>({
+    ...emptyBaseForm,
+    priceBySizes: [],
+  });
   const [deleteTarget, setDeleteTarget] = useState<Pkg | null>(null);
 
   // Sell modal
@@ -87,8 +94,11 @@ export default function Pacotes() {
   // Price for selected pet
   const selectedPet = (clientPets as any[]).find((p: any) => p.id === Number(sellForm.petId));
   const petSize = selectedPet?.size as string | undefined;
+  const petCoat = (selectedPet as any)?.coat as string | undefined;
   const priceForPet = petSize && sellTarget
-    ? (sellTarget.priceBySizes.find(p => p.size === petSize)?.price ?? null)
+    ? (sellTarget.priceBySizes.find(p => p.size === petSize && p.coat === petCoat)?.price
+      ?? sellTarget.priceBySizes.find(p => p.size === petSize && !p.coat)?.price
+      ?? null)
     : null;
 
   // Compute session summary for sell modal
@@ -114,14 +124,21 @@ export default function Pacotes() {
 
   const openCreate = () => {
     setEditing(null);
-    setForm(emptyForm);
+    setForm({
+      ...emptyBaseForm,
+      priceBySizes: allCombos.map(([size, coat]) => ({ size, coat, price: 0 })),
+    });
     setModalOpen(true);
   };
 
   const openEdit = (pkg: Pkg) => {
     setEditing(pkg);
-    const savedMap = Object.fromEntries((pkg.priceBySizes ?? []).map(p => [p.size, p.price]));
-    const priceBySizes = DEFAULT_PORTE_ORDER.map(size => ({ size, price: savedMap[size] ?? 0 }));
+    const savedMap = Object.fromEntries(
+      (pkg.priceBySizes ?? []).map(p => [sizeCoatKey(p.size, p.coat ?? ""), p.price])
+    );
+    const priceBySizes = allCombos.map(([size, coat]) => ({
+      size, coat, price: savedMap[sizeCoatKey(size, coat)] ?? 0,
+    }));
     setForm({
       name: pkg.name,
       description: pkg.description ?? "",
@@ -153,11 +170,13 @@ export default function Pacotes() {
     setForm(f => ({ ...f, serviceItems: f.serviceItems.filter((_, i) => i !== idx) }));
   };
 
-  const updatePrice = (size: string, raw: string) => {
+  const updatePrice = (key: string, raw: string) => {
     const price = parseFloat(raw) || 0;
     setForm(f => ({
       ...f,
-      priceBySizes: f.priceBySizes.map(p => p.size === size ? { ...p, price } : p),
+      priceBySizes: f.priceBySizes.map(p =>
+        sizeCoatKey(p.size, p.coat ?? "") === key ? { ...p, price } : p
+      ),
     }));
   };
 
@@ -315,7 +334,7 @@ export default function Pacotes() {
                       <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Preço por porte</p>
                       <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
                         {prices.map(p => (
-                          <div key={p.size} className="flex items-center justify-between text-xs">
+                          <div key={sizeCoatKey(p.size, p.coat ?? "")} className="flex items-center justify-between text-xs">
                             <span className="text-muted-foreground capitalize">{getPorteLabel(p.size)}{p.coat ? ` · ${getCoatLabel(p.coat)}` : ""}</span>
                             <span className="font-medium">{formatBRL(p.price)}</span>
                           </div>
@@ -400,14 +419,16 @@ export default function Pacotes() {
               )}
             </div>
 
-            {/* Prices by size */}
+            {/* Prices by size × coat */}
             <div className="space-y-2">
-              <Label>Preço por porte *</Label>
-              <p className="text-xs text-muted-foreground">Deixe 0 para portes que não se aplicam a este pacote.</p>
+              <Label>Preço por porte · pelagem *</Label>
+              <p className="text-xs text-muted-foreground">Deixe 0 para combinações que não se aplicam a este pacote.</p>
               <div className="rounded-lg border divide-y">
-                {form.priceBySizes.map(({ size, price }) => (
-                  <div key={size} className="flex items-center justify-between px-3 py-2 gap-3">
-                    <span className="text-sm w-32 shrink-0">{getPorteLabel(size)}</span>
+                {form.priceBySizes.map(({ size, coat, price }) => (
+                  <div key={sizeCoatKey(size, coat ?? "")} className="flex items-center justify-between px-3 py-2 gap-3">
+                    <span className="text-sm w-44 shrink-0">
+                      {getPorteLabel(size)}{coat ? <span className="text-muted-foreground"> · {getCoatLabel(coat)}</span> : ""}
+                    </span>
                     <div className="flex items-center gap-1.5 flex-1">
                       <span className="text-sm text-muted-foreground">R$</span>
                       <Input
@@ -416,7 +437,7 @@ export default function Pacotes() {
                         min="0"
                         placeholder="0,00"
                         value={price === 0 ? "" : price}
-                        onChange={e => updatePrice(size, e.target.value)}
+                        onChange={e => updatePrice(sizeCoatKey(size, coat ?? ""), e.target.value)}
                         className="h-8 text-sm"
                       />
                     </div>

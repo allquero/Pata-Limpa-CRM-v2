@@ -580,10 +580,17 @@ function ConfirmacaoWhatsAppModal({
     : (mode === "agradecimento" || mode === "conclusao") ? "agradecimento" : "confirmacao";
   const filteredTemplates = (msgTemplates as MessageTemplate[]).filter(t => t.type === templateType);
 
+  const { data: tenantForMsg } = useGetTenant(tenantId);
+  const schedulingMethodForMsg = (tenantForMsg as any)?.schedulingMethod ?? "hora";
+  const isPeriodoMsg = schedulingMethodForMsg === "periodo";
+
   const buildMessage = (): string => {
     if (!appt || !client) return "";
-    const apptTime = new Date(appt.scheduledDate).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-    const apptDate = format(new Date(appt.scheduledDate), "dd/MM/yyyy");
+    const d = new Date(appt.scheduledDate);
+    const rawTime = d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    const periodoLabel = d.getUTCHours() < 12 ? "Manhã" : "Tarde";
+    const apptTime = isPeriodoMsg ? periodoLabel : rawTime;
+    const apptDate = format(d, "dd/MM/yyyy");
     const extraNames = (appt.extraServiceIds ?? [])
       .map(id => services.find(s => s.id === id)?.name)
       .filter(Boolean) as string[];
@@ -619,6 +626,7 @@ function ConfirmacaoWhatsAppModal({
       .replace(/\{nome_pet\}/g, pet?.name ?? "")
       .replace(/\{data\}/g, apptDate)
       .replace(/\{horario\}/g, apptTime)
+      .replace(/\{periodo\}/g, periodoLabel)
       .replace(/\{servico\}/g, serviceName)
       .replace(/\{preco\}/g, price)
       .replace(/\{datas\}/g, datasStr);
@@ -1177,16 +1185,20 @@ export default function Agendamentos() {
     const client = (clients as Client[]).find(c => c.id === appt.clientId);
     const service = (services as Service[]).find(s => s.id === appt.serviceId);
     const pkg = (packages as Package[]).find(p => p.id === appt.packageId);
-    const apptTime = new Date(appt.scheduledDate).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    const d = new Date(appt.scheduledDate);
+    const rawTime = d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    const periodoLabel = d.getUTCHours() < 12 ? "Manhã" : "Tarde";
+    const apptTime = isPeriodo ? periodoLabel : rawTime;
     const apptDate = format(tomorrow, "dd/MM/yyyy");
     const serviceName = service?.name ?? pkg?.name ?? "Serviço";
     const selectedTmpl = reminderTemplateId !== "default" ? reminderTemplates.find(t => String(t.id) === reminderTemplateId) : null;
-    const content = selectedTmpl?.content ?? `Olá {nome_cliente}! Lembramos que {nome_pet} tem agendamento amanhã, dia {data} às {horario}. Serviço: {servico}. Valor: {preco}. Aguardamos vocês! 🐾`;
+    const content = selectedTmpl?.content ?? `Olá {nome_cliente}! Lembramos que {nome_pet} tem agendamento amanhã, dia {data} — {periodo}. Serviço: {servico}. Valor: {preco}. Aguardamos vocês! 🐾`;
     return content
       .replace(/\{nome_cliente\}/g, client?.name ?? "")
       .replace(/\{nome_pet\}/g, pet?.name ?? "")
       .replace(/\{data\}/g, apptDate)
       .replace(/\{horario\}/g, apptTime)
+      .replace(/\{periodo\}/g, periodoLabel)
       .replace(/\{servico\}/g, serviceName)
       .replace(/\{preco\}/g, formatBRL(Number(appt.totalPrice)));
   };
