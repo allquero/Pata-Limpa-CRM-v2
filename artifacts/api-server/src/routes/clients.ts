@@ -121,10 +121,13 @@ router.get("/clients/:id/history", async (req: Request, res: Response): Promise<
     .leftJoin(petsTable, eq(packageSalesTable.petId, petsTable.id))
     .where(and(eq(packageSalesTable.clientId, clientId), eq(packageSalesTable.tenantId, req.tenantId!)));
 
-  // Partition appointments: avulsos (no recurringGroupId or recurringGroupId not in pkgSales) vs package
+  // Partition appointments strictly by packageId:
+  //   avulsos = appointments with package_id IS NULL
+  //   pkgAppts = appointments with package_id IS NOT NULL
+  // This is robust even when package_sales backfill is incomplete.
   const pkgGroupIds = new Set(pkgSales.map(p => p.sale.recurringGroupId));
-  const avulsosAppts = appts.filter(a => !a.appt.recurringGroupId || !pkgGroupIds.has(a.appt.recurringGroupId));
-  const pkgAppts = appts.filter(a => a.appt.recurringGroupId && pkgGroupIds.has(a.appt.recurringGroupId));
+  const avulsosAppts = appts.filter(a => a.appt.packageId == null);
+  const pkgAppts = appts.filter(a => a.appt.packageId != null && a.appt.recurringGroupId && pkgGroupIds.has(a.appt.recurringGroupId));
 
   // Group package appointments by recurringGroupId
   const pkgApptsByGroup = new Map<string, typeof pkgAppts>();
