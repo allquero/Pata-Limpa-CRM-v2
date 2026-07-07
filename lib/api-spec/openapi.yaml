@@ -497,6 +497,31 @@ paths:
               schema:
                 $ref: "#/components/schemas/Client"
 
+  /clients/{id}/history:
+    get:
+      operationId: getClientHistory
+      tags: [clients]
+      summary: Get full payment and appointment history for a client
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Client history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientHistory"
+        "404":
+          description: Client not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
   /clients/{id}:
     get:
       operationId: getClient
@@ -1049,6 +1074,96 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AppointmentFull"
+        "422":
+          description: Cannot mark as concluido without confirmedAt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  /appointments/{id}/confirm:
+    patch:
+      operationId: confirmAppointmentPresence
+      tags: [appointments]
+      summary: Set or clear confirmed_at for an appointment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppointmentConfirmInput"
+      responses:
+        "200":
+          description: Updated appointment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppointmentFull"
+        "404":
+          description: Appointment not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  # Payments
+  /payments:
+    post:
+      operationId: createPayment
+      tags: [financial]
+      summary: Register a payment (against an appointment or package sale)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentInput"
+      responses:
+        "201":
+          description: Created payment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payment"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Record does not belong to this tenant
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  /payments/{id}:
+    delete:
+      operationId: deletePayment
+      tags: [financial]
+      summary: Delete a payment record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Payment not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
 
   # Financial Entries
   /financial-entries:
@@ -2036,7 +2151,7 @@ components:
 
     SellPackageResult:
       type: object
-      required: [appointments, financialEntry]
+      required: [appointments, financialEntry, packageSale]
       properties:
         appointments:
           type: array
@@ -2044,6 +2159,8 @@ components:
             $ref: "#/components/schemas/AppointmentFull"
         financialEntry:
           $ref: "#/components/schemas/FinancialEntry"
+        packageSale:
+          $ref: "#/components/schemas/PackageSale"
 
     # Appointment
     AppointmentFull:
@@ -2080,6 +2197,9 @@ components:
           type: ["integer", "null"]
         recurringGroupId:
           type: ["string", "null"]
+        confirmedAt:
+          type: ["string", "null"]
+          format: date-time
         createdAt:
           type: string
           format: date-time
@@ -2105,6 +2225,190 @@ components:
               type: string
             price:
               type: number
+
+    AppointmentConfirmInput:
+      type: object
+      required: [confirmed]
+      properties:
+        confirmed:
+          type: boolean
+
+    # Package Sale
+    PackageSale:
+      type: object
+      required: [id, tenantId, clientId, recurringGroupId, saleDate, createdAt]
+      properties:
+        id:
+          type: integer
+        tenantId:
+          type: integer
+        clientId:
+          type: integer
+        petId:
+          type: ["integer", "null"]
+        packageId:
+          type: ["integer", "null"]
+        recurringGroupId:
+          type: string
+        totalPrice:
+          type: ["number", "null"]
+        weeks:
+          type: ["integer", "null"]
+        saleDate:
+          type: string
+          format: date
+        createdAt:
+          type: string
+          format: date-time
+
+    # Payment
+    Payment:
+      type: object
+      required: [id, tenantId, clientId, amount, paymentDate, createdAt]
+      properties:
+        id:
+          type: integer
+        tenantId:
+          type: integer
+        clientId:
+          type: integer
+        appointmentId:
+          type: ["integer", "null"]
+        packageSaleId:
+          type: ["integer", "null"]
+        amount:
+          type: number
+        paymentDate:
+          type: string
+          format: date
+        paymentMethod:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    PaymentInput:
+      type: object
+      required: [clientId, amount, paymentDate]
+      properties:
+        clientId:
+          type: integer
+        appointmentId:
+          type: integer
+        packageSaleId:
+          type: integer
+        amount:
+          type: number
+          minimum: 0.01
+        paymentDate:
+          type: string
+          format: date
+        paymentMethod:
+          type: string
+        notes:
+          type: string
+
+    # Client History
+    ClientHistory:
+      type: object
+      required: [client, avulsos, pacotes]
+      properties:
+        client:
+          $ref: "#/components/schemas/Client"
+        avulsos:
+          type: array
+          items:
+            type: object
+            required: [id, scheduledDate, totalPrice, totalPago, saldo, statusPagamento]
+            properties:
+              id:
+                type: integer
+              scheduledDate:
+                type: string
+                format: date-time
+              status:
+                type: string
+              totalPrice:
+                type: number
+              confirmedAt:
+                type: ["string", "null"]
+                format: date-time
+              notes:
+                type: ["string", "null"]
+              service:
+                type: ["object", "null"]
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+              pet:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+              totalPago:
+                type: number
+              saldo:
+                type: number
+              statusPagamento:
+                type: string
+                enum: [quitado, parcial, pendente]
+              pagamentos:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Payment"
+        pacotes:
+          type: array
+          items:
+            type: object
+            required: [id, recurringGroupId, totalPrice, totalPago, saldo, statusPagamento, agendamentos]
+            properties:
+              id:
+                type: integer
+              recurringGroupId:
+                type: string
+              packageName:
+                type: ["string", "null"]
+              petName:
+                type: ["string", "null"]
+              saleDate:
+                type: string
+                format: date
+              totalPrice:
+                type: ["number", "null"]
+              weeks:
+                type: ["integer", "null"]
+              totalPago:
+                type: number
+              saldo:
+                type: ["number", "null"]
+              statusPagamento:
+                type: string
+                enum: [quitado, parcial, pendente]
+              agendamentos:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    scheduledDate:
+                      type: string
+                      format: date-time
+                    status:
+                      type: string
+                    confirmedAt:
+                      type: ["string", "null"]
+                      format: date-time
+              pagamentos:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Payment"
 
     AppointmentInput:
       type: object

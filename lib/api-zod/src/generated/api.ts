@@ -375,6 +375,105 @@ export const CreateClientBody = zod.object({
 });
 
 /**
+ * @summary Get full payment and appointment history for a client
+ */
+export const GetClientHistoryParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetClientHistoryResponse = zod.object({
+  client: zod.object({
+    id: zod.number(),
+    tenantId: zod.number(),
+    name: zod.string(),
+    phone: zod.string().nullish(),
+    email: zod.string().nullish(),
+    address: zod.string().nullish(),
+    notes: zod.string().nullish(),
+    createdAt: zod.coerce.date(),
+  }),
+  avulsos: zod.array(
+    zod.object({
+      id: zod.number(),
+      scheduledDate: zod.coerce.date(),
+      status: zod.string().optional(),
+      totalPrice: zod.number(),
+      confirmedAt: zod.coerce.date().nullish(),
+      notes: zod.string().nullish(),
+      service: zod
+        .object({
+          id: zod.number().optional(),
+          name: zod.string().optional(),
+        })
+        .nullish(),
+      pet: zod
+        .object({
+          id: zod.number().optional(),
+          name: zod.string().optional(),
+        })
+        .optional(),
+      totalPago: zod.number(),
+      saldo: zod.number(),
+      statusPagamento: zod.enum(["quitado", "parcial", "pendente"]),
+      pagamentos: zod
+        .array(
+          zod.object({
+            id: zod.number(),
+            tenantId: zod.number(),
+            clientId: zod.number(),
+            appointmentId: zod.number().nullish(),
+            packageSaleId: zod.number().nullish(),
+            amount: zod.number(),
+            paymentDate: zod.coerce.date(),
+            paymentMethod: zod.string().nullish(),
+            notes: zod.string().nullish(),
+            createdAt: zod.coerce.date(),
+          }),
+        )
+        .optional(),
+    }),
+  ),
+  pacotes: zod.array(
+    zod.object({
+      id: zod.number(),
+      recurringGroupId: zod.string(),
+      packageName: zod.string().nullish(),
+      petName: zod.string().nullish(),
+      saleDate: zod.coerce.date().optional(),
+      totalPrice: zod.number().nullable(),
+      weeks: zod.number().nullish(),
+      totalPago: zod.number(),
+      saldo: zod.number().nullable(),
+      statusPagamento: zod.enum(["quitado", "parcial", "pendente"]),
+      agendamentos: zod.array(
+        zod.object({
+          id: zod.number().optional(),
+          scheduledDate: zod.coerce.date().optional(),
+          status: zod.string().optional(),
+          confirmedAt: zod.coerce.date().nullish(),
+        }),
+      ),
+      pagamentos: zod
+        .array(
+          zod.object({
+            id: zod.number(),
+            tenantId: zod.number(),
+            clientId: zod.number(),
+            appointmentId: zod.number().nullish(),
+            packageSaleId: zod.number().nullish(),
+            amount: zod.number(),
+            paymentDate: zod.coerce.date(),
+            paymentMethod: zod.string().nullish(),
+            notes: zod.string().nullish(),
+            createdAt: zod.coerce.date(),
+          }),
+        )
+        .optional(),
+    }),
+  ),
+});
+
+/**
  * @summary Get a client with their pets
  */
 export const GetClientParams = zod.object({
@@ -1033,6 +1132,7 @@ export const ListAppointmentsResponseItem = zod.object({
   extraServiceIds: zod.array(zod.number()).nullish(),
   recurringWeeks: zod.number().nullish(),
   recurringGroupId: zod.string().nullish(),
+  confirmedAt: zod.coerce.date().nullish(),
   createdAt: zod.coerce.date(),
   pet: zod
     .object({
@@ -1142,6 +1242,7 @@ export const GetAppointmentResponse = zod.object({
   extraServiceIds: zod.array(zod.number()).nullish(),
   recurringWeeks: zod.number().nullish(),
   recurringGroupId: zod.string().nullish(),
+  confirmedAt: zod.coerce.date().nullish(),
   createdAt: zod.coerce.date(),
   pet: zod
     .object({
@@ -1247,6 +1348,7 @@ export const UpdateAppointmentResponse = zod.object({
   extraServiceIds: zod.array(zod.number()).nullish(),
   recurringWeeks: zod.number().nullish(),
   recurringGroupId: zod.string().nullish(),
+  confirmedAt: zod.coerce.date().nullish(),
   createdAt: zod.coerce.date(),
   pet: zod
     .object({
@@ -1350,6 +1452,7 @@ export const UpdateAppointmentStatusResponse = zod.object({
   extraServiceIds: zod.array(zod.number()).nullish(),
   recurringWeeks: zod.number().nullish(),
   recurringGroupId: zod.string().nullish(),
+  confirmedAt: zod.coerce.date().nullish(),
   createdAt: zod.coerce.date(),
   pet: zod
     .object({
@@ -1407,6 +1510,119 @@ export const UpdateAppointmentStatusResponse = zod.object({
       price: zod.number().optional(),
     })
     .nullish(),
+});
+
+/**
+ * @summary Set or clear confirmed_at for an appointment
+ */
+export const ConfirmAppointmentPresenceParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const ConfirmAppointmentPresenceBody = zod.object({
+  confirmed: zod.boolean(),
+});
+
+export const ConfirmAppointmentPresenceResponse = zod.object({
+  id: zod.number(),
+  tenantId: zod.number(),
+  petId: zod.number(),
+  clientId: zod.number(),
+  serviceId: zod.number().nullish(),
+  packageId: zod.number().nullish(),
+  scheduledDate: zod.coerce.date(),
+  status: zod.enum([
+    "aguardando",
+    "em_atendimento",
+    "pet_pronto",
+    "concluido",
+    "cancelado",
+  ]),
+  totalPrice: zod.number(),
+  notes: zod.string().nullish(),
+  extraServiceIds: zod.array(zod.number()).nullish(),
+  recurringWeeks: zod.number().nullish(),
+  recurringGroupId: zod.string().nullish(),
+  confirmedAt: zod.coerce.date().nullish(),
+  createdAt: zod.coerce.date(),
+  pet: zod
+    .object({
+      id: zod.number(),
+      clientId: zod.number(),
+      name: zod.string(),
+      breed: zod.string().nullish(),
+      size: zod.enum([
+        "mini_curto",
+        "mini_longo",
+        "pequeno_curto",
+        "pequeno_longo",
+        "medio_curto",
+        "medio_longo",
+        "grande_curto",
+        "grande_longo",
+        "gigante",
+      ]),
+      sex: zod
+        .union([zod.literal("macho"), zod.literal("femea"), zod.literal(null)])
+        .nullish(),
+      neutered: zod.boolean().optional(),
+      coat: zod.string().nullish(),
+      behavior: zod.string().nullish(),
+      healthNotes: zod.string().nullish(),
+      groomingPreferences: zod.string().nullish(),
+      senior: zod.boolean().optional(),
+      notes: zod.string().nullish(),
+      createdAt: zod.coerce.date(),
+    })
+    .optional(),
+  client: zod
+    .object({
+      id: zod.number(),
+      tenantId: zod.number(),
+      name: zod.string(),
+      phone: zod.string().nullish(),
+      email: zod.string().nullish(),
+      address: zod.string().nullish(),
+      notes: zod.string().nullish(),
+      createdAt: zod.coerce.date(),
+    })
+    .optional(),
+  service: zod
+    .object({
+      id: zod.number().optional(),
+      name: zod.string().optional(),
+      price: zod.number().optional(),
+    })
+    .nullish(),
+  package: zod
+    .object({
+      id: zod.number().optional(),
+      name: zod.string().optional(),
+      price: zod.number().optional(),
+    })
+    .nullish(),
+});
+
+/**
+ * @summary Register a payment (against an appointment or package sale)
+ */
+export const createPaymentBodyAmountMin = 0.01;
+
+export const CreatePaymentBody = zod.object({
+  clientId: zod.number(),
+  appointmentId: zod.number().optional(),
+  packageSaleId: zod.number().optional(),
+  amount: zod.number().min(createPaymentBodyAmountMin),
+  paymentDate: zod.coerce.date(),
+  paymentMethod: zod.string().optional(),
+  notes: zod.string().optional(),
+});
+
+/**
+ * @summary Delete a payment record
+ */
+export const DeletePaymentParams = zod.object({
+  id: zod.coerce.number(),
 });
 
 /**
@@ -1761,6 +1977,7 @@ export const GetDashboardResponse = zod.object({
         extraServiceIds: zod.array(zod.number()).nullish(),
         recurringWeeks: zod.number().nullish(),
         recurringGroupId: zod.string().nullish(),
+        confirmedAt: zod.coerce.date().nullish(),
         createdAt: zod.coerce.date(),
         pet: zod
           .object({

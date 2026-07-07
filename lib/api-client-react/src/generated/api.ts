@@ -23,6 +23,7 @@ import type {
   AdminTenantInput,
   AdminTenantUpdate,
   AdminUser,
+  AppointmentConfirmInput,
   AppointmentFull,
   AppointmentInput,
   AppointmentStatusUpdate,
@@ -30,6 +31,7 @@ import type {
   AppointmentsReport,
   AuthUserEnvelope,
   Client,
+  ClientHistory,
   ClientInput,
   ClientUpdate,
   ClientWithPets,
@@ -66,6 +68,8 @@ import type {
   Package,
   PackageInput,
   PackageUpdate,
+  Payment,
+  PaymentInput,
   Pet,
   PetInput,
   PetUpdate,
@@ -1895,6 +1899,93 @@ export const useCreateClient = <
 > => {
   return useMutation(getCreateClientMutationOptions(options));
 };
+
+/**
+ * @summary Get full payment and appointment history for a client
+ */
+export const getGetClientHistoryUrl = (id: number) => {
+  return `/api/clients/${id}/history`;
+};
+
+export const getClientHistory = async (
+  id: number,
+  options?: RequestInit,
+): Promise<ClientHistory> => {
+  return customFetch<ClientHistory>(getGetClientHistoryUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetClientHistoryQueryKey = (id: number) => {
+  return [`/api/clients/${id}/history`] as const;
+};
+
+export const getGetClientHistoryQueryOptions = <
+  TData = Awaited<ReturnType<typeof getClientHistory>>,
+  TError = ErrorType<ErrorEnvelope>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getClientHistory>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetClientHistoryQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getClientHistory>>
+  > = ({ signal }) => getClientHistory(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getClientHistory>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetClientHistoryQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getClientHistory>>
+>;
+export type GetClientHistoryQueryError = ErrorType<ErrorEnvelope>;
+
+/**
+ * @summary Get full payment and appointment history for a client
+ */
+
+export function useGetClientHistory<
+  TData = Awaited<ReturnType<typeof getClientHistory>>,
+  TError = ErrorType<ErrorEnvelope>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getClientHistory>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetClientHistoryQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary Get a client with their pets
@@ -4164,7 +4255,7 @@ export const updateAppointmentStatus = async (
 };
 
 export const getUpdateAppointmentStatusMutationOptions = <
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorEnvelope>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -4206,13 +4297,13 @@ export type UpdateAppointmentStatusMutationResult = NonNullable<
 >;
 export type UpdateAppointmentStatusMutationBody =
   BodyType<AppointmentStatusUpdate>;
-export type UpdateAppointmentStatusMutationError = ErrorType<unknown>;
+export type UpdateAppointmentStatusMutationError = ErrorType<ErrorEnvelope>;
 
 /**
  * @summary Update appointment kanban status
  */
 export const useUpdateAppointmentStatus = <
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorEnvelope>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -4229,6 +4320,264 @@ export const useUpdateAppointmentStatus = <
   TContext
 > => {
   return useMutation(getUpdateAppointmentStatusMutationOptions(options));
+};
+
+/**
+ * @summary Set or clear confirmed_at for an appointment
+ */
+export const getConfirmAppointmentPresenceUrl = (id: number) => {
+  return `/api/appointments/${id}/confirm`;
+};
+
+export const confirmAppointmentPresence = async (
+  id: number,
+  appointmentConfirmInput: AppointmentConfirmInput,
+  options?: RequestInit,
+): Promise<AppointmentFull> => {
+  return customFetch<AppointmentFull>(getConfirmAppointmentPresenceUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(appointmentConfirmInput),
+  });
+};
+
+export const getConfirmAppointmentPresenceMutationOptions = <
+  TError = ErrorType<ErrorEnvelope>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof confirmAppointmentPresence>>,
+    TError,
+    { id: number; data: BodyType<AppointmentConfirmInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof confirmAppointmentPresence>>,
+  TError,
+  { id: number; data: BodyType<AppointmentConfirmInput> },
+  TContext
+> => {
+  const mutationKey = ["confirmAppointmentPresence"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof confirmAppointmentPresence>>,
+    { id: number; data: BodyType<AppointmentConfirmInput> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return confirmAppointmentPresence(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ConfirmAppointmentPresenceMutationResult = NonNullable<
+  Awaited<ReturnType<typeof confirmAppointmentPresence>>
+>;
+export type ConfirmAppointmentPresenceMutationBody =
+  BodyType<AppointmentConfirmInput>;
+export type ConfirmAppointmentPresenceMutationError = ErrorType<ErrorEnvelope>;
+
+/**
+ * @summary Set or clear confirmed_at for an appointment
+ */
+export const useConfirmAppointmentPresence = <
+  TError = ErrorType<ErrorEnvelope>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof confirmAppointmentPresence>>,
+    TError,
+    { id: number; data: BodyType<AppointmentConfirmInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof confirmAppointmentPresence>>,
+  TError,
+  { id: number; data: BodyType<AppointmentConfirmInput> },
+  TContext
+> => {
+  return useMutation(getConfirmAppointmentPresenceMutationOptions(options));
+};
+
+/**
+ * @summary Register a payment (against an appointment or package sale)
+ */
+export const getCreatePaymentUrl = () => {
+  return `/api/payments`;
+};
+
+export const createPayment = async (
+  paymentInput: PaymentInput,
+  options?: RequestInit,
+): Promise<Payment> => {
+  return customFetch<Payment>(getCreatePaymentUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(paymentInput),
+  });
+};
+
+export const getCreatePaymentMutationOptions = <
+  TError = ErrorType<ErrorEnvelope>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createPayment>>,
+    TError,
+    { data: BodyType<PaymentInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createPayment>>,
+  TError,
+  { data: BodyType<PaymentInput> },
+  TContext
+> => {
+  const mutationKey = ["createPayment"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createPayment>>,
+    { data: BodyType<PaymentInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createPayment(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreatePaymentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createPayment>>
+>;
+export type CreatePaymentMutationBody = BodyType<PaymentInput>;
+export type CreatePaymentMutationError = ErrorType<ErrorEnvelope>;
+
+/**
+ * @summary Register a payment (against an appointment or package sale)
+ */
+export const useCreatePayment = <
+  TError = ErrorType<ErrorEnvelope>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createPayment>>,
+    TError,
+    { data: BodyType<PaymentInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createPayment>>,
+  TError,
+  { data: BodyType<PaymentInput> },
+  TContext
+> => {
+  return useMutation(getCreatePaymentMutationOptions(options));
+};
+
+/**
+ * @summary Delete a payment record
+ */
+export const getDeletePaymentUrl = (id: number) => {
+  return `/api/payments/${id}`;
+};
+
+export const deletePayment = async (
+  id: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getDeletePaymentUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeletePaymentMutationOptions = <
+  TError = ErrorType<ErrorEnvelope>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deletePayment>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deletePayment>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["deletePayment"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deletePayment>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deletePayment(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeletePaymentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deletePayment>>
+>;
+
+export type DeletePaymentMutationError = ErrorType<ErrorEnvelope>;
+
+/**
+ * @summary Delete a payment record
+ */
+export const useDeletePayment = <
+  TError = ErrorType<ErrorEnvelope>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deletePayment>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deletePayment>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getDeletePaymentMutationOptions(options));
 };
 
 /**

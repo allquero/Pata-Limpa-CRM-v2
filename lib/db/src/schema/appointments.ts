@@ -24,6 +24,7 @@ export const appointmentsTable = pgTable("appointments", {
   extraServiceIds: json("extra_service_ids").$type<number[]>(),
   recurringWeeks: integer("recurring_weeks"),
   recurringGroupId: text("recurring_group_id"),
+  confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

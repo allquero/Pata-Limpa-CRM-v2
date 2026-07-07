@@ -11,9 +11,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, ChevronDown, ChevronUp, PawPrint, Download, Upload, FileDown, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Plus, Pencil, Trash2, ChevronDown, ChevronUp, PawPrint, Download, Upload, FileDown, AlertCircle, CheckCircle2, History } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { HistoricoClienteModal } from "@/components/HistoricoClienteModal";
 
 // ── Tipos ────────────────────────────────────────────────────────────────────
 type Client = {
@@ -72,6 +73,9 @@ export default function Clientes() {
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [form, setForm] = useState(emptyClient);
   const [expandedClient, setExpandedClient] = useState<number | null>(null);
+  const [historyClientId, setHistoryClientId] = useState<number | null>(null);
+  const [historyClientName, setHistoryClientName] = useState<string>("");
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   const [petModalOpen, setPetModalOpen] = useState(false);
   const [editingPet, setEditingPet] = useState<Pet | null>(null);
@@ -289,6 +293,13 @@ export default function Clientes() {
                     <Button variant="ghost" size="sm" onClick={() => openAddPet(client.id)}>
                       <PawPrint className="h-4 w-4 mr-1" />Pet
                     </Button>
+                    <Button
+                      variant="ghost" size="icon"
+                      title="Ver histórico financeiro"
+                      onClick={() => { setHistoryClientId(client.id); setHistoryClientName(client.name); setHistoryOpen(true); }}
+                    >
+                      <History className="h-4 w-4" />
+                    </Button>
                     <Button variant="ghost" size="icon" onClick={() => openEdit(client)}><Pencil className="h-4 w-4" /></Button>
                     <Button variant="ghost" size="icon" onClick={() => handleDelete(client.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                     <Button variant="ghost" size="icon"
@@ -329,6 +340,13 @@ export default function Clientes() {
           ))}
         </div>
       )}
+      {/* ── Modal Histórico ── */}
+      <HistoricoClienteModal
+        clientId={historyClientId}
+        clientName={historyClientName}
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+      />
       {/* ── Modal Cliente ── */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent>

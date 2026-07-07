@@ -1,7 +1,16 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { eq, and, ilike, inArray } from "drizzle-orm";
 import multer from "multer";
-import { db, clientsTable, petsTable } from "@workspace/db";
+import {
+  db,
+  clientsTable,
+  petsTable,
+  appointmentsTable,
+  servicesTable,
+  packageSalesTable,
+  packagesTable,
+  paymentsTable,
+} from "@workspace/db";
 import {
   CreateClientBody,
   UpdateClientBody,
@@ -61,6 +70,138 @@ function parseCsvLine(line: string): string[] {
   return result;
 }
 
+
+// ── Client History ───────────────────────────────────────────────────────────
+
+router.get("/clients/:id/history", async (req: Request, res: Response): Promise<void> => {
+  const clientId = Number(req.params.id);
+  if (isNaN(clientId)) {
+    res.status(400).json({ error: "ID inválido" });
+    return;
+  }
+
+  const [client] = await db
+    .select()
+    .from(clientsTable)
+    .where(and(eq(clientsTable.id, clientId), eq(clientsTable.tenantId, req.tenantId!)));
+
+  if (!client) {
+    res.status(404).json({ error: "Cliente não encontrado" });
+    return;
+  }
+
+  // Get all appointments for this client
+  const appts = await db
+    .select({
+      appt: appointmentsTable,
+      service: { id: servicesTable.id, name: servicesTable.name },
+      pet: { id: petsTable.id, name: petsTable.name },
+    })
+    .from(appointmentsTable)
+    .leftJoin(servicesTable, eq(appointmentsTable.serviceId, servicesTable.id))
+    .leftJoin(petsTable, eq(appointmentsTable.petId, petsTable.id))
+    .where(and(eq(appointmentsTable.clientId, clientId), eq(appointmentsTable.tenantId, req.tenantId!)))
+    .orderBy(appointmentsTable.scheduledDate);
+
+  // Get all payments for this client
+  const allPayments = await db
+    .select()
+    .from(paymentsTable)
+    .where(and(eq(paymentsTable.clientId, clientId), eq(paymentsTable.tenantId, req.tenantId!)));
+
+  // Get all package sales for this client
+  const pkgSales = await db
+    .select({
+      sale: packageSalesTable,
+      packageName: packagesTable.name,
+      petName: petsTable.name,
+    })
+    .from(packageSalesTable)
+    .leftJoin(packagesTable, eq(packageSalesTable.packageId, packagesTable.id))
+    .leftJoin(petsTable, eq(packageSalesTable.petId, petsTable.id))
+    .where(and(eq(packageSalesTable.clientId, clientId), eq(packageSalesTable.tenantId, req.tenantId!)));
+
+  // Partition appointments: avulsos (no recurringGroupId or recurringGroupId not in pkgSales) vs package
+  const pkgGroupIds = new Set(pkgSales.map(p => p.sale.recurringGroupId));
+  const avulsosAppts = appts.filter(a => !a.appt.recurringGroupId || !pkgGroupIds.has(a.appt.recurringGroupId));
+  const pkgAppts = appts.filter(a => a.appt.recurringGroupId && pkgGroupIds.has(a.appt.recurringGroupId));
+
+  // Group package appointments by recurringGroupId
+  const pkgApptsByGroup = new Map<string, typeof pkgAppts>();
+  for (const a of pkgAppts) {
+    const gid = a.appt.recurringGroupId!;
+    if (!pkgApptsByGroup.has(gid)) pkgApptsByGroup.set(gid, []);
+    pkgApptsByGroup.get(gid)!.push(a);
+  }
+
+  // Build payments indexed by appointmentId and packageSaleId
+  const paymentsByApptId = new Map<number, typeof allPayments>();
+  const paymentsByPkgSaleId = new Map<number, typeof allPayments>();
+  for (const p of allPayments) {
+    if (p.appointmentId != null) {
+      if (!paymentsByApptId.has(p.appointmentId)) paymentsByApptId.set(p.appointmentId, []);
+      paymentsByApptId.get(p.appointmentId)!.push(p);
+    }
+    if (p.packageSaleId != null) {
+      if (!paymentsByPkgSaleId.has(p.packageSaleId)) paymentsByPkgSaleId.set(p.packageSaleId, []);
+      paymentsByPkgSaleId.get(p.packageSaleId)!.push(p);
+    }
+  }
+
+  // Build avulsos response
+  const avulsos = avulsosAppts.map(a => {
+    const price = parseFloat(a.appt.totalPrice);
+    const apptPayments = paymentsByApptId.get(a.appt.id) ?? [];
+    const totalPago = apptPayments.reduce((sum, p) => sum + parseFloat(p.amount), 0);
+    const saldo = price - totalPago;
+    const statusPagamento = totalPago === 0 ? "pendente" : saldo <= 0 ? "quitado" : "parcial";
+    return {
+      id: a.appt.id,
+      scheduledDate: a.appt.scheduledDate,
+      status: a.appt.status,
+      totalPrice: price,
+      confirmedAt: a.appt.confirmedAt,
+      notes: a.appt.notes,
+      service: a.service?.id ? a.service : null,
+      pet: a.pet?.id ? a.pet : null,
+      totalPago: Math.round(totalPago * 100) / 100,
+      saldo: Math.round(saldo * 100) / 100,
+      statusPagamento,
+      pagamentos: apptPayments.map(p => ({ ...p, amount: parseFloat(p.amount) })),
+    };
+  });
+
+  // Build pacotes response
+  const pacotes = pkgSales.map(ps => {
+    const salePayments = paymentsByPkgSaleId.get(ps.sale.id) ?? [];
+    const totalPago = salePayments.reduce((sum, p) => sum + parseFloat(p.amount), 0);
+    const totalPrice = ps.sale.totalPrice != null ? parseFloat(ps.sale.totalPrice) : null;
+    const saldo = totalPrice != null ? totalPrice - totalPago : null;
+    const statusPagamento = totalPago === 0 ? "pendente" : saldo != null && saldo <= 0 ? "quitado" : "parcial";
+    const groupAppts = pkgApptsByGroup.get(ps.sale.recurringGroupId) ?? [];
+    return {
+      id: ps.sale.id,
+      recurringGroupId: ps.sale.recurringGroupId,
+      packageName: ps.packageName ?? null,
+      petName: ps.petName ?? null,
+      saleDate: ps.sale.saleDate,
+      totalPrice,
+      weeks: ps.sale.weeks,
+      totalPago: Math.round(totalPago * 100) / 100,
+      saldo: saldo != null ? Math.round(saldo * 100) / 100 : null,
+      statusPagamento,
+      agendamentos: groupAppts.map(a => ({
+        id: a.appt.id,
+        scheduledDate: a.appt.scheduledDate,
+        status: a.appt.status,
+        confirmedAt: a.appt.confirmedAt,
+      })),
+      pagamentos: salePayments.map(p => ({ ...p, amount: parseFloat(p.amount) })),
+    };
+  });
+
+  res.json({ client, avulsos, pacotes });
+});
 
 // ── Export ───────────────────────────────────────────────────────────────────
 

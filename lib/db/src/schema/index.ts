@@ -9,3 +9,5 @@ export * from "./appointments";
 export * from "./financial";
 export * from "./message-templates";
 export * from "./settings";
+export * from "./package-sales";
+export * from "./payments";

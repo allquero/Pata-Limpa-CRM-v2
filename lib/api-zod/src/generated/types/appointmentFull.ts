@@ -31,6 +31,8 @@ export interface AppointmentFull {
   recurringWeeks?: number | null;
   /** @nullable */
   recurringGroupId?: string | null;
+  /** @nullable */
+  confirmedAt?: Date | null;
   createdAt: Date;
   pet?: Pet;
   client?: Client;

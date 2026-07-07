@@ -492,6 +492,8 @@ export interface AppointmentFull {
   recurringWeeks?: number | null;
   /** @nullable */
   recurringGroupId?: string | null;
+  /** @nullable */
+  confirmedAt?: string | null;
   createdAt: string;
   pet?: Pet;
   client?: Client;
@@ -524,9 +526,142 @@ export interface FinancialEntry {
   createdAt: string;
 }
 
+export interface PackageSale {
+  id: number;
+  tenantId: number;
+  clientId: number;
+  /** @nullable */
+  petId?: number | null;
+  /** @nullable */
+  packageId?: number | null;
+  recurringGroupId: string;
+  /** @nullable */
+  totalPrice?: number | null;
+  /** @nullable */
+  weeks?: number | null;
+  saleDate: string;
+  createdAt: string;
+}
+
 export interface SellPackageResult {
   appointments: AppointmentFull[];
   financialEntry: FinancialEntry;
+  packageSale: PackageSale;
+}
+
+export interface AppointmentConfirmInput {
+  confirmed: boolean;
+}
+
+export interface Payment {
+  id: number;
+  tenantId: number;
+  clientId: number;
+  /** @nullable */
+  appointmentId?: number | null;
+  /** @nullable */
+  packageSaleId?: number | null;
+  amount: number;
+  paymentDate: string;
+  /** @nullable */
+  paymentMethod?: string | null;
+  /** @nullable */
+  notes?: string | null;
+  createdAt: string;
+}
+
+export interface PaymentInput {
+  clientId: number;
+  appointmentId?: number;
+  packageSaleId?: number;
+  /** @minimum 0.01 */
+  amount: number;
+  paymentDate: string;
+  paymentMethod?: string;
+  notes?: string;
+}
+
+/**
+ * @nullable
+ */
+export type ClientHistoryAvulsosItemService = {
+  id?: number;
+  name?: string;
+} | null;
+
+export type ClientHistoryAvulsosItemPet = {
+  id?: number;
+  name?: string;
+};
+
+export type ClientHistoryAvulsosItemStatusPagamento =
+  (typeof ClientHistoryAvulsosItemStatusPagamento)[keyof typeof ClientHistoryAvulsosItemStatusPagamento];
+
+export const ClientHistoryAvulsosItemStatusPagamento = {
+  quitado: "quitado",
+  parcial: "parcial",
+  pendente: "pendente",
+} as const;
+
+export type ClientHistoryAvulsosItem = {
+  id: number;
+  scheduledDate: string;
+  status?: string;
+  totalPrice: number;
+  /** @nullable */
+  confirmedAt?: string | null;
+  /** @nullable */
+  notes?: string | null;
+  /** @nullable */
+  service?: ClientHistoryAvulsosItemService;
+  pet?: ClientHistoryAvulsosItemPet;
+  totalPago: number;
+  saldo: number;
+  statusPagamento: ClientHistoryAvulsosItemStatusPagamento;
+  pagamentos?: Payment[];
+};
+
+export type ClientHistoryPacotesItemStatusPagamento =
+  (typeof ClientHistoryPacotesItemStatusPagamento)[keyof typeof ClientHistoryPacotesItemStatusPagamento];
+
+export const ClientHistoryPacotesItemStatusPagamento = {
+  quitado: "quitado",
+  parcial: "parcial",
+  pendente: "pendente",
+} as const;
+
+export type ClientHistoryPacotesItemAgendamentosItem = {
+  id?: number;
+  scheduledDate?: string;
+  status?: string;
+  /** @nullable */
+  confirmedAt?: string | null;
+};
+
+export type ClientHistoryPacotesItem = {
+  id: number;
+  recurringGroupId: string;
+  /** @nullable */
+  packageName?: string | null;
+  /** @nullable */
+  petName?: string | null;
+  saleDate?: string;
+  /** @nullable */
+  totalPrice: number | null;
+  /** @nullable */
+  weeks?: number | null;
+  totalPago: number;
+  /** @nullable */
+  saldo: number | null;
+  statusPagamento: ClientHistoryPacotesItemStatusPagamento;
+  agendamentos: ClientHistoryPacotesItemAgendamentosItem[];
+  pagamentos?: Payment[];
+};
+
+export interface ClientHistory {
+  client: Client;
+  avulsos: ClientHistoryAvulsosItem[];
+  pacotes: ClientHistoryPacotesItem[];
 }
 
 export interface AppointmentInput {

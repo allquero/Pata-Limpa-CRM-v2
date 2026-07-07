@@ -11,6 +11,7 @@ import {
   getListPetsQueryKey, useListMessageTemplates,
   getListAppointmentsQueryKey, getListMessageTemplatesQueryKey,
   useGetTenant,
+  useConfirmAppointmentPresence,
 } from "@workspace/api-client-react";
 import type {
   Client, Pet, Service, Package, SellPackageResult, PetInputSize, MessageTemplate, AppointmentFull,
@@ -31,7 +32,7 @@ import {
   MessageSquare, UserPlus, ShoppingCart, CalendarCheck,
   ChevronRight as ArrowNext, Search, X, CalendarDays,
   Bell, ChevronDown, ChevronUp, CheckCheck, Pencil,
-  Scissors, Plus,
+  Scissors, Plus, UserCheck,
 } from "lucide-react";
 import { format, addDays, startOfWeek, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -49,6 +50,7 @@ function appointmentFromFull(af: AppointmentFull): Appointment {
     status: af.status as AppStatus,
     totalPrice: af.totalPrice,
     notes: af.notes,
+    confirmedAt: af.confirmedAt,
   };
 }
 
@@ -63,6 +65,7 @@ type Appointment = {
   status: AppStatus;
   totalPrice: string | number;
   notes?: string | null;
+  confirmedAt?: string | null;
 };
 
 const COLUMNS: { id: AppStatus; label: string; color: string; bg: string }[] = [
@@ -78,7 +81,7 @@ function formatBRL(v: number) {
 
 // ─── Card components ──────────────────────────────────────────────────────────
 
-function AppointmentCard({ appt, clients, pets, services, packages, onDelete, onWhatsapp, onPetPronto, onEditService, onChangeStatus, isDragging = false, isEditingDate, editDate, editTime, onStartEditDate, onChangeEditDate, onSaveEditDate, onCancelEditDate }: {
+function AppointmentCard({ appt, clients, pets, services, packages, onDelete, onWhatsapp, onPetPronto, onEditService, onChangeStatus, onConfirm, isDragging = false, isEditingDate, editDate, editTime, onStartEditDate, onChangeEditDate, onSaveEditDate, onCancelEditDate }: {
   appt: Appointment;
   clients: Client[];
   pets: Pet[];
@@ -89,6 +92,7 @@ function AppointmentCard({ appt, clients, pets, services, packages, onDelete, on
   onPetPronto?: (appt: Appointment) => void;
   onEditService?: (appt: Appointment) => void;
   onChangeStatus?: (appt: Appointment, newStatus: AppStatus) => void;
+  onConfirm?: (appt: Appointment) => void;
   isDragging?: boolean;
   isEditingDate?: boolean;
   editDate?: string;
@@ -114,6 +118,11 @@ function AppointmentCard({ appt, clients, pets, services, packages, onDelete, on
             <PawPrint className="h-3.5 w-3.5 text-primary shrink-0" />
             <span className="font-semibold text-sm truncate">{pet?.name ?? "Pet"}</span>
             {pet?.size && <Badge variant="secondary" className="text-xs px-1 py-0">{PORTE_SIZES[pet.size] ?? pet.size}</Badge>}
+            {appt.confirmedAt && (
+              <span title="Presença confirmada" className="text-green-600">
+                <UserCheck className="h-3.5 w-3.5" />
+              </span>
+            )}
           </div>
           <p className="text-xs text-muted-foreground truncate">{client?.name ?? "Cliente"}</p>
           <p className="text-xs text-muted-foreground">
@@ -124,6 +133,15 @@ function AppointmentCard({ appt, clients, pets, services, packages, onDelete, on
           </p>
         </div>
         <div className="flex items-center gap-0.5">
+          {onConfirm && !appt.confirmedAt && (appt.status === "aguardando" || appt.status === "em_atendimento") && (
+            <button
+              onClick={e => { e.stopPropagation(); onConfirm(appt); }}
+              className="p-1 rounded hover:bg-green-50 text-muted-foreground hover:text-green-600 transition-colors"
+              title="Confirmar presença"
+            >
+              <UserCheck className="h-3.5 w-3.5" />
+            </button>
+          )}
           {onEditService && (
             <button
               onClick={e => { e.stopPropagation(); onEditService(appt); }}
@@ -225,7 +243,7 @@ function AppointmentCard({ appt, clients, pets, services, packages, onDelete, on
   );
 }
 
-function DraggableCard({ appt, clients, pets, services, packages, onDelete, onWhatsapp, onPetPronto, onEditService, onChangeStatus, isEditingDate, editDate, editTime, onStartEditDate, onChangeEditDate, onSaveEditDate, onCancelEditDate }: {
+function DraggableCard({ appt, clients, pets, services, packages, onDelete, onWhatsapp, onPetPronto, onEditService, onChangeStatus, onConfirm, isEditingDate, editDate, editTime, onStartEditDate, onChangeEditDate, onSaveEditDate, onCancelEditDate }: {
   appt: Appointment;
   clients: Client[];
   pets: Pet[];
@@ -236,6 +254,7 @@ function DraggableCard({ appt, clients, pets, services, packages, onDelete, onWh
   onPetPronto?: (appt: Appointment) => void;
   onEditService?: (appt: Appointment) => void;
   onChangeStatus?: (appt: Appointment, newStatus: AppStatus) => void;
+  onConfirm?: (appt: Appointment) => void;
   isEditingDate?: boolean;
   editDate?: string;
   editTime?: string;
@@ -258,6 +277,7 @@ function DraggableCard({ appt, clients, pets, services, packages, onDelete, onWh
         onPetPronto={onPetPronto}
         onEditService={onEditService}
         onChangeStatus={onChangeStatus}
+        onConfirm={onConfirm}
         isDragging={isDragging}
         isEditingDate={isEditingDate}
         editDate={editDate}
@@ -271,7 +291,7 @@ function DraggableCard({ appt, clients, pets, services, packages, onDelete, onWh
   );
 }
 
-function KanbanColumn({ status, label, color, bg, appointments, clients, pets, services, packages, onDelete, onWhatsapp, onPetPronto, onEditService, onChangeStatus, editingApptId, editDate, editTime, onStartEditDate, onChangeEditDate, onSaveEditDate, onCancelEditDate }: {
+function KanbanColumn({ status, label, color, bg, appointments, clients, pets, services, packages, onDelete, onWhatsapp, onPetPronto, onEditService, onChangeStatus, onConfirm, editingApptId, editDate, editTime, onStartEditDate, onChangeEditDate, onSaveEditDate, onCancelEditDate }: {
   status: AppStatus;
   label: string;
   color: string;
@@ -286,6 +306,7 @@ function KanbanColumn({ status, label, color, bg, appointments, clients, pets, s
   onPetPronto: (appt: Appointment) => void;
   onEditService: (appt: Appointment) => void;
   onChangeStatus: (appt: Appointment, newStatus: AppStatus) => void;
+  onConfirm: (appt: Appointment) => void;
   editingApptId: number | null;
   editDate: string;
   editTime: string;
@@ -318,6 +339,7 @@ function KanbanColumn({ status, label, color, bg, appointments, clients, pets, s
             onPetPronto={onPetPronto}
             onEditService={onEditService}
             onChangeStatus={onChangeStatus}
+            onConfirm={onConfirm}
             isEditingDate={editingApptId === appt.id}
             editDate={editDate}
             editTime={editTime}
@@ -963,6 +985,17 @@ export default function Agendamentos() {
     refetch();
   };
 
+  const confirmPresence = useConfirmAppointmentPresence();
+  const handleConfirmPresence = useCallback(async (appt: Appointment) => {
+    try {
+      await confirmPresence.mutateAsync({ id: appt.id, data: { confirmed: true } });
+      toast({ title: "Presença confirmada!" });
+      refetch();
+    } catch {
+      toast({ title: "Erro ao confirmar presença", variant: "destructive" });
+    }
+  }, [confirmPresence, refetch, toast]);
+
   const openCasual = () => {
     setCasual(emptyCasual);
     setCasualStep(0);
@@ -1194,6 +1227,7 @@ export default function Agendamentos() {
               onPetPronto={openPetPronto}
               onEditService={setEditServicoAppt}
               onChangeStatus={handleStatusChange}
+              onConfirm={handleConfirmPresence}
               editingApptId={editingApptId}
               editDate={editDate}
               editTime={editTime}

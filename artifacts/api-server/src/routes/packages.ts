@@ -10,6 +10,7 @@ import {
   servicesTable,
   financialEntriesTable,
   clientsTable,
+  packageSalesTable,
 } from "@workspace/db";
 import type { ServiceItem, PriceBySize } from "@workspace/db";
 import { requireTenant } from "../middlewares/requireTenant";
@@ -204,56 +205,79 @@ router.post("/packages/:id/sell", async (req, res): Promise<void> => {
   const baseDate = new Date(year!, month! - 1, day!, hour!, minute!, 0, 0);
 
   const groupId = randomUUID();
-  const insertedIds: number[] = [];
+  const dateStr = (startDate as string).substring(0, 10);
 
-  for (let i = 0; i < numSessions; i++) {
-    const scheduledDate = new Date(baseDate);
-    scheduledDate.setDate(scheduledDate.getDate() + i * 7);
+  const { insertedIds, financialEntry, packageSale } = await db.transaction(async (tx) => {
+    const ids: number[] = [];
 
-    const isLastSession = i === numSessions - 1;
-    const extraNote =
-      isLastSession && extraItems.length > 0
-        ? `Inclui: ${extraItems.map(e => e.serviceName).join(" + ")}`
-        : null;
-    const sessionNotes = [notes as string | undefined, extraNote].filter(Boolean).join(" | ") || null;
+    for (let i = 0; i < numSessions; i++) {
+      const scheduledDate = new Date(baseDate);
+      scheduledDate.setDate(scheduledDate.getDate() + i * 7);
 
-    const [appt] = await db
-      .insert(appointmentsTable)
+      const isLastSession = i === numSessions - 1;
+      const extraNote =
+        isLastSession && extraItems.length > 0
+          ? `Inclui: ${extraItems.map(e => e.serviceName).join(" + ")}`
+          : null;
+      const sessionNotes = [notes as string | undefined, extraNote].filter(Boolean).join(" | ") || null;
+
+      const [appt] = await tx
+        .insert(appointmentsTable)
+        .values({
+          tenantId: req.tenantId!,
+          clientId: Number(clientId),
+          petId: Number(petId),
+          serviceId: mainServiceId,
+          packageId: id,
+          scheduledDate,
+          status: "aguardando",
+          totalPrice: "0",
+          notes: sessionNotes,
+          recurringGroupId: groupId,
+          recurringWeeks: numSessions,
+        })
+        .returning();
+      ids.push(appt.id);
+    }
+
+    const [fe] = await tx
+      .insert(financialEntriesTable)
+      .values({
+        tenantId: req.tenantId!,
+        type: "receita",
+        description: `Venda de pacote: ${pkg.name} — ${pet.name}`,
+        amount: String(packagePrice),
+        date: dateStr,
+        category: "Pacotes",
+      })
+      .returning();
+
+    const [ps] = await tx
+      .insert(packageSalesTable)
       .values({
         tenantId: req.tenantId!,
         clientId: Number(clientId),
         petId: Number(petId),
-        serviceId: mainServiceId,
         packageId: id,
-        scheduledDate,
-        status: "aguardando",
-        totalPrice: "0",
-        notes: sessionNotes,
         recurringGroupId: groupId,
-        recurringWeeks: numSessions,
+        totalPrice: packagePrice > 0 ? String(packagePrice) : null,
+        weeks: numSessions,
+        saleDate: dateStr,
       })
       .returning();
-    insertedIds.push(appt.id);
-  }
 
-  const dateStr = (startDate as string).substring(0, 10);
-  const [financialEntry] = await db
-    .insert(financialEntriesTable)
-    .values({
-      tenantId: req.tenantId!,
-      type: "receita",
-      description: `Venda de pacote: ${pkg.name} — ${pet.name}`,
-      amount: String(packagePrice),
-      date: dateStr,
-      category: "Pacotes",
-    })
-    .returning();
+    return { insertedIds: ids, financialEntry: fe, packageSale: ps };
+  });
 
   const appointments = await Promise.all(insertedIds.map(appId => getFullAppointment(appId)));
 
   res.status(201).json({
     appointments,
     financialEntry: { ...financialEntry, amount: parseFloat(financialEntry.amount) },
+    packageSale: {
+      ...packageSale,
+      totalPrice: packageSale.totalPrice != null ? parseFloat(packageSale.totalPrice) : null,
+    },
   });
 });
 

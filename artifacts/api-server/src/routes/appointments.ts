@@ -273,7 +273,7 @@ router.patch("/appointments/:id/status", async (req, res): Promise<void> => {
     return;
   }
   const [existing] = await db
-    .select({ id: appointmentsTable.id })
+    .select({ id: appointmentsTable.id, confirmedAt: appointmentsTable.confirmedAt })
     .from(appointmentsTable)
     .where(and(eq(appointmentsTable.id, params.data.id), eq(appointmentsTable.tenantId, req.tenantId!)));
   if (!existing) {
@@ -282,6 +282,39 @@ router.patch("/appointments/:id/status", async (req, res): Promise<void> => {
   }
   await db.update(appointmentsTable).set({ status: parsed.data.status }).where(eq(appointmentsTable.id, params.data.id));
   const appt = await getFullAppointment(params.data.id);
+  if (!appt) {
+    res.status(404).json({ error: "Agendamento não encontrado" });
+    return;
+  }
+  res.json(appt);
+});
+
+router.patch("/appointments/:id/confirm", async (req, res): Promise<void> => {
+  const id = Number(req.params.id);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "ID inválido" });
+    return;
+  }
+
+  const body = req.body as Record<string, unknown>;
+  if (typeof body.confirmed !== "boolean") {
+    res.status(400).json({ error: "Campo 'confirmed' (boolean) é obrigatório" });
+    return;
+  }
+
+  const [existing] = await db
+    .select({ id: appointmentsTable.id })
+    .from(appointmentsTable)
+    .where(and(eq(appointmentsTable.id, id), eq(appointmentsTable.tenantId, req.tenantId!)));
+  if (!existing) {
+    res.status(404).json({ error: "Agendamento não encontrado" });
+    return;
+  }
+
+  const confirmedAt = body.confirmed ? new Date() : null;
+  await db.update(appointmentsTable).set({ confirmedAt }).where(eq(appointmentsTable.id, id));
+
+  const appt = await getFullAppointment(id);
   if (!appt) {
     res.status(404).json({ error: "Agendamento não encontrado" });
     return;

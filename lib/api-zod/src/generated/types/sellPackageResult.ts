@@ -7,8 +7,10 @@
  */
 import type { AppointmentFull } from "./appointmentFull";
 import type { FinancialEntry } from "./financialEntry";
+import type { PackageSale } from "./packageSale";
 
 export interface SellPackageResult {
   appointments: AppointmentFull[];
   financialEntry: FinancialEntry;
+  packageSale: PackageSale;
 }
