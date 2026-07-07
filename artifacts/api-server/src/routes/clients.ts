@@ -177,7 +177,7 @@ router.get("/clients/:id/history", async (req: Request, res: Response): Promise<
     const totalPago = salePayments.reduce((sum, p) => sum + parseFloat(p.amount), 0);
     const totalPrice = ps.sale.totalPrice != null ? parseFloat(ps.sale.totalPrice) : null;
     const saldo = totalPrice != null ? totalPrice - totalPago : null;
-    const statusPagamento = totalPago === 0 ? "pendente" : saldo != null && saldo <= 0 ? "quitado" : "parcial";
+    const statusPagamento = totalPrice == null ? "pendente" : totalPago === 0 ? "pendente" : saldo != null && saldo <= 0 ? "quitado" : "parcial";
     const groupAppts = pkgApptsByGroup.get(ps.sale.recurringGroupId) ?? [];
     return {
       id: ps.sale.id,

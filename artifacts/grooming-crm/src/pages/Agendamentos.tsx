@@ -1005,6 +1005,10 @@ export default function Agendamentos() {
   const confirmPresence = useConfirmAppointmentPresence();
   const handleConfirmPresence = useCallback(async (appt: Appointment) => {
     const newConfirmed = !appt.confirmedAt;
+    if (!newConfirmed) {
+      const ok = confirm("Desfazer a confirmação de presença deste agendamento?");
+      if (!ok) return;
+    }
     try {
       await confirmPresence.mutateAsync({ id: appt.id, data: { confirmed: newConfirmed } });
       toast({ title: newConfirmed ? "Presença confirmada!" : "Confirmação desfeita" });
