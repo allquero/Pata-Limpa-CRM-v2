@@ -1,0 +1,220 @@
+# Prompt para o Replit — Sistema de Pagamentos, Confirmação e Histórico (Pata-Limpa-CRM)
+
+## Contexto do projeto (não alterar sem necessidade)
+
+O app já está em produção e em uso real, com clientes e agendamentos reais no banco. **Nenhuma tabela existente pode ser destruída, renomeada ou ter dados apagados.** Toda mudança deve ser **aditiva** (novas tabelas e novas colunas nullable), feita via Drizzle (`npx drizzle-kit generate`), revisada antes de aplicar.
+
+### Tabelas relevantes que já existem hoje
+
+- **`clients`**: dados do cliente (nome, telefone, etc). Não existe e não deve existir uma flag "tipo de cliente" (casual/pacotista) — isso é característica da compra, não do cliente. O mesmo cliente pode ter agendamentos avulsos e pacotes ao mesmo tempo.
+- **`pets`**: pets vinculados a `clients`.
+- **`services`**: catálogo de serviços por porte (`size`) com preço (`price`).
+- **`packages`**: pacotes fechados (ex: "4 Semanas", "5 Semanas"), com `service_items` (jsonb) e `price_by_sizes` (jsonb, preço por porte do pet).
+- **`appointments`**: cada agendamento individual.
+  - `service_id` / `package_id`: se veio de um serviço avulso ou de um pacote.
+  - `recurring_group_id` (text, nullable): agrupa todos os agendamentos de uma mesma compra de pacote (ex: as 4 ou 5 semanas ficam com o mesmo valor nesse campo). Quando é avulso, esse campo é `NULL`.
+  - `recurring_weeks`: quantidade de semanas do pacote contratado.
+  - `total_price`: hoje, para agendamentos avulsos, tem o preço real do serviço. **Para agendamentos de pacote, esse campo vem como `0.00`**, porque o cliente não paga por agendamento individual dentro do pacote — ele paga o pacote inteiro de uma vez.
+  - `status`: `aguardando` / `concluido` (execução do serviço, não tem nada a ver com pagamento nem confirmação de presença).
+- **`financial_entries`**: hoje registra a **venda** do pacote como receita no momento em que o pacote é fechado (ex: "Venda de pacote: 4 Semanas — Rex, R$155,00"). **Importante: isso representa o momento da venda, não necessariamente o momento em que o dinheiro foi efetivamente recebido.** Essa tabela continua existindo e continua sendo usada para o financeiro/relatórios — não mexer nela.
+
+### O problema real que estamos resolvendo
+
+O sistema atual não distingue "vendi o pacote" de "recebi o pagamento". Isso já causou confusão real: um cliente afirmou ter pago um agendamento e não havia nenhum registro que provasse isso. É uma empresa com 10 anos de clientes fiéis, então **o pagamento nunca pode bloquear o agendamento** — o cliente pode agendar e ser atendido mesmo sem ter pago ainda (às vezes paga só no 2º atendimento). O que falta é só um **registro confiável de quanto foi pago, quando, e contra o quê**.
+
+---
+
+## O que precisa ser implementado
+
+### 1. Nova tabela `package_sales` (referência única de "quanto esse pacote custa no total")
+
+Motivo: hoje não existe um lugar único e confiável para "quanto o cliente deve pelo pacote inteiro" — o preço está espalhado (em `packages.price_by_sizes`, calculado no momento da venda) e o registro contábil em `financial_entries` não é pensado pra ser consultado programaticamente por grupo. Criar uma tabela dedicada evita recalcular/duplicar essa lógica.
+
+```
+package_sales
+- id (serial, PK)
+- tenant_id (integer, FK -> tenants.id)
+- client_id (integer, FK -> clients.id)
+- pet_id (integer, FK -> pets.id, nullable)
+- package_id (integer, FK -> packages.id)
+- recurring_group_id (text, UNIQUE, NOT NULL) -- mesmo valor usado em appointments.recurring_group_id
+- total_price (numeric(10,2), NOT NULL) -- valor total do pacote contratado
+- weeks (integer, nullable)
+- sale_date (date, NOT NULL, default now())
+- created_at (timestamp with time zone, default now())
+```
+
+- Importante: A tabela package_sales passa a ser a única fonte oficial ("single source of truth") do valor contratado de um pacote. Nenhuma tela, endpoint ou regra de negócio futura deve consultar packages.price_by_sizes para descobrir quanto o cliente pagou, pois os preços do catálogo podem mudar ao longo do tempo. O valor efetivamente contratado deve ser preservado em package_sales.total_price.
+- Toda vez que um novo pacote for vendido (fluxo que já existe hoje e gera o `recurring_group_id` + os `appointments` + o lançamento em `financial_entries`), criar também uma linha em `package_sales` com o valor total do pacote.
+- Todo o processo de venda de um pacote deve ocorrer dentro de uma única transação do banco de dados.
+A transação deve incluir:
+
+criação dos agendamentos recorrentes;
+criação do lançamento em financial_entries;
+criação do registro em package_sales.
+
+Caso qualquer uma dessas etapas falhe, toda a transação deve ser revertida (rollback).
+
+- **Backfill necessário**: para os pacotes já vendidos anteriormente (grupos de `recurring_group_id` que já existem em `appointments` mas não têm linha em `package_sales`), rodar um script único de backfill que:
+  1. Busca todos os `recurring_group_id` distintos em `appointments` onde `recurring_group_id IS NOT NULL`.
+  2. Para cada grupo, pega `client_id`, `package_id`, `recurring_weeks` do primeiro agendamento do grupo.
+  3. Para localizar o valor da venda existente, utilizar a seguinte ordem de validação:
+Mesmo tenant_id;
+Mesmo client_id;
+Mesmo package_id (obtido através do grupo de agendamentos);
+Data próxima da criação do grupo;
+Descrição compatível contendo o nome do pacote.
+
+Apenas quando todas essas validações forem suficientemente consistentes o registro poderá ser considerado correspondente. Caso exista qualquer dúvida na correspondência, não tentar adivinhar. Criar o registro em package_sales com total_price = NULL, registrar esse caso em um relatório de pendências e permitir revisão manual posterior.
+  4. O script de backfill deve ser idempotente. Caso seja executado mais de uma vez, nunca deverá criar registros duplicados em package_sales. Antes de inserir um registro, verificar se já existe um package_sale para aquele recurring_group_id.
+
+### 2. Nova tabela `payments` (pagamentos efetivamente recebidos)
+
+```
+payments
+- id (serial, PK)
+- tenant_id (integer, FK -> tenants.id)
+- client_id (integer, FK -> clients.id)
+- appointment_id (integer, FK -> appointments.id, nullable) -- pagamento de um agendamento avulso específico
+- package_sale_id (integer, FK -> package_sales.id, nullable) -- pagamento (total ou parcial) de um pacote
+- amount (numeric(10,2), NOT NULL)
+- payment_date (date, NOT NULL)
+- payment_method (text, nullable) -- ex: pix, dinheiro, cartão
+- notes (text, nullable)
+- created_at (timestamp with time zone, default now())
+```
+
+Regras:
+- Exatamente um entre `appointment_id` e `package_sale_id` deve ser preenchido por linha (nunca os dois, nunca nenhum). Validar isso na aplicação (não precisa de constraint complexa no banco, mas pode adicionar um `CHECK` se for simples de fazer no Postgres).
+- Um pacote pode ter **múltiplos pagamentos parciais** ao longo do tempo, todos apontando para o mesmo `package_sale_id`. O saldo é sempre calculado, nunca armazenado: `saldo = package_sales.total_price - SUM(payments.amount WHERE package_sale_id = X)` 
+- O campo package_sales.total_price deve receber exatamente o mesmo valor utilizado no momento da venda para gerar o lançamento em financial_entries.
+- Esse valor nunca deve ser recalculado posteriormente utilizando packages.price_by_sizes..
+- Um agendamento avulso normalmente tem 1 pagamento único, mas o modelo permite mais de um se precisar (ex: pagamento parcial de um serviço avulso também).
+
+### 3. Ajuste na tabela `appointments`
+
+Adicionar (coluna nova, nullable, não mexe em dado existente):
+
+appointments.confirmed_at (timestamp with time zone, nullable)
+
+Essa coluna representa apenas que o cliente confirmou presença para aquele agendamento específico.
+
+Ela é completamente independente de:
+- status de pagamento;
+- status de execução do serviço.
+
+### Fluxo obrigatório
+
+A confirmação de presença deve acontecer de duas formas:
+
+- automaticamente quando o cliente responder positivamente à mensagem de confirmação (fluxo já existente);
+- manualmente pelo usuário através de um botão "Confirmar Presença" na tela do agendamento.
+
+### Botão Confirmar Presença
+
+Quando o usuário clicar no botão:
+
+- gravar a data/hora atual em confirmed_at;
+- atualizar imediatamente a interface;
+- esconder o botão de confirmação.
+
+Após confirmado, deve aparecer um botão:
+
+**"Desfazer confirmação"**
+
+Ao clicar nele:
+
+- exibir um diálogo de confirmação perguntando se realmente deseja remover a confirmação de presença;
+- somente após confirmação do usuário limpar confirmed_at (NULL);
+- voltar a exibir o botão "Confirmar Presença".
+
+### Regra obrigatória para conclusão do atendimento
+
+Um atendimento NÃO pode ser marcado como "Concluído" enquanto confirmed_at estiver NULL.
+
+Caso o usuário tente alterar o status para "Concluído" sem confirmação de presença:
+
+- impedir a alteração;
+- exibir uma mensagem amigável informando que primeiro é necessário confirmar a presença do cliente.
+
+Essa validação deve existir tanto no backend quanto no frontend.
+
+O objetivo é garantir que um atendimento concluído sempre represente um pet que realmente compareceu.
+
+
+### 4. Lógica de status de pagamento (calculada, não armazenada no banco)
+
+Para cada pacote (`package_sales`), calcular no backend (endpoint de histórico do cliente):
+
+- `total_pago = SUM(payments.amount) WHERE package_sale_id = X`
+- Se `total_pago >= total_price` → status **"Quitado"** (verde)
+- Se `0 < total_pago < total_price` → status **"Parcial"** (amarelo)
+- Se `total_pago == 0` → status **"Pendente"** (vermelho)
+
+Mesma lógica para agendamentos avulsos, comparando `SUM(payments.amount) WHERE appointment_id = X` contra `appointments.total_price`.
+
+### Regras adicionais
+
+O status de pagamento nunca deve ser salvo em nenhuma tabela.
+
+Ele deve ser sempre calculado em tempo real a partir dos pagamentos registrados.
+
+Isso evita inconsistências caso pagamentos sejam adicionados, editados ou removidos posteriormente.
+
+Os endpoints devem retornar:
+
+- total_pago
+- saldo
+- status_pagamento
+
+já calculados para consumo direto pelo frontend.
+
+### 4.1 Integridade dos pagamentos
+
+Ao registrar um pagamento:
+
+- validar que o pacote ou agendamento pertence ao mesmo tenant;
+- validar que pertence ao mesmo cliente informado;
+- impedir pagamentos negativos;
+- impedir valor igual a zero.
+
+O sistema deve permitir pagamentos acima do saldo devedor.
+
+Nesse caso o histórico continuará registrando o valor recebido normalmente e o status permanecerá "Quitado".
+
+Não bloquear pagamentos excedentes, pois podem representar adiantamentos ou erros que serão tratados posteriormente pelo usuário.
+Após criado, um pagamento não poderá ter seu vínculo alterado entre appointment e package_sale. Caso tenha sido registrado incorretamente, o pagamento deverá ser excluído e registrado novamente. Isso preserva a rastreabilidade do histórico financeiro.
+
+
+### 5. Endpoint de histórico do cliente
+
+Criar (ou expandir, se já existir) um endpoint tipo `GET /api/clients/:id/history` que retorna, por cliente:
+- Lista de agendamentos avulsos com: data, serviço, valor, status de pagamento (calculado), `confirmed_at`.
+- Lista de pacotes contratados (via `package_sales`) com: nome do pacote, valor total, total pago, saldo, status de pagamento (calculado), lista dos agendamentos daquele grupo com seus `confirmed_at` e `status` de execução.
+- O endpoint de histórico deve evitar consultas do tipo N+1. Sempre que possível, buscar pagamentos agregados utilizando joins e agregações SQL, reduzindo o número de consultas ao banco.
+
+### 6. Frontend
+
+- Tela de histórico do cliente: mostrar pacotes e agendamentos avulsos com badge colorido (verde/amarelo/vermelho) conforme o status calculado acima.
+- Tela ou modal para registrar um novo pagamento: escolher se é contra um agendamento avulso ou contra um pacote (`package_sale_id`), valor, data, forma de pagamento, observação.
+- Não bloquear a criação de novos agendamentos por falta de pagamento — isso continua funcionando exatamente como hoje.
+
+---
+
+## Passo a passo de execução (importante seguir nessa ordem)
+
+1. Adicionar as novas tabelas (`package_sales`, `payments`) e a nova coluna (`appointments.confirmed_at`) no schema do Drizzle.
+2. Rodar `npx drizzle-kit generate` para gerar a migration.
+3. **Revisar o SQL gerado antes de aplicar** — confirmar que é só `CREATE TABLE` e `ALTER TABLE ADD COLUMN`, nada de `DROP` ou `ALTER COLUMN` em tabelas existentes.
+4. Aplicar a migration no banco (Supabase, via Session pooler, como já é o processo atual).
+5. Rodar o script de backfill de `package_sales` a partir dos `recurring_group_id` já existentes.
+6. Implementar os endpoints de pagamento e histórico.
+7. Implementar a UI de histórico com os badges coloridos e o formulário de registro de pagamento.
+8. Testar com pelo menos um cliente pacotista real (com pagamento parcial) e um cliente avulso antes de considerar concluído.
+
+Importante:
+Antes de implementar qualquer alteração, analisar a estrutura atual do projeto para reutilizar os padrões já existentes de arquitetura, nomenclatura, organização de pastas, componentes React, rotas, serviços e acesso ao banco.
+Não criar uma nova arquitetura paralela.
+Todas as implementações devem seguir o padrão já utilizado no projeto.
+Sempre reutilizar código existente quando possível.
+Caso seja necessário tomar alguma decisão arquitetural não especificada neste documento, interromper a implementação e solicitar confirmação antes de prosseguir.
