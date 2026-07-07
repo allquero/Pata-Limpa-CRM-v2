@@ -2405,6 +2405,17 @@ components:
                     confirmedAt:
                       type: ["string", "null"]
                       format: date-time
+                    petId:
+                      type: ["integer", "null"]
+                    petName:
+                      type: ["string", "null"]
+                    service:
+                      type: ["object", "null"]
+                      properties:
+                        id:
+                          type: integer
+                        name:
+                          type: string
               pagamentos:
                 type: array
                 items:

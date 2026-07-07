@@ -5,6 +5,7 @@
  * Grooming CRM API
  * OpenAPI spec version: 0.1.0
  */
+import type { ClientHistoryPacotesItemAgendamentosItemService } from "./clientHistoryPacotesItemAgendamentosItemService";
 
 export type ClientHistoryPacotesItemAgendamentosItem = {
   id?: number;
@@ -12,4 +13,10 @@ export type ClientHistoryPacotesItemAgendamentosItem = {
   status?: string;
   /** @nullable */
   confirmedAt?: Date | null;
+  /** @nullable */
+  petId?: number | null;
+  /** @nullable */
+  petName?: string | null;
+  /** @nullable */
+  service?: ClientHistoryPacotesItemAgendamentosItemService;
 };

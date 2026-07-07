@@ -630,12 +630,26 @@ export const ClientHistoryPacotesItemStatusPagamento = {
   pendente: "pendente",
 } as const;
 
+/**
+ * @nullable
+ */
+export type ClientHistoryPacotesItemAgendamentosItemService = {
+  id?: number;
+  name?: string;
+} | null;
+
 export type ClientHistoryPacotesItemAgendamentosItem = {
   id?: number;
   scheduledDate?: string;
   status?: string;
   /** @nullable */
   confirmedAt?: string | null;
+  /** @nullable */
+  petId?: number | null;
+  /** @nullable */
+  petName?: string | null;
+  /** @nullable */
+  service?: ClientHistoryPacotesItemAgendamentosItemService;
 };
 
 export type ClientHistoryPacotesItem = {

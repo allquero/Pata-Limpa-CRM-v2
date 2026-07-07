@@ -37,6 +37,7 @@ export * from "./clientHistoryAvulsosItemService";
 export * from "./clientHistoryAvulsosItemStatusPagamento";
 export * from "./clientHistoryPacotesItem";
 export * from "./clientHistoryPacotesItemAgendamentosItem";
+export * from "./clientHistoryPacotesItemAgendamentosItemService";
 export * from "./clientHistoryPacotesItemStatusPagamento";
 export * from "./clientInput";
 export * from "./clientUpdate";

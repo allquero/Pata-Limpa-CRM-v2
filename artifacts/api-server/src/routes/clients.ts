@@ -198,6 +198,9 @@ router.get("/clients/:id/history", async (req: Request, res: Response): Promise<
         scheduledDate: a.appt.scheduledDate,
         status: a.appt.status,
         confirmedAt: a.appt.confirmedAt,
+        petId: a.appt.petId ?? null,
+        petName: a.pet?.id ? a.pet.name : null,
+        service: a.service?.id ? { id: a.service.id, name: a.service.name } : null,
       })),
       pagamentos: salePayments.map(p => ({ ...p, amount: parseFloat(p.amount) })),
     };

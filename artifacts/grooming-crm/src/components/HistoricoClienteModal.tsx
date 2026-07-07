@@ -10,7 +10,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { getGetClientHistoryQueryKey } from "@workspace/api-client-react";
-import { ChevronDown, ChevronUp, Trash2, Plus, PackageIcon, CalendarIcon, CheckCircle2, Clock, XCircle } from "lucide-react";
+import {
+  ChevronDown, ChevronUp, Trash2, Plus, PackageIcon,
+  CalendarIcon, CheckCircle2, Clock, XCircle, PawPrint,
+} from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -20,29 +23,27 @@ function formatBRL(v: number) {
 
 function formatDate(d: string | Date | null | undefined) {
   if (!d) return "—";
-  try {
-    return format(new Date(d as string), "dd/MM/yyyy", { locale: ptBR });
-  } catch { return "—"; }
+  try { return format(new Date(d as string), "dd/MM/yyyy", { locale: ptBR }); }
+  catch { return "—"; }
 }
 
 function formatDateTime(d: string | Date | null | undefined) {
   if (!d) return "—";
-  try {
-    return format(new Date(d as string), "dd/MM/yyyy HH:mm", { locale: ptBR });
-  } catch { return "—"; }
+  try { return format(new Date(d as string), "dd/MM/yyyy HH:mm", { locale: ptBR }); }
+  catch { return "—"; }
 }
 
 const STATUS_INFO: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
-  aguardando: { label: "Aguardando", color: "bg-yellow-100 text-yellow-800", icon: <Clock className="h-3 w-3" /> },
-  em_atendimento: { label: "Em Atendimento", color: "bg-blue-100 text-blue-800", icon: <Clock className="h-3 w-3" /> },
-  pet_pronto: { label: "Pet Pronto", color: "bg-orange-100 text-orange-800", icon: <CheckCircle2 className="h-3 w-3" /> },
-  concluido: { label: "Concluído", color: "bg-green-100 text-green-800", icon: <CheckCircle2 className="h-3 w-3" /> },
-  cancelado: { label: "Cancelado", color: "bg-red-100 text-red-800", icon: <XCircle className="h-3 w-3" /> },
+  aguardando:    { label: "Aguardando",    color: "bg-yellow-100 text-yellow-800", icon: <Clock className="h-3 w-3" /> },
+  em_atendimento:{ label: "Em Atendimento",color: "bg-blue-100 text-blue-800",    icon: <Clock className="h-3 w-3" /> },
+  pet_pronto:    { label: "Pet Pronto",    color: "bg-orange-100 text-orange-800", icon: <CheckCircle2 className="h-3 w-3" /> },
+  concluido:     { label: "Concluído",     color: "bg-green-100 text-green-800",   icon: <CheckCircle2 className="h-3 w-3" /> },
+  cancelado:     { label: "Cancelado",     color: "bg-red-100 text-red-800",       icon: <XCircle className="h-3 w-3" /> },
 };
 
 const PAGAMENTO_INFO: Record<string, { label: string; color: string }> = {
   quitado: { label: "Quitado", color: "bg-green-100 text-green-800" },
-  parcial: { label: "Parcial", color: "bg-yellow-100 text-yellow-800" },
+  parcial:  { label: "Parcial",  color: "bg-yellow-100 text-yellow-800" },
   pendente: { label: "Pendente", color: "bg-red-100 text-red-800" },
 };
 
@@ -50,12 +51,146 @@ const METODOS_PAGAMENTO = [
   "Dinheiro", "PIX", "Cartão de Débito", "Cartão de Crédito", "Transferência",
 ];
 
+// ─── Tipos derivados ──────────────────────────────────────────────────────────
+type Avulso  = NonNullable<ClientHistory["avulsos"]>[number];
+type Pacote  = NonNullable<ClientHistory["pacotes"]>[number];
+type Payment = NonNullable<Avulso["pagamentos"]>[number];
+
+type PkgAgendamento = NonNullable<Pacote["agendamentos"]>[number] & {
+  petId?: number | null;
+  petName?: string | null;
+  service?: { id: number; name: string } | null;
+};
+
+// ─── Visão por cachorro ───────────────────────────────────────────────────────
+type PetSession = {
+  apptId: number;
+  scheduledDate: string;
+  service: string | null;
+  status: string;
+  confirmed: boolean;
+  origin: "avulso" | "pacote";
+  packageName?: string | null;
+};
+
+function buildPetView(history: ClientHistory): Map<number, { petName: string; sessions: PetSession[] }> {
+  const map = new Map<number, { petName: string; sessions: PetSession[] }>();
+
+  for (const a of history.avulsos ?? []) {
+    const pet = a.pet as { id?: number; name?: string } | null | undefined;
+    if (!pet?.id) continue;
+    if (!map.has(pet.id)) map.set(pet.id, { petName: pet.name ?? "?", sessions: [] });
+    map.get(pet.id)!.sessions.push({
+      apptId: a.id,
+      scheduledDate: a.scheduledDate as string,
+      service: (a.service as { name?: string } | null)?.name ?? null,
+      status: a.status ?? "aguardando",
+      confirmed: !!a.confirmedAt,
+      origin: "avulso",
+    });
+  }
+
+  for (const p of history.pacotes ?? []) {
+    for (const ag of (p.agendamentos ?? []) as PkgAgendamento[]) {
+      const petId = ag.petId;
+      const petName = ag.petName ?? p.petName ?? "?";
+      if (!petId || ag.id == null) continue;
+      if (!map.has(petId)) map.set(petId, { petName, sessions: [] });
+      map.get(petId)!.sessions.push({
+        apptId: ag.id as number,
+        scheduledDate: ag.scheduledDate as string,
+        service: ag.service?.name ?? null,
+        status: ag.status ?? "aguardando",
+        confirmed: !!ag.confirmedAt,
+        origin: "pacote",
+        packageName: p.packageName,
+      });
+    }
+  }
+
+  // Ordena por data dentro de cada pet
+  for (const { sessions } of map.values()) {
+    sessions.sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate));
+  }
+
+  return map;
+}
+
+function PetHistorySection({ petName, sessions }: { petName: string; sessions: PetSession[] }) {
+  const [expanded, setExpanded] = useState(false);
+  const total     = sessions.length;
+  const attended  = sessions.filter(s => s.confirmed).length;
+  const completed = sessions.filter(s => s.status === "concluido").length;
+
+  return (
+    <div className="border rounded-lg overflow-hidden">
+      <button
+        className="w-full flex items-center justify-between p-3 hover:bg-muted/30 text-left gap-2"
+        onClick={() => setExpanded(e => !e)}
+      >
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <PawPrint className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+          <div>
+            <p className="text-sm font-medium">{petName}</p>
+            <div className="flex items-center gap-3 mt-0.5 flex-wrap text-[11px] text-muted-foreground">
+              <span>{total} sessão(ões) total</span>
+              <span className="text-green-600 font-medium">{attended} presença(s) confirmada(s)</span>
+              <span>{completed} concluída(s)</span>
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Barra de progresso de presenças */}
+          <div className="flex gap-0.5" title={`${attended}/${total} presenças`}>
+            {sessions.map(s => (
+              <div
+                key={s.apptId}
+                className={`h-3 w-3 rounded-sm ${
+                  s.confirmed ? "bg-green-500" : s.status === "cancelado" ? "bg-gray-200" : "bg-red-300"
+                }`}
+                title={`${formatDate(s.scheduledDate)} — ${s.confirmed ? "Presente" : "Não confirmado"}`}
+              />
+            ))}
+          </div>
+          {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+        </div>
+      </button>
+      {expanded && (
+        <div className="border-t divide-y bg-muted/10">
+          {sessions.map((s, i) => {
+            const si = STATUS_INFO[s.status] ?? STATUS_INFO.aguardando;
+            return (
+              <div key={s.apptId} className="flex items-center gap-2 px-3 py-2 text-xs">
+                <span className="text-muted-foreground w-5 shrink-0 text-right">{i + 1}.</span>
+                <span className="text-muted-foreground w-24 shrink-0">{formatDate(s.scheduledDate)}</span>
+                {s.service && <span className="text-muted-foreground flex-1 truncate">{s.service}</span>}
+                {s.origin === "pacote" && s.packageName && !s.service && (
+                  <span className="text-muted-foreground flex-1 truncate">{s.packageName}</span>
+                )}
+                <Badge className={`text-[10px] px-1 py-0 gap-0.5 shrink-0 ${si.color}`}>
+                  {si.icon}{si.label}
+                </Badge>
+                {s.confirmed ? (
+                  <span className="text-green-600 flex items-center gap-0.5 shrink-0 text-[11px]">
+                    <CheckCircle2 className="h-3 w-3" /> Presente
+                  </span>
+                ) : s.status !== "cancelado" ? (
+                  <span className="text-red-400 flex items-center gap-0.5 shrink-0 text-[11px]">
+                    <XCircle className="h-3 w-3" /> Não confirmado
+                  </span>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Formulário de pagamento ──────────────────────────────────────────────────
 function PaymentForm({
-  clientId,
-  appointmentId,
-  packageSaleId,
-  maxAmount,
-  onSuccess,
+  clientId, appointmentId, packageSaleId, maxAmount, onSuccess,
 }: {
   clientId: number;
   appointmentId?: number;
@@ -65,18 +200,15 @@ function PaymentForm({
 }) {
   const { toast } = useToast();
   const createPayment = useCreatePayment();
-  const [amount, setAmount] = useState(maxAmount != null && maxAmount > 0 ? String(maxAmount) : "");
-  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().substring(0, 10));
+  const [amount, setAmount]             = useState(maxAmount != null && maxAmount > 0 ? String(maxAmount) : "");
+  const [paymentDate, setPaymentDate]   = useState(new Date().toISOString().substring(0, 10));
   const [paymentMethod, setPaymentMethod] = useState("");
-  const [notes, setNotes] = useState("");
-  const [open, setOpen] = useState(false);
+  const [notes, setNotes]               = useState("");
+  const [open, setOpen]                 = useState(false);
 
   if (!open) {
     return (
-      <button
-        onClick={() => setOpen(true)}
-        className="flex items-center gap-1 text-xs text-primary hover:underline"
-      >
+      <button onClick={() => setOpen(true)} className="flex items-center gap-1 text-xs text-primary hover:underline">
         <Plus className="h-3 w-3" /> Registrar pagamento
       </button>
     );
@@ -84,10 +216,7 @@ function PaymentForm({
 
   const handleSave = async () => {
     const v = parseFloat(amount.replace(",", "."));
-    if (isNaN(v) || v <= 0) {
-      toast({ title: "Valor inválido", variant: "destructive" });
-      return;
-    }
+    if (isNaN(v) || v <= 0) { toast({ title: "Valor inválido", variant: "destructive" }); return; }
     try {
       await createPayment.mutateAsync({
         data: {
@@ -95,7 +224,7 @@ function PaymentForm({
           appointmentId,
           packageSaleId,
           amount: v,
-          paymentDate: new Date(paymentDate) as any,
+          paymentDate: new Date(paymentDate) as unknown as string,
           paymentMethod: paymentMethod || undefined,
           notes: notes || undefined,
         },
@@ -114,44 +243,22 @@ function PaymentForm({
       <div className="grid grid-cols-2 gap-2">
         <div>
           <Label className="text-xs">Valor *</Label>
-          <Input
-            type="number"
-            step="0.01"
-            min="0.01"
-            value={amount}
-            onChange={e => setAmount(e.target.value)}
-            className="h-7 text-xs"
-            placeholder="0,00"
-          />
+          <Input type="number" step="0.01" min="0.01" value={amount} onChange={e => setAmount(e.target.value)} className="h-7 text-xs" placeholder="0,00" />
         </div>
         <div>
           <Label className="text-xs">Data *</Label>
-          <Input
-            type="date"
-            value={paymentDate}
-            onChange={e => setPaymentDate(e.target.value)}
-            className="h-7 text-xs"
-          />
+          <Input type="date" value={paymentDate} onChange={e => setPaymentDate(e.target.value)} className="h-7 text-xs" />
         </div>
         <div>
           <Label className="text-xs">Método</Label>
-          <select
-            value={paymentMethod}
-            onChange={e => setPaymentMethod(e.target.value)}
-            className="h-7 text-xs w-full rounded border border-input bg-background px-2"
-          >
+          <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)} className="h-7 text-xs w-full rounded border border-input bg-background px-2">
             <option value="">Selecione</option>
             {METODOS_PAGAMENTO.map(m => <option key={m} value={m}>{m}</option>)}
           </select>
         </div>
         <div>
           <Label className="text-xs">Obs.</Label>
-          <Input
-            value={notes}
-            onChange={e => setNotes(e.target.value)}
-            className="h-7 text-xs"
-            placeholder="Opcional"
-          />
+          <Input value={notes} onChange={e => setNotes(e.target.value)} className="h-7 text-xs" placeholder="Opcional" />
         </div>
       </div>
       <div className="flex gap-2 justify-end">
@@ -164,15 +271,12 @@ function PaymentForm({
   );
 }
 
-type Avulso = NonNullable<ClientHistory["avulsos"]>[number];
-type Pacote = NonNullable<ClientHistory["pacotes"]>[number];
-type Payment = NonNullable<Avulso["pagamentos"]>[number];
-
+// ─── Avulso item ──────────────────────────────────────────────────────────────
 function AvulsoItem({ item, clientId, onRefresh }: { item: Avulso; clientId: number; onRefresh: () => void }) {
   const [expanded, setExpanded] = useState(false);
   const { toast } = useToast();
   const deletePayment = useDeletePayment();
-  const pagInfo = PAGAMENTO_INFO[item.statusPagamento] ?? PAGAMENTO_INFO.pendente;
+  const pagInfo    = PAGAMENTO_INFO[item.statusPagamento] ?? PAGAMENTO_INFO.pendente;
   const statusInfo = STATUS_INFO[item.status ?? "aguardando"] ?? STATUS_INFO.aguardando;
 
   const handleDeletePayment = async (id: number) => {
@@ -188,22 +292,21 @@ function AvulsoItem({ item, clientId, onRefresh }: { item: Avulso; clientId: num
 
   return (
     <div className="border rounded-lg overflow-hidden">
-      <button
-        className="w-full flex items-center justify-between p-3 hover:bg-muted/30 text-left gap-2"
-        onClick={() => setExpanded(e => !e)}
-      >
+      <button className="w-full flex items-center justify-between p-3 hover:bg-muted/30 text-left gap-2" onClick={() => setExpanded(e => !e)}>
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-sm font-medium">{formatDateTime(item.scheduledDate)}</span>
-              {item.service && <span className="text-xs text-muted-foreground">— {item.service.name}</span>}
-              {item.pet && <span className="text-xs text-muted-foreground">({item.pet.name})</span>}
+              {(item.service as { name?: string } | null)?.name && (
+                <span className="text-xs text-muted-foreground">— {(item.service as { name: string }).name}</span>
+              )}
+              {(item.pet as { name?: string } | null)?.name && (
+                <span className="text-xs text-muted-foreground">({(item.pet as { name: string }).name})</span>
+              )}
             </div>
             <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-              <Badge className={`text-[10px] px-1 py-0 gap-1 ${statusInfo.color}`}>
-                {statusInfo.icon}{statusInfo.label}
-              </Badge>
+              <Badge className={`text-[10px] px-1 py-0 gap-1 ${statusInfo.color}`}>{statusInfo.icon}{statusInfo.label}</Badge>
               <Badge className={`text-[10px] px-1.5 py-0 ${pagInfo.color}`}>{pagInfo.label}</Badge>
               {item.confirmedAt && (
                 <span className="text-[10px] text-green-600 flex items-center gap-0.5">
@@ -215,9 +318,9 @@ function AvulsoItem({ item, clientId, onRefresh }: { item: Avulso; clientId: num
         </div>
         <div className="flex items-center gap-3 shrink-0">
           <div className="text-right">
-            <p className="text-sm font-semibold">{formatBRL(item.totalPrice)}</p>
+            <p className="text-sm font-semibold">{formatBRL(item.totalPrice as number)}</p>
             <p className="text-[10px] text-muted-foreground">
-              Pago: {formatBRL(item.totalPago)} · Saldo: {formatBRL(item.saldo)}
+              Pago: {formatBRL(item.totalPago as number)} · Saldo: {formatBRL(item.saldo as number)}
             </p>
           </div>
           {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
@@ -229,16 +332,13 @@ function AvulsoItem({ item, clientId, onRefresh }: { item: Avulso; clientId: num
             <div>
               <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Pagamentos</p>
               <div className="space-y-1">
-                {(item.pagamentos as Payment[]).map((p) => (
+                {(item.pagamentos as Payment[]).map(p => (
                   <div key={p.id} className="flex items-center justify-between text-xs bg-card border rounded px-2 py-1">
                     <span className="text-muted-foreground">{formatDate(p.paymentDate)}</span>
                     <span>{p.paymentMethod ?? "—"}</span>
                     <span className="font-semibold text-green-700">{formatBRL(p.amount as unknown as number)}</span>
                     {p.notes && <span className="text-muted-foreground truncate max-w-[100px]">{p.notes}</span>}
-                    <button
-                      onClick={() => handleDeletePayment(p.id)}
-                      className="p-0.5 rounded hover:bg-red-50 text-muted-foreground hover:text-red-600"
-                    >
+                    <button onClick={() => handleDeletePayment(p.id)} className="p-0.5 rounded hover:bg-red-50 text-muted-foreground hover:text-red-600">
                       <Trash2 className="h-3 w-3" />
                     </button>
                   </div>
@@ -246,15 +346,10 @@ function AvulsoItem({ item, clientId, onRefresh }: { item: Avulso; clientId: num
               </div>
             </div>
           )}
-          {item.saldo > 0 && (
-            <PaymentForm
-              clientId={clientId}
-              appointmentId={item.id}
-              maxAmount={item.saldo}
-              onSuccess={onRefresh}
-            />
+          {(item.saldo as number) > 0 && (
+            <PaymentForm clientId={clientId} appointmentId={item.id} maxAmount={item.saldo as number} onSuccess={onRefresh} />
           )}
-          {item.saldo <= 0 && (item.pagamentos ?? []).length === 0 && (
+          {(item.saldo as number) <= 0 && (item.pagamentos ?? []).length === 0 && (
             <PaymentForm clientId={clientId} appointmentId={item.id} onSuccess={onRefresh} />
           )}
         </div>
@@ -263,11 +358,17 @@ function AvulsoItem({ item, clientId, onRefresh }: { item: Avulso; clientId: num
   );
 }
 
+// ─── Pacote item ──────────────────────────────────────────────────────────────
 function PacoteItem({ item, clientId, onRefresh }: { item: Pacote; clientId: number; onRefresh: () => void }) {
   const [expanded, setExpanded] = useState(false);
   const { toast } = useToast();
   const deletePayment = useDeletePayment();
   const pagInfo = PAGAMENTO_INFO[item.statusPagamento] ?? PAGAMENTO_INFO.pendente;
+  const agendamentos = (item.agendamentos ?? []) as PkgAgendamento[];
+
+  const totalAppts    = agendamentos.length;
+  const doneAppts     = agendamentos.filter(a => a.status === "concluido").length;
+  const confirmedAppts = agendamentos.filter(a => a.confirmedAt).length;
 
   const handleDeletePayment = async (id: number) => {
     if (!confirm("Excluir este pagamento?")) return;
@@ -280,16 +381,9 @@ function PacoteItem({ item, clientId, onRefresh }: { item: Pacote; clientId: num
     }
   };
 
-  const totalAppts = item.agendamentos?.length ?? 0;
-  const doneAppts = item.agendamentos?.filter(a => a.status === "concluido").length ?? 0;
-  const confirmedAppts = item.agendamentos?.filter(a => a.confirmedAt).length ?? 0;
-
   return (
     <div className="border rounded-lg overflow-hidden">
-      <button
-        className="w-full flex items-center justify-between p-3 hover:bg-muted/30 text-left gap-2"
-        onClick={() => setExpanded(e => !e)}
-      >
+      <button className="w-full flex items-center justify-between p-3 hover:bg-muted/30 text-left gap-2" onClick={() => setExpanded(e => !e)}>
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <PackageIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
           <div className="flex-1 min-w-0">
@@ -311,9 +405,11 @@ function PacoteItem({ item, clientId, onRefresh }: { item: Pacote; clientId: num
         </div>
         <div className="flex items-center gap-3 shrink-0">
           <div className="text-right">
-            <p className="text-sm font-semibold">{item.totalPrice != null ? formatBRL(item.totalPrice as unknown as number) : "—"}</p>
+            <p className="text-sm font-semibold">
+              {item.totalPrice != null ? formatBRL(item.totalPrice as unknown as number) : "—"}
+            </p>
             <p className="text-[10px] text-muted-foreground">
-              Pago: {formatBRL(item.totalPago)} · Saldo: {item.saldo != null ? formatBRL(item.saldo as unknown as number) : "—"}
+              Pago: {formatBRL(item.totalPago as number)} · Saldo: {item.saldo != null ? formatBRL(item.saldo as unknown as number) : "—"}
             </p>
           </div>
           {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
@@ -321,44 +417,44 @@ function PacoteItem({ item, clientId, onRefresh }: { item: Pacote; clientId: num
       </button>
       {expanded && (
         <div className="border-t px-3 py-2 bg-muted/20 space-y-3">
-          {/* Agendamentos do pacote */}
-          {(item.agendamentos ?? []).length > 0 && (
+          {agendamentos.length > 0 && (
             <div>
-              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Agendamentos</p>
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Sessões do pacote</p>
               <div className="space-y-1">
-                {item.agendamentos!.map((a, i) => {
+                {agendamentos.map((a, i) => {
                   const si = STATUS_INFO[a.status ?? "aguardando"] ?? STATUS_INFO.aguardando;
                   return (
                     <div key={a.id} className="flex items-center gap-2 text-xs px-2 py-1 bg-card border rounded">
                       <span className="text-muted-foreground w-4 shrink-0">{i + 1}.</span>
-                      <span className="text-muted-foreground">{formatDateTime(a.scheduledDate)}</span>
-                      <Badge className={`text-[10px] px-1 py-0 gap-1 ${si.color}`}>{si.icon}{si.label}</Badge>
-                      {a.confirmedAt && (
-                        <span className="text-[10px] text-green-600 flex items-center gap-0.5">
-                          <CheckCircle2 className="h-3 w-3" /> Confirmado
+                      <span className="text-muted-foreground">{formatDate(a.scheduledDate)}</span>
+                      {a.service?.name && <span className="text-muted-foreground flex-1 truncate">{a.service.name}</span>}
+                      <Badge className={`text-[10px] px-1 py-0 gap-1 shrink-0 ${si.color}`}>{si.icon}{si.label}</Badge>
+                      {a.confirmedAt ? (
+                        <span className="text-[10px] text-green-600 flex items-center gap-0.5 shrink-0">
+                          <CheckCircle2 className="h-3 w-3" /> Presente
                         </span>
-                      )}
+                      ) : a.status !== "cancelado" ? (
+                        <span className="text-[10px] text-red-400 flex items-center gap-0.5 shrink-0">
+                          <XCircle className="h-3 w-3" /> Não confirmado
+                        </span>
+                      ) : null}
                     </div>
                   );
                 })}
               </div>
             </div>
           )}
-          {/* Pagamentos do pacote */}
           {(item.pagamentos ?? []).length > 0 && (
             <div>
               <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Pagamentos</p>
               <div className="space-y-1">
-                {(item.pagamentos as Payment[]).map((p) => (
+                {(item.pagamentos as Payment[]).map(p => (
                   <div key={p.id} className="flex items-center justify-between text-xs bg-card border rounded px-2 py-1">
                     <span className="text-muted-foreground">{formatDate(p.paymentDate)}</span>
                     <span>{p.paymentMethod ?? "—"}</span>
                     <span className="font-semibold text-green-700">{formatBRL(p.amount as unknown as number)}</span>
                     {p.notes && <span className="text-muted-foreground truncate max-w-[100px]">{p.notes}</span>}
-                    <button
-                      onClick={() => handleDeletePayment(p.id)}
-                      className="p-0.5 rounded hover:bg-red-50 text-muted-foreground hover:text-red-600"
-                    >
+                    <button onClick={() => handleDeletePayment(p.id)} className="p-0.5 rounded hover:bg-red-50 text-muted-foreground hover:text-red-600">
                       <Trash2 className="h-3 w-3" />
                     </button>
                   </div>
@@ -380,6 +476,7 @@ function PacoteItem({ item, clientId, onRefresh }: { item: Pacote; clientId: num
   );
 }
 
+// ─── Modal principal ──────────────────────────────────────────────────────────
 export function HistoricoClienteModal({
   clientId,
   clientName,
@@ -392,6 +489,8 @@ export function HistoricoClienteModal({
   onOpenChange: (v: boolean) => void;
 }) {
   const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState<"pets" | "avulsos" | "pacotes">("pets");
+
   const { data, isLoading } = useGetClientHistory(clientId ?? 0, {
     query: {
       queryKey: getGetClientHistoryQueryKey(clientId ?? 0),
@@ -400,33 +499,37 @@ export function HistoricoClienteModal({
   });
 
   const handleRefresh = () => {
-    if (clientId) {
-      queryClient.invalidateQueries({ queryKey: getGetClientHistoryQueryKey(clientId) });
-    }
+    if (clientId) queryClient.invalidateQueries({ queryKey: getGetClientHistoryQueryKey(clientId) });
   };
 
   const history = data as ClientHistory | undefined;
 
-  const totalAvulsos = history?.avulsos?.length ?? 0;
-  const totalPacotes = history?.pacotes?.length ?? 0;
+  const totalAvulsos  = history?.avulsos?.length ?? 0;
+  const totalPacotes  = history?.pacotes?.length ?? 0;
 
   const totalPago =
-    (history?.avulsos?.reduce((s, a) => s + (a.totalPago ?? 0), 0) ?? 0) +
-    (history?.pacotes?.reduce((s, p) => s + (p.totalPago ?? 0), 0) ?? 0);
+    (history?.avulsos?.reduce((s, a) => s + ((a.totalPago as number) ?? 0), 0) ?? 0) +
+    (history?.pacotes?.reduce((s, p) => s + ((p.totalPago as number) ?? 0), 0) ?? 0);
 
   const totalValor =
-    (history?.avulsos?.reduce((s, a) => s + (a.totalPrice ?? 0), 0) ?? 0) +
+    (history?.avulsos?.reduce((s, a) => s + ((a.totalPrice as number) ?? 0), 0) ?? 0) +
     (history?.pacotes?.reduce((s, p) => s + ((p.totalPrice as unknown as number) ?? 0), 0) ?? 0);
 
   const totalSaldo = totalValor - totalPago;
+
+  const petView = history ? buildPetView(history) : new Map();
+
+  const TABS = [
+    { key: "pets" as const,    label: `Por Cachorro (${petView.size})` },
+    { key: "avulsos" as const, label: `Avulsos (${totalAvulsos})` },
+    { key: "pacotes" as const, label: `Pacotes (${totalPacotes})` },
+  ];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>
-            Histórico — {clientName ?? "Cliente"}
-          </DialogTitle>
+          <DialogTitle>Histórico — {clientName ?? "Cliente"}</DialogTitle>
         </DialogHeader>
 
         {isLoading ? (
@@ -437,7 +540,7 @@ export function HistoricoClienteModal({
           <p className="text-muted-foreground text-sm">Nenhum dado encontrado.</p>
         ) : (
           <div className="space-y-5">
-            {/* Resumo */}
+            {/* Resumo financeiro */}
             <div className="grid grid-cols-3 gap-3">
               <div className="rounded-lg border p-3 text-center">
                 <p className="text-2xl font-bold text-primary">{formatBRL(totalValor)}</p>
@@ -448,53 +551,69 @@ export function HistoricoClienteModal({
                 <p className="text-xs text-muted-foreground mt-0.5">Total pago</p>
               </div>
               <div className={`rounded-lg border p-3 text-center ${totalSaldo > 0 ? "border-red-200 bg-red-50" : ""}`}>
-                <p className={`text-2xl font-bold ${totalSaldo > 0 ? "text-red-600" : "text-muted-foreground"}`}>{formatBRL(totalSaldo)}</p>
+                <p className={`text-2xl font-bold ${totalSaldo > 0 ? "text-red-600" : "text-muted-foreground"}`}>
+                  {formatBRL(totalSaldo)}
+                </p>
                 <p className="text-xs text-muted-foreground mt-0.5">Saldo a receber</p>
               </div>
             </div>
 
-            {/* Avulsos */}
-            {totalAvulsos > 0 && (
-              <div>
-                <p className="text-sm font-semibold mb-2 flex items-center gap-1.5">
-                  <CalendarIcon className="h-4 w-4" /> Agendamentos Avulsos ({totalAvulsos})
-                </p>
-                <div className="space-y-2">
-                  {(history.avulsos ?? []).map(item => (
-                    <AvulsoItem
-                      key={item.id}
-                      item={item}
-                      clientId={clientId!}
-                      onRefresh={handleRefresh}
-                    />
-                  ))}
-                </div>
+            {/* Abas */}
+            <div className="flex gap-1 border-b">
+              {TABS.map(tab => (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-t transition-colors ${
+                    activeTab === tab.key
+                      ? "bg-background border border-b-background text-foreground -mb-px"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Aba: Por cachorro */}
+            {activeTab === "pets" && (
+              <div className="space-y-2">
+                {petView.size === 0 ? (
+                  <p className="text-muted-foreground text-sm text-center py-6">
+                    Nenhuma sessão associada a um pet encontrada.
+                  </p>
+                ) : (
+                  Array.from(petView.entries()).map(([petId, { petName, sessions }]) => (
+                    <PetHistorySection key={petId} petName={petName} sessions={sessions} />
+                  ))
+                )}
               </div>
             )}
 
-            {/* Pacotes */}
-            {totalPacotes > 0 && (
-              <div>
-                <p className="text-sm font-semibold mb-2 flex items-center gap-1.5">
-                  <PackageIcon className="h-4 w-4" /> Pacotes ({totalPacotes})
-                </p>
-                <div className="space-y-2">
-                  {(history.pacotes ?? []).map(item => (
-                    <PacoteItem
-                      key={item.id}
-                      item={item}
-                      clientId={clientId!}
-                      onRefresh={handleRefresh}
-                    />
-                  ))}
-                </div>
+            {/* Aba: Avulsos */}
+            {activeTab === "avulsos" && (
+              <div className="space-y-2">
+                {totalAvulsos === 0 ? (
+                  <p className="text-muted-foreground text-sm text-center py-6">Nenhum agendamento avulso.</p>
+                ) : (
+                  (history.avulsos ?? []).map(item => (
+                    <AvulsoItem key={item.id} item={item} clientId={clientId!} onRefresh={handleRefresh} />
+                  ))
+                )}
               </div>
             )}
 
-            {totalAvulsos === 0 && totalPacotes === 0 && (
-              <p className="text-muted-foreground text-sm text-center py-6">
-                Nenhum agendamento ou pacote encontrado para este cliente.
-              </p>
+            {/* Aba: Pacotes */}
+            {activeTab === "pacotes" && (
+              <div className="space-y-2">
+                {totalPacotes === 0 ? (
+                  <p className="text-muted-foreground text-sm text-center py-6">Nenhum pacote encontrado.</p>
+                ) : (
+                  (history.pacotes ?? []).map(item => (
+                    <PacoteItem key={item.id} item={item} clientId={clientId!} onRefresh={handleRefresh} />
+                  ))
+                )}
+              </div>
             )}
           </div>
         )}

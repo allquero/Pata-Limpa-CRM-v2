@@ -451,6 +451,14 @@ export const GetClientHistoryResponse = zod.object({
           scheduledDate: zod.coerce.date().optional(),
           status: zod.string().optional(),
           confirmedAt: zod.coerce.date().nullish(),
+          petId: zod.number().nullish(),
+          petName: zod.string().nullish(),
+          service: zod
+            .object({
+              id: zod.number().optional(),
+              name: zod.string().optional(),
+            })
+            .nullish(),
         }),
       ),
       pagamentos: zod
