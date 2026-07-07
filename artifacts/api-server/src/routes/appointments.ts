@@ -280,6 +280,10 @@ router.patch("/appointments/:id/status", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Agendamento não encontrado" });
     return;
   }
+  if (parsed.data.status === "concluido" && !existing.confirmedAt) {
+    res.status(422).json({ error: "Confirme a presença do cliente antes de concluir o agendamento" });
+    return;
+  }
   await db.update(appointmentsTable).set({ status: parsed.data.status }).where(eq(appointmentsTable.id, params.data.id));
   const appt = await getFullAppointment(params.data.id);
   if (!appt) {

@@ -6,6 +6,7 @@
   "scripts": {
     "hello": "tsx ./src/hello.ts",
     "fix-dev-tenant-user-id": "tsx ./src/fix-dev-tenant-user-id.ts",
+    "backfill-package-sales": "tsx ./src/backfill-package-sales.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

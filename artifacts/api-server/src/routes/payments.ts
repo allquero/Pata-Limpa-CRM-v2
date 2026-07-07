@@ -44,25 +44,33 @@ router.post("/payments", async (req, res): Promise<void> => {
     return;
   }
 
-  // Verify the linked record belongs to this tenant
+  // Verify the linked record belongs to this tenant AND to the same clientId
   if (hasAppt) {
     const [appt] = await db
-      .select({ id: appointmentsTable.id })
+      .select({ id: appointmentsTable.id, clientId: appointmentsTable.clientId })
       .from(appointmentsTable)
       .where(and(eq(appointmentsTable.id, appointmentId!), eq(appointmentsTable.tenantId, req.tenantId!)));
     if (!appt) {
       res.status(403).json({ error: "Agendamento não pertence a este tenant" });
       return;
     }
+    if (appt.clientId !== clientId) {
+      res.status(400).json({ error: "Agendamento não pertence a este cliente" });
+      return;
+    }
   }
 
   if (hasPkg) {
     const [ps] = await db
-      .select({ id: packageSalesTable.id })
+      .select({ id: packageSalesTable.id, clientId: packageSalesTable.clientId })
       .from(packageSalesTable)
       .where(and(eq(packageSalesTable.id, packageSaleId!), eq(packageSalesTable.tenantId, req.tenantId!)));
     if (!ps) {
       res.status(403).json({ error: "Venda de pacote não pertence a este tenant" });
+      return;
+    }
+    if (ps.clientId !== clientId) {
+      res.status(400).json({ error: "Venda de pacote não pertence a este cliente" });
       return;
     }
   }

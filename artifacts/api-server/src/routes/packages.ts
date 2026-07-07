@@ -260,7 +260,7 @@ router.post("/packages/:id/sell", async (req, res): Promise<void> => {
         petId: Number(petId),
         packageId: id,
         recurringGroupId: groupId,
-        totalPrice: packagePrice > 0 ? String(packagePrice) : null,
+        totalPrice: String(packagePrice),
         weeks: numSessions,
         saleDate: dateStr,
       })

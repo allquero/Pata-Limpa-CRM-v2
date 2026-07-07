@@ -1,4 +1,5 @@
-import { pgTable, serial, integer, text, numeric, date, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, text, numeric, date, timestamp, check } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { tenantsTable } from "./tenants";
@@ -17,7 +18,12 @@ export const paymentsTable = pgTable("payments", {
   paymentMethod: text("payment_method"),
   notes: text("notes"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => [
+  check(
+    "payments_exactly_one_link",
+    sql`(${table.appointmentId} IS NOT NULL)::int + (${table.packageSaleId} IS NOT NULL)::int = 1`,
+  ),
+]);
 
 export const insertPaymentSchema = createInsertSchema(paymentsTable).omit({ id: true, createdAt: true });
 export type InsertPayment = z.infer<typeof insertPaymentSchema>;

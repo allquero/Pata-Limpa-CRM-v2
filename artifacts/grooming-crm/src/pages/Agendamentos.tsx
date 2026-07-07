@@ -133,11 +133,15 @@ function AppointmentCard({ appt, clients, pets, services, packages, onDelete, on
           </p>
         </div>
         <div className="flex items-center gap-0.5">
-          {onConfirm && !appt.confirmedAt && (appt.status === "aguardando" || appt.status === "em_atendimento") && (
+          {onConfirm && (appt.status === "aguardando" || appt.status === "em_atendimento") && (
             <button
               onClick={e => { e.stopPropagation(); onConfirm(appt); }}
-              className="p-1 rounded hover:bg-green-50 text-muted-foreground hover:text-green-600 transition-colors"
-              title="Confirmar presença"
+              className={`p-1 rounded transition-colors ${
+                appt.confirmedAt
+                  ? "bg-green-50 text-green-600 hover:bg-red-50 hover:text-red-500"
+                  : "hover:bg-green-50 text-muted-foreground hover:text-green-600"
+              }`}
+              title={appt.confirmedAt ? "Desfazer confirmação de presença" : "Confirmar presença"}
             >
               <UserCheck className="h-3.5 w-3.5" />
             </button>
@@ -958,14 +962,27 @@ export default function Agendamentos() {
 
   const handleStatusChange = useCallback(async (appt: Appointment, newStatus: AppStatus) => {
     if (appt.status === newStatus) return;
+    if (newStatus === "concluido" && !appt.confirmedAt) {
+      toast({
+        title: "Confirme a presença primeiro",
+        description: "Use o ícone ✓ no card para confirmar a presença antes de concluir.",
+        variant: "destructive",
+      });
+      return;
+    }
     try {
       await updateStatus.mutateAsync({ id: appt.id, data: { status: newStatus } });
       refetch();
       if (newStatus === "concluido") {
         openConfirmacao(appt);
       }
-    } catch {
-      toast({ title: "Erro ao atualizar status", variant: "destructive" });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "";
+      if (msg.includes("422") || msg.toLowerCase().includes("confirme")) {
+        toast({ title: "Confirme a presença antes de concluir", variant: "destructive" });
+      } else {
+        toast({ title: "Erro ao atualizar status", variant: "destructive" });
+      }
     }
   }, [updateStatus, refetch, toast]);
 
@@ -987,12 +1004,13 @@ export default function Agendamentos() {
 
   const confirmPresence = useConfirmAppointmentPresence();
   const handleConfirmPresence = useCallback(async (appt: Appointment) => {
+    const newConfirmed = !appt.confirmedAt;
     try {
-      await confirmPresence.mutateAsync({ id: appt.id, data: { confirmed: true } });
-      toast({ title: "Presença confirmada!" });
+      await confirmPresence.mutateAsync({ id: appt.id, data: { confirmed: newConfirmed } });
+      toast({ title: newConfirmed ? "Presença confirmada!" : "Confirmação desfeita" });
       refetch();
     } catch {
-      toast({ title: "Erro ao confirmar presença", variant: "destructive" });
+      toast({ title: "Erro ao atualizar confirmação", variant: "destructive" });
     }
   }, [confirmPresence, refetch, toast]);
 
