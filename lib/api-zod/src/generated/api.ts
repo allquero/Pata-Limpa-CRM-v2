@@ -924,6 +924,12 @@ export const listPackagesResponseServiceItemsItemServiceNameMax = 100;
 
 export const listPackagesResponseServiceItemsItemQuantityMax = 52;
 
+export const listPackagesResponseSessionsItemLabelMax = 200;
+
+export const listPackagesResponseSessionsItemServiceNamesItemMax = 100;
+
+export const listPackagesResponseSessionsItemServiceNamesMax = 20;
+
 export const ListPackagesResponseItem = zod.object({
   id: zod.number(),
   tenantId: zod.number(),
@@ -950,6 +956,20 @@ export const ListPackagesResponseItem = zod.object({
       price: zod.number(),
     }),
   ),
+  sessions: zod
+    .array(
+      zod.object({
+        label: zod.string().max(listPackagesResponseSessionsItemLabelMax),
+        serviceNames: zod
+          .array(
+            zod
+              .string()
+              .max(listPackagesResponseSessionsItemServiceNamesItemMax),
+          )
+          .max(listPackagesResponseSessionsItemServiceNamesMax),
+      }),
+    )
+    .nullish(),
   createdAt: zod.coerce.date(),
 });
 export const ListPackagesResponse = zod.array(ListPackagesResponseItem);
@@ -968,6 +988,14 @@ export const createPackageBodyServiceItemsItemQuantityMax = 52;
 export const createPackageBodyServiceItemsMax = 20;
 
 export const createPackageBodyPriceBySizesMax = 20;
+
+export const createPackageBodySessionsItemLabelMax = 200;
+
+export const createPackageBodySessionsItemServiceNamesItemMax = 100;
+
+export const createPackageBodySessionsItemServiceNamesMax = 20;
+
+export const createPackageBodySessionsMax = 52;
 
 export const CreatePackageBody = zod.object({
   tenantId: zod.number(),
@@ -1000,6 +1028,19 @@ export const CreatePackageBody = zod.object({
     )
     .max(createPackageBodyPriceBySizesMax)
     .optional(),
+  sessions: zod
+    .array(
+      zod.object({
+        label: zod.string().max(createPackageBodySessionsItemLabelMax),
+        serviceNames: zod
+          .array(
+            zod.string().max(createPackageBodySessionsItemServiceNamesItemMax),
+          )
+          .max(createPackageBodySessionsItemServiceNamesMax),
+      }),
+    )
+    .max(createPackageBodySessionsMax)
+    .optional(),
 });
 
 /**
@@ -1012,6 +1053,12 @@ export const GetPackageParams = zod.object({
 export const getPackageResponseServiceItemsItemServiceNameMax = 100;
 
 export const getPackageResponseServiceItemsItemQuantityMax = 52;
+
+export const getPackageResponseSessionsItemLabelMax = 200;
+
+export const getPackageResponseSessionsItemServiceNamesItemMax = 100;
+
+export const getPackageResponseSessionsItemServiceNamesMax = 20;
 
 export const GetPackageResponse = zod.object({
   id: zod.number(),
@@ -1039,6 +1086,18 @@ export const GetPackageResponse = zod.object({
       price: zod.number(),
     }),
   ),
+  sessions: zod
+    .array(
+      zod.object({
+        label: zod.string().max(getPackageResponseSessionsItemLabelMax),
+        serviceNames: zod
+          .array(
+            zod.string().max(getPackageResponseSessionsItemServiceNamesItemMax),
+          )
+          .max(getPackageResponseSessionsItemServiceNamesMax),
+      }),
+    )
+    .nullish(),
   createdAt: zod.coerce.date(),
 });
 
@@ -1060,6 +1119,14 @@ export const updatePackageBodyServiceItemsItemQuantityMax = 52;
 export const updatePackageBodyServiceItemsMax = 20;
 
 export const updatePackageBodyPriceBySizesMax = 20;
+
+export const updatePackageBodySessionsItemLabelMax = 200;
+
+export const updatePackageBodySessionsItemServiceNamesItemMax = 100;
+
+export const updatePackageBodySessionsItemServiceNamesMax = 20;
+
+export const updatePackageBodySessionsMax = 52;
 
 export const UpdatePackageBody = zod.object({
   name: zod.string().max(updatePackageBodyNameMax).optional(),
@@ -1091,11 +1158,30 @@ export const UpdatePackageBody = zod.object({
     )
     .max(updatePackageBodyPriceBySizesMax)
     .optional(),
+  sessions: zod
+    .array(
+      zod.object({
+        label: zod.string().max(updatePackageBodySessionsItemLabelMax),
+        serviceNames: zod
+          .array(
+            zod.string().max(updatePackageBodySessionsItemServiceNamesItemMax),
+          )
+          .max(updatePackageBodySessionsItemServiceNamesMax),
+      }),
+    )
+    .max(updatePackageBodySessionsMax)
+    .optional(),
 });
 
 export const updatePackageResponseServiceItemsItemServiceNameMax = 100;
 
 export const updatePackageResponseServiceItemsItemQuantityMax = 52;
+
+export const updatePackageResponseSessionsItemLabelMax = 200;
+
+export const updatePackageResponseSessionsItemServiceNamesItemMax = 100;
+
+export const updatePackageResponseSessionsItemServiceNamesMax = 20;
 
 export const UpdatePackageResponse = zod.object({
   id: zod.number(),
@@ -1123,6 +1209,20 @@ export const UpdatePackageResponse = zod.object({
       price: zod.number(),
     }),
   ),
+  sessions: zod
+    .array(
+      zod.object({
+        label: zod.string().max(updatePackageResponseSessionsItemLabelMax),
+        serviceNames: zod
+          .array(
+            zod
+              .string()
+              .max(updatePackageResponseSessionsItemServiceNamesItemMax),
+          )
+          .max(updatePackageResponseSessionsItemServiceNamesMax),
+      }),
+    )
+    .nullish(),
   createdAt: zod.coerce.date(),
 });
 

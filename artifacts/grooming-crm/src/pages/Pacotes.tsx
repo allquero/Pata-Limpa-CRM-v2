@@ -17,11 +17,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Package, X, ShoppingCart, CalendarCheck } from "lucide-react";
+import { Plus, Pencil, Trash2, Package, ShoppingCart, CalendarCheck, Calendar } from "lucide-react";
 import { format } from "date-fns";
 
 type ServiceItem = { serviceName: string; quantity: number };
 type PriceBySize = { size: string; coat?: string; price: number };
+type SessionItem = { label: string; serviceNames: string[] };
 
 type Pkg = {
   id: number;
@@ -29,15 +30,10 @@ type Pkg = {
   description: string | null;
   serviceItems: ServiceItem[];
   priceBySizes: PriceBySize[];
+  sessions?: SessionItem[] | null;
 };
 
 function sizeCoatKey(size: string, coat: string) { return `${size}|${coat}`; }
-
-const emptyBaseForm = {
-  name: "",
-  description: "",
-  serviceItems: [] as ServiceItem[],
-};
 
 const emptySellForm = {
   clientId: "",
@@ -63,35 +59,35 @@ export default function Pacotes() {
   const deletePackage = useDeletePackage();
   const sellPackage = useSellPackage();
 
-  // Tenant config
   const tenantPortes: string[] = (tenantData as any)?.petSizes ?? DEFAULT_PORTE_ORDER;
   const tenantCoats: string[] = (tenantData as any)?.coatTypes ?? Object.keys(DEFAULT_COAT_LABELS);
   const allCombos: [string, string][] = tenantPortes.flatMap(s => tenantCoats.map(c => [s, c] as [string, string]));
 
-  // Package create/edit modal
+  const serviceNames = Array.from(new Set((services as any[]).map((s: any) => s.name))).sort() as string[];
+
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Pkg | null>(null);
-  const [form, setForm] = useState<typeof emptyBaseForm & { priceBySizes: PriceBySize[] }>({
-    ...emptyBaseForm,
+  const [form, setForm] = useState<{
+    name: string;
+    description: string;
+    sessions: SessionItem[];
+    priceBySizes: PriceBySize[];
+  }>({
+    name: "",
+    description: "",
+    sessions: [],
     priceBySizes: [],
   });
   const [deleteTarget, setDeleteTarget] = useState<Pkg | null>(null);
 
-  // Sell modal
   const [sellTarget, setSellTarget] = useState<Pkg | null>(null);
   const [sellForm, setSellForm] = useState(emptySellForm);
 
-  const serviceNames = Array.from(new Set((services as any[]).map((s: any) => s.name))).sort() as string[];
-  const usedNames = form.serviceItems.map(i => i.serviceName);
-  const availableNames = serviceNames.filter(n => !usedNames.includes(n));
-
-  // Pets filtered by selected client in sell form
   const sellPetParams = sellForm.clientId ? { clientId: Number(sellForm.clientId) } : { clientId: 0 };
   const { data: clientPets = [] } = useListPets(sellPetParams, {
     query: { queryKey: getListPetsQueryKey(sellPetParams), enabled: !!sellForm.clientId },
   });
 
-  // Price for selected pet
   const selectedPet = (clientPets as any[]).find((p: any) => p.id === Number(sellForm.petId));
   const petSize = selectedPet?.size as string | undefined;
   const petCoat = (selectedPet as any)?.coat as string | undefined;
@@ -101,31 +97,36 @@ export default function Pacotes() {
       ?? null)
     : null;
 
-  // Compute session summary for sell modal
   const sellSessions = (() => {
     if (!sellTarget) return [];
+    if (sellTarget.sessions?.length) {
+      return sellTarget.sessions.map((s, i) => ({
+        index: i + 1,
+        label: s.label || `Sessão ${i + 1}`,
+        serviceNames: s.serviceNames,
+        hasExtra: s.serviceNames.length > 1,
+      }));
+    }
     const items = [...(sellTarget.serviceItems ?? [])].sort((a, b) => b.quantity - a.quantity);
     const main = items[0];
     const extras = items.slice(1);
     if (!main) return [];
-    const sessions = [];
-    for (let i = 0; i < main.quantity; i++) {
-      const isLast = i === main.quantity - 1;
-      sessions.push({
-        index: i + 1,
-        label: isLast && extras.length > 0
-          ? `${main.serviceName} + ${extras.map(e => e.serviceName).join(" + ")}`
-          : main.serviceName,
-        hasExtra: isLast && extras.length > 0,
-      });
-    }
-    return sessions;
+    return Array.from({ length: main.quantity }, (_, i) => ({
+      index: i + 1,
+      label: i === main.quantity - 1 && extras.length > 0
+        ? `${main.serviceName} + ${extras.map(e => e.serviceName).join(" + ")}`
+        : main.serviceName,
+      serviceNames: [] as string[],
+      hasExtra: i === main.quantity - 1 && extras.length > 0,
+    }));
   })();
 
   const openCreate = () => {
     setEditing(null);
     setForm({
-      ...emptyBaseForm,
+      name: "",
+      description: "",
+      sessions: [{ label: "Semana 1", serviceNames: [] }],
       priceBySizes: allCombos.map(([size, coat]) => ({ size, coat, price: 0 })),
     });
     setModalOpen(true);
@@ -140,12 +141,10 @@ export default function Pacotes() {
       size, coat,
       price: savedMap[sizeCoatKey(size, coat)] ?? savedMap[sizeCoatKey(size, "")] ?? 0,
     }));
-    setForm({
-      name: pkg.name,
-      description: pkg.description ?? "",
-      serviceItems: pkg.serviceItems.map(i => ({ ...i })),
-      priceBySizes,
-    });
+    const sessions = (pkg.sessions && pkg.sessions.length > 0)
+      ? pkg.sessions.map(s => ({ ...s }))
+      : [];
+    setForm({ name: pkg.name, description: pkg.description ?? "", sessions, priceBySizes });
     setModalOpen(true);
   };
 
@@ -154,21 +153,44 @@ export default function Pacotes() {
     setSellForm(emptySellForm);
   };
 
-  const addServiceItem = (serviceName: string) => {
-    if (!serviceName || usedNames.includes(serviceName)) return;
-    setForm(f => ({ ...f, serviceItems: [...f.serviceItems, { serviceName, quantity: 1 }] }));
-  };
-
-  const updateItemQty = (idx: number, qty: number) => {
+  const setNumSessions = (n: number) => {
+    const clamped = Math.max(1, Math.min(52, n));
     setForm(f => {
-      const items = [...f.serviceItems];
-      items[idx] = { ...items[idx], quantity: Math.max(1, Math.min(52, qty)) };
-      return { ...f, serviceItems: items };
+      const current = f.sessions;
+      if (clamped > current.length) {
+        return {
+          ...f, sessions: [
+            ...current,
+            ...Array.from({ length: clamped - current.length }, (_, i) => ({
+              label: `Semana ${current.length + i + 1}`,
+              serviceNames: [] as string[],
+            })),
+          ],
+        };
+      } else {
+        return { ...f, sessions: current.slice(0, clamped) };
+      }
     });
   };
 
-  const removeItem = (idx: number) => {
-    setForm(f => ({ ...f, serviceItems: f.serviceItems.filter((_, i) => i !== idx) }));
+  const updateSessionLabel = (idx: number, label: string) => {
+    setForm(f => {
+      const sessions = [...f.sessions];
+      sessions[idx] = { ...sessions[idx], label };
+      return { ...f, sessions };
+    });
+  };
+
+  const toggleSessionService = (idx: number, name: string) => {
+    setForm(f => {
+      const sessions = [...f.sessions];
+      const cur = sessions[idx].serviceNames;
+      sessions[idx] = {
+        ...sessions[idx],
+        serviceNames: cur.includes(name) ? cur.filter(n => n !== name) : [...cur, name],
+      };
+      return { ...f, sessions };
+    });
   };
 
   const updatePrice = (key: string, raw: string) => {
@@ -183,6 +205,7 @@ export default function Pacotes() {
 
   const handleSave = async () => {
     if (!form.name.trim()) { toast({ title: "Nome é obrigatório", variant: "destructive" }); return; }
+    if (form.sessions.length === 0) { toast({ title: "Defina ao menos 1 sessão", variant: "destructive" }); return; }
     const hasAnyPrice = form.priceBySizes.some(p => p.price > 0);
     if (!hasAnyPrice) { toast({ title: "Defina ao menos um preço por porte", variant: "destructive" }); return; }
     try {
@@ -190,7 +213,7 @@ export default function Pacotes() {
         tenantId: tenantId!,
         name: form.name.trim(),
         description: form.description.trim() || undefined,
-        serviceItems: form.serviceItems,
+        sessions: form.sessions,
         priceBySizes: form.priceBySizes.filter(p => p.price > 0),
       };
       if (editing) {
@@ -265,6 +288,7 @@ export default function Pacotes() {
           Novo Pacote
         </Button>
       </div>
+
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3].map(i => <Skeleton key={i} className="h-64 w-full rounded-xl" />)}
@@ -276,12 +300,13 @@ export default function Pacotes() {
           <Button variant="outline" onClick={openCreate}>Criar primeiro pacote</Button>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-[0px] pb-[0px]">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {(packages as Pkg[]).map(pkg => {
             const prices = pkg.priceBySizes ?? [];
             const priceValues = prices.map(p => p.price).filter(p => p > 0);
             const minPrice = priceValues.length ? Math.min(...priceValues) : 0;
             const maxPrice = priceValues.length ? Math.max(...priceValues) : 0;
+            const pkgSessions = pkg.sessions?.length ? pkg.sessions : null;
 
             return (
               <Card key={pkg.id} className="flex flex-col border hover:shadow-md transition-shadow">
@@ -304,7 +329,6 @@ export default function Pacotes() {
                   </div>
                 </CardHeader>
                 <CardContent className="flex-1 space-y-3 pb-[14px] pr-[14px] pl-[14px]">
-                  {/* Price range */}
                   <div>
                     {minPrice === maxPrice && minPrice > 0 ? (
                       <span className="text-2xl font-bold text-primary">{formatBRL(minPrice)}</span>
@@ -315,8 +339,25 @@ export default function Pacotes() {
                     )}
                   </div>
 
-                  {/* Service items */}
-                  {pkg.serviceItems && pkg.serviceItems.length > 0 && (
+                  {pkgSessions ? (
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        {pkgSessions.length} sessão{pkgSessions.length !== 1 ? "ões" : ""} semanal{pkgSessions.length !== 1 ? "is" : ""}
+                      </p>
+                      <div className="space-y-0.5">
+                        {pkgSessions.slice(0, 4).map((s, i) => (
+                          <div key={i} className="flex items-center gap-1.5 text-xs">
+                            <span className="text-muted-foreground shrink-0 w-[72px] truncate">{s.label || `Sessão ${i + 1}`}:</span>
+                            <span className="truncate text-foreground/80">{s.serviceNames.join(", ") || "—"}</span>
+                          </div>
+                        ))}
+                        {pkgSessions.length > 4 && (
+                          <p className="text-xs text-muted-foreground pl-0.5">+ {pkgSessions.length - 4} mais...</p>
+                        )}
+                      </div>
+                    </div>
+                  ) : pkg.serviceItems && pkg.serviceItems.length > 0 ? (
                     <div className="space-y-1">
                       <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Inclui</p>
                       <div className="flex flex-wrap gap-1">
@@ -327,9 +368,8 @@ export default function Pacotes() {
                         ))}
                       </div>
                     </div>
-                  )}
+                  ) : null}
 
-                  {/* Price by size table */}
                   {prices.length > 0 && (
                     <div className="space-y-1">
                       <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Preço por porte</p>
@@ -344,12 +384,7 @@ export default function Pacotes() {
                     </div>
                   )}
 
-                  {/* Sell button */}
-                  <Button
-                    className="w-full gap-2 mt-1"
-                    size="sm"
-                    onClick={() => openSell(pkg)}
-                  >
+                  <Button className="w-full gap-2 mt-1" size="sm" onClick={() => openSell(pkg)}>
                     <ShoppingCart className="h-4 w-4" />
                     Vender Pacote
                   </Button>
@@ -359,6 +394,7 @@ export default function Pacotes() {
           })}
         </div>
       )}
+
       {/* Create / Edit Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
@@ -366,7 +402,6 @@ export default function Pacotes() {
             <DialogTitle>{editing ? "Editar Pacote" : "Novo Pacote"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-5 py-2">
-            {/* Name */}
             <div className="space-y-1.5">
               <Label>Nome do pacote *</Label>
               <Input
@@ -376,7 +411,6 @@ export default function Pacotes() {
               />
             </div>
 
-            {/* Description */}
             <div className="space-y-1.5">
               <Label>Descrição</Label>
               <Input
@@ -386,44 +420,84 @@ export default function Pacotes() {
               />
             </div>
 
-            {/* Service items */}
-            <div className="space-y-2">
-              <Label>Serviços incluídos</Label>
-              {form.serviceItems.length > 0 && (
-                <div className="space-y-2 rounded-lg border p-3 bg-muted/30">
-                  {form.serviceItems.map((item, idx) => (
-                    <div key={idx} className="flex items-center gap-2">
-                      <span className="flex-1 text-sm font-medium">{item.serviceName}</span>
-                      <div className="flex items-center gap-1">
-                        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateItemQty(idx, item.quantity - 1)}>−</Button>
-                        <span className="w-8 text-center text-sm font-semibold">{item.quantity}</span>
-                        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateItemQty(idx, item.quantity + 1)}>+</Button>
-                      </div>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => removeItem(idx)}>
-                        <X className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  ))}
+            {/* Sessions */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label>Sessões semanais *</Label>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">Número de sessões:</span>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() => setNumSessions(form.sessions.length - 1)}
+                      disabled={form.sessions.length <= 1}
+                    >−</Button>
+                    <span className="w-8 text-center text-sm font-semibold">{form.sessions.length}</span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() => setNumSessions(form.sessions.length + 1)}
+                      disabled={form.sessions.length >= 52}
+                    >+</Button>
+                  </div>
                 </div>
+              </div>
+
+              {serviceNames.length === 0 && (
+                <p className="text-xs text-amber-600 border border-amber-200 bg-amber-50 rounded-lg px-3 py-2">
+                  Cadastre serviços primeiro para selecioná-los nas sessões.
+                </p>
               )}
-              {availableNames.length > 0 && (
-                <Select onValueChange={addServiceItem} value="">
-                  <SelectTrigger>
-                    <SelectValue placeholder="+ Adicionar tipo de serviço" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableNames.map(name => (
-                      <SelectItem key={name} value={name}>{name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
+
+              <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                {form.sessions.map((session, idx) => (
+                  <div key={idx} className="rounded-lg border p-3 space-y-2 bg-muted/20">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-muted-foreground w-5 shrink-0">{idx + 1}.</span>
+                      <Input
+                        placeholder={`Semana ${idx + 1}`}
+                        value={session.label}
+                        onChange={e => updateSessionLabel(idx, e.target.value)}
+                        className="h-7 text-xs flex-1"
+                      />
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 pl-7">
+                      {serviceNames.length === 0 ? (
+                        <span className="text-xs text-muted-foreground">Sem serviços</span>
+                      ) : (
+                        serviceNames.map(name => {
+                          const checked = session.serviceNames.includes(name);
+                          return (
+                            <button
+                              key={name}
+                              type="button"
+                              onClick={() => toggleSessionService(idx, name)}
+                              className={`text-xs px-2.5 py-0.5 rounded-full border transition-colors ${
+                                checked
+                                  ? "bg-primary text-primary-foreground border-primary"
+                                  : "bg-background text-muted-foreground border-border hover:border-primary hover:text-primary"
+                              }`}
+                            >
+                              {name}
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
 
-            {/* Prices by size × coat */}
+            {/* Prices */}
             <div className="space-y-2">
               <Label>Preço por porte · pelagem *</Label>
-              <p className="text-xs text-muted-foreground">Deixe 0 para combinações que não se aplicam a este pacote.</p>
+              <p className="text-xs text-muted-foreground">Deixe 0 para combinações que não se aplicam.</p>
               <div className="rounded-lg border divide-y">
                 {form.priceBySizes.map(({ size, coat, price }) => (
                   <div key={sizeCoatKey(size, coat ?? "")} className="flex items-center justify-between px-3 py-2 gap-3">
@@ -455,6 +529,7 @@ export default function Pacotes() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
       {/* Sell Modal */}
       <Dialog open={!!sellTarget} onOpenChange={o => !o && setSellTarget(null)}>
         <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
@@ -469,7 +544,6 @@ export default function Pacotes() {
           </DialogHeader>
 
           <div className="space-y-4 py-2">
-            {/* Cliente */}
             <div className="space-y-1.5">
               <Label>Cliente *</Label>
               <Select
@@ -487,7 +561,6 @@ export default function Pacotes() {
               </Select>
             </div>
 
-            {/* Pet */}
             <div className="space-y-1.5">
               <Label>Pet *</Label>
               <Select
@@ -508,7 +581,6 @@ export default function Pacotes() {
               </Select>
             </div>
 
-            {/* Price preview */}
             {sellForm.petId && (
               <div className="rounded-lg bg-muted/40 border px-4 py-3 flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Valor do pacote</span>
@@ -520,7 +592,6 @@ export default function Pacotes() {
               </div>
             )}
 
-            {/* Data */}
             <div className="space-y-1.5">
               <Label>Data do 1º agendamento *</Label>
               <Input
@@ -530,7 +601,6 @@ export default function Pacotes() {
               />
             </div>
 
-            {/* Horário */}
             <div className="space-y-1.5">
               <Label>Horário *</Label>
               <Input
@@ -540,7 +610,6 @@ export default function Pacotes() {
               />
             </div>
 
-            {/* Session preview */}
             {sellSessions.length > 0 && sellForm.startDate && (
               <div className="space-y-2">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
@@ -553,11 +622,11 @@ export default function Pacotes() {
                     d.setDate(d.getDate() + i * 7);
                     return (
                       <div key={s.index} className="flex items-center justify-between px-3 py-2">
-                        <span className="text-muted-foreground">
+                        <span className="text-muted-foreground text-xs">
                           {d.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" })}
                           {" "}às {sellForm.startTime}
                         </span>
-                        <span className={s.hasExtra ? "font-medium text-primary" : ""}>
+                        <span className={`text-xs text-right max-w-[55%] truncate ${s.hasExtra ? "font-medium text-primary" : ""}`}>
                           {s.label}
                         </span>
                       </div>
@@ -567,7 +636,6 @@ export default function Pacotes() {
               </div>
             )}
 
-            {/* Notes */}
             <div className="space-y-1.5">
               <Label>Observações</Label>
               <Textarea
@@ -588,6 +656,7 @@ export default function Pacotes() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
       {/* Delete Confirm */}
       <AlertDialog open={!!deleteTarget} onOpenChange={o => !o && setDeleteTarget(null)}>
         <AlertDialogContent>

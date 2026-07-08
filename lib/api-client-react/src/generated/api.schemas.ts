@@ -324,6 +324,13 @@ export interface ServiceUpdate {
   durationMinutes?: number;
 }
 
+export interface PackageSession {
+  /** @maxLength 200 */
+  label: string;
+  /** @maxItems 20 */
+  serviceNames: string[];
+}
+
 export interface ServiceItem {
   /** @maxLength 100 */
   serviceName: string;
@@ -350,6 +357,7 @@ export interface Package {
   description?: string | null;
   serviceItems: ServiceItem[];
   priceBySizes: PriceBySize[];
+  sessions?: PackageSession[] | null;
   createdAt: string;
 }
 
@@ -363,6 +371,8 @@ export interface PackageInput {
   serviceItems?: ServiceItem[];
   /** @maxItems 20 */
   priceBySizes?: PriceBySize[];
+  /** @maxItems 52 */
+  sessions?: PackageSession[];
 }
 
 export interface PackageUpdate {
@@ -374,6 +384,8 @@ export interface PackageUpdate {
   serviceItems?: ServiceItem[];
   /** @maxItems 20 */
   priceBySizes?: PriceBySize[];
+  /** @maxItems 52 */
+  sessions?: PackageSession[];
 }
 
 export interface SellPackageInput {

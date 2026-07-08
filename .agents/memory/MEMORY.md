@@ -1,0 +1,1 @@
+- [Package sessions design](package-sessions.md) — packages use sessions[] (label+serviceNames per week); sell endpoint prefers sessions over legacy serviceItems when sessions.length > 0.

@@ -88,6 +88,7 @@ export * from "./okResponse";
 export * from "./package";
 export * from "./packageInput";
 export * from "./packageSale";
+export * from "./packageSession";
 export * from "./packageUpdate";
 export * from "./payment";
 export * from "./paymentInput";

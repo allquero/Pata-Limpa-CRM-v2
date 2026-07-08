@@ -978,6 +978,15 @@ export default function Agendamentos() {
 
   const sellSessions = (() => {
     if (!selectedPkg) return [];
+    const pkgSessions = (selectedPkg as any).sessions as Array<{ label: string; serviceNames: string[] }> | null | undefined;
+    if (pkgSessions?.length) {
+      return pkgSessions.map((s, i) => ({
+        index: i + 1,
+        label: s.label || `Sessão ${i + 1}`,
+        serviceNames: s.serviceNames,
+        hasExtra: s.serviceNames.length > 1,
+      }));
+    }
     const items = [...(selectedPkg.serviceItems ?? [])].sort((a, b) => b.quantity - a.quantity);
     const main = items[0];
     const extras = items.slice(1);
@@ -987,6 +996,7 @@ export default function Agendamentos() {
       label: i === main.quantity - 1 && extras.length > 0
         ? `${main.serviceName} + ${extras.map(e => e.serviceName).join(" + ")}`
         : main.serviceName,
+      serviceNames: [] as string[],
       hasExtra: i === main.quantity - 1 && extras.length > 0,
     }));
   })();
@@ -1711,7 +1721,19 @@ export default function Agendamentos() {
                   {(packages as Package[]).map(p => { const prices = p.priceBySizes.map(x => x.price).filter(x => x > 0); const min = prices.length ? Math.min(...prices) : 0; const max = prices.length ? Math.max(...prices) : 0; const range = min === max ? formatBRL(min) : `${formatBRL(min)} – ${formatBRL(max)}`; return (<SelectItem key={p.id} value={String(p.id)}>{p.name} ({range})</SelectItem>); })}
                 </SelectContent>
               </Select>
-              {selectedPkg && (<div className="flex flex-wrap gap-1 mt-1">{selectedPkg.serviceItems.map((item, i) => (<Badge key={i} variant="outline" className="text-xs">{item.quantity}× {item.serviceName}</Badge>))}</div>)}
+              {selectedPkg && (() => {
+                const pkgSessions = (selectedPkg as any).sessions as Array<{ label: string; serviceNames: string[] }> | null | undefined;
+                return (
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {pkgSessions?.length
+                      ? <Badge variant="secondary" className="text-xs">{pkgSessions.length} sessão{pkgSessions.length !== 1 ? "ões" : ""} semanal{pkgSessions.length !== 1 ? "is" : ""}</Badge>
+                      : selectedPkg.serviceItems.map((item, i) => (
+                          <Badge key={i} variant="outline" className="text-xs">{item.quantity}× {item.serviceName}</Badge>
+                        ))
+                    }
+                  </div>
+                );
+              })()}
             </div>
             <div className="space-y-1.5">
               <Label>Cliente *</Label>

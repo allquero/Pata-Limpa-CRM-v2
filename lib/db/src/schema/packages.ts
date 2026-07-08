@@ -16,6 +16,12 @@ export const priceBySize = z.object({
 });
 export type PriceBySize = z.infer<typeof priceBySize>;
 
+export const packageSessionSchema = z.object({
+  label: z.string(),
+  serviceNames: z.array(z.string()),
+});
+export type PackageSession = z.infer<typeof packageSessionSchema>;
+
 export const packagesTable = pgTable("packages", {
   id: serial("id").primaryKey(),
   tenantId: integer("tenant_id").notNull().references(() => tenantsTable.id, { onDelete: "cascade" }),
@@ -23,6 +29,7 @@ export const packagesTable = pgTable("packages", {
   description: text("description"),
   serviceItems: jsonb("service_items").notNull().default([]).$type<ServiceItem[]>(),
   priceBySizes: jsonb("price_by_sizes").notNull().default([]).$type<PriceBySize[]>(),
+  sessions: jsonb("sessions").$type<PackageSession[]>(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
@@ -30,6 +37,7 @@ export const packagesTable = pgTable("packages", {
 export const insertPackageSchema = createInsertSchema(packagesTable).omit({ id: true, createdAt: true, updatedAt: true }).extend({
   serviceItems: z.array(serviceItemSchema).default([]),
   priceBySizes: z.array(priceBySize).default([]),
+  sessions: z.array(packageSessionSchema).optional(),
 });
 export type InsertPackage = z.infer<typeof insertPackageSchema>;
 export type Package = typeof packagesTable.$inferSelect;

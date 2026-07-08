@@ -2016,6 +2016,20 @@ components:
           type: integer
 
     # Package
+    PackageSession:
+      type: object
+      required: [label, serviceNames]
+      properties:
+        label:
+          type: string
+          maxLength: 200
+        serviceNames:
+          type: array
+          maxItems: 20
+          items:
+            type: string
+            maxLength: 100
+
     ServiceItem:
       type: object
       required: [serviceName, quantity]
@@ -2061,6 +2075,11 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/PriceBySize"
+        sessions:
+          type: array
+          nullable: true
+          items:
+            $ref: "#/components/schemas/PackageSession"
         createdAt:
           type: string
           format: date-time
@@ -2087,6 +2106,11 @@ components:
           maxItems: 20
           items:
             $ref: "#/components/schemas/PriceBySize"
+        sessions:
+          type: array
+          maxItems: 52
+          items:
+            $ref: "#/components/schemas/PackageSession"
 
     PackageUpdate:
       type: object
@@ -2107,6 +2131,11 @@ components:
           maxItems: 20
           items:
             $ref: "#/components/schemas/PriceBySize"
+        sessions:
+          type: array
+          maxItems: 52
+          items:
+            $ref: "#/components/schemas/PackageSession"
 
     SellPackageInput:
       type: object

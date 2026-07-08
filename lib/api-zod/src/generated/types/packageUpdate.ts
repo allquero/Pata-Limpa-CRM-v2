@@ -5,6 +5,7 @@
  * Grooming CRM API
  * OpenAPI spec version: 0.1.0
  */
+import type { PackageSession } from "./packageSession";
 import type { PriceBySize } from "./priceBySize";
 import type { ServiceItem } from "./serviceItem";
 
@@ -17,4 +18,6 @@ export interface PackageUpdate {
   serviceItems?: ServiceItem[];
   /** @maxItems 20 */
   priceBySizes?: PriceBySize[];
+  /** @maxItems 52 */
+  sessions?: PackageSession[];
 }

@@ -12,7 +12,7 @@ import {
   clientsTable,
   packageSalesTable,
 } from "@workspace/db";
-import type { ServiceItem, PriceBySize } from "@workspace/db";
+import type { ServiceItem, PriceBySize, PackageSession } from "@workspace/db";
 import { requireTenant } from "../middlewares/requireTenant";
 
 const MAX_PACKAGE_SESSIONS = 52;
@@ -28,11 +28,17 @@ const PriceBySizeSchema = zod.object({
   price: zod.number().min(0),
 });
 
+const SessionSchema = zod.object({
+  label: zod.string().max(200),
+  serviceNames: zod.array(zod.string().max(100)).max(20),
+});
+
 const PackageBodySchema = zod.object({
   name: zod.string().min(1).max(200),
   description: zod.string().max(1000).optional().nullable(),
   serviceItems: zod.array(ServiceItemSchema).max(20).optional(),
   priceBySizes: zod.array(PriceBySizeSchema).max(20).optional(),
+  sessions: zod.array(SessionSchema).max(MAX_PACKAGE_SESSIONS).optional(),
 });
 
 const PackageUpdateSchema = PackageBodySchema.partial();
@@ -45,6 +51,7 @@ const parsePackage = (pkg: typeof packagesTable.$inferSelect) => ({
   ...pkg,
   serviceItems: (pkg.serviceItems as ServiceItem[]) ?? [],
   priceBySizes: (pkg.priceBySizes as PriceBySize[]) ?? [],
+  sessions: (pkg.sessions as PackageSession[]) ?? null,
 });
 
 async function getFullAppointment(id: number) {
@@ -90,7 +97,7 @@ router.post("/packages", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const { name, description, serviceItems = [], priceBySizes = [] } = parsed.data;
+  const { name, description, serviceItems = [], priceBySizes = [], sessions } = parsed.data;
   const [pkg] = await db
     .insert(packagesTable)
     .values({
@@ -99,6 +106,7 @@ router.post("/packages", async (req, res): Promise<void> => {
       description: description ?? null,
       serviceItems,
       priceBySizes,
+      sessions: sessions ?? null,
     })
     .returning();
   res.status(201).json(parsePackage(pkg));
@@ -128,6 +136,7 @@ router.patch("/packages/:id", async (req, res): Promise<void> => {
   if (parsed.data.description !== undefined) updateData.description = parsed.data.description ?? null;
   if (parsed.data.serviceItems !== undefined) updateData.serviceItems = parsed.data.serviceItems;
   if (parsed.data.priceBySizes !== undefined) updateData.priceBySizes = parsed.data.priceBySizes;
+  if (parsed.data.sessions !== undefined) updateData.sessions = parsed.data.sessions;
   const [pkg] = await db
     .update(packagesTable)
     .set(updateData)
@@ -178,70 +187,110 @@ router.post("/packages/:id/sell", async (req, res): Promise<void> => {
     .where(and(eq(petsTable.id, Number(petId)), eq(petsTable.clientId, Number(clientId))));
   if (!pet) { res.status(404).json({ error: "Pet não encontrado ou não pertence a este cliente" }); return; }
 
-  const serviceItems = (pkg.serviceItems as ServiceItem[]) ?? [];
   const priceBySizes = (pkg.priceBySizes as PriceBySize[]) ?? [];
-
-  if (serviceItems.length === 0) {
-    res.status(400).json({ error: "Pacote sem serviços definidos" });
-    return;
-  }
+  const pkgSessions = (pkg.sessions as PackageSession[]) ?? [];
+  const serviceItems = (pkg.serviceItems as ServiceItem[]) ?? [];
 
   const priceEntry =
     priceBySizes.find(p => p.size === pet.size && p.coat === pet.coat) ??
     priceBySizes.find(p => p.size === pet.size);
   const packagePrice = priceEntry ? priceEntry.price : 0;
 
-  const sortedItems = [...serviceItems].sort((a, b) => b.quantity - a.quantity);
-  const mainItem = sortedItems[0]!;
-  const extraItems = sortedItems.slice(1);
-  const numSessions = Math.min(mainItem.quantity, MAX_PACKAGE_SESSIONS);
+  const [year, month, day] = (startDate as string).split("-").map(Number);
+  const [hour, minute] = (startTime as string).split(":").map(Number);
+  const baseDate = new Date(year!, month! - 1, day!, hour!, minute!, 0, 0);
+  const groupId = randomUUID();
+  const dateStr = (startDate as string).substring(0, 10);
 
   const allServices = await db
     .select()
     .from(servicesTable)
     .where(eq(servicesTable.tenantId, req.tenantId!));
-  const mainService = allServices.find(s => s.name === mainItem.serviceName);
-  const mainServiceId = mainService?.id ?? null;
-
-  const [year, month, day] = (startDate as string).split("-").map(Number);
-  const [hour, minute] = (startTime as string).split(":").map(Number);
-  const baseDate = new Date(year!, month! - 1, day!, hour!, minute!, 0, 0);
-
-  const groupId = randomUUID();
-  const dateStr = (startDate as string).substring(0, 10);
 
   const { insertedIds, financialEntry, packageSale } = await db.transaction(async (tx) => {
     const ids: number[] = [];
 
-    for (let i = 0; i < numSessions; i++) {
-      const scheduledDate = new Date(baseDate);
-      scheduledDate.setDate(scheduledDate.getDate() + i * 7);
+    if (pkgSessions.length > 0) {
+      const numSessions = Math.min(pkgSessions.length, MAX_PACKAGE_SESSIONS);
 
-      const isLastSession = i === numSessions - 1;
-      const extraNote =
-        isLastSession && extraItems.length > 0
-          ? `Inclui: ${extraItems.map(e => e.serviceName).join(" + ")}`
-          : null;
-      const sessionNotes = [notes as string | undefined, extraNote].filter(Boolean).join(" | ") || null;
+      for (let i = 0; i < numSessions; i++) {
+        const session = pkgSessions[i]!;
+        const scheduledDate = new Date(baseDate);
+        scheduledDate.setDate(scheduledDate.getDate() + i * 7);
 
-      const [appt] = await tx
-        .insert(appointmentsTable)
-        .values({
-          tenantId: req.tenantId!,
-          clientId: Number(clientId),
-          petId: Number(petId),
-          serviceId: mainServiceId,
-          packageId: id,
-          scheduledDate,
-          status: "aguardando",
-          totalPrice: "0",
-          notes: sessionNotes,
-          recurringGroupId: groupId,
-          recurringWeeks: numSessions,
-        })
-        .returning();
-      ids.push(appt.id);
+        const sessionServices = session.serviceNames
+          .map(name => allServices.find(s => s.name === name))
+          .filter((s): s is typeof allServices[number] => s != null);
+
+        const primaryServiceId = sessionServices[0]?.id ?? null;
+        const extraIds = sessionServices.slice(1).map(s => s.id);
+
+        const sessionNotes = notes as string | null ?? null;
+
+        const [appt] = await tx
+          .insert(appointmentsTable)
+          .values({
+            tenantId: req.tenantId!,
+            clientId: Number(clientId),
+            petId: Number(petId),
+            serviceId: primaryServiceId,
+            packageId: id,
+            extraServiceIds: extraIds.length > 0 ? extraIds : null,
+            scheduledDate,
+            status: "aguardando",
+            totalPrice: "0",
+            notes: sessionNotes,
+            recurringGroupId: groupId,
+            recurringWeeks: numSessions,
+          })
+          .returning();
+        ids.push(appt.id);
+      }
+    } else {
+      if (serviceItems.length === 0) {
+        throw new Error("Pacote sem serviços definidos");
+      }
+
+      const sortedItems = [...serviceItems].sort((a, b) => b.quantity - a.quantity);
+      const mainItem = sortedItems[0]!;
+      const extraItems = sortedItems.slice(1);
+      const numSessions = Math.min(mainItem.quantity, MAX_PACKAGE_SESSIONS);
+
+      const mainService = allServices.find(s => s.name === mainItem.serviceName);
+      const mainServiceId = mainService?.id ?? null;
+
+      for (let i = 0; i < numSessions; i++) {
+        const scheduledDate = new Date(baseDate);
+        scheduledDate.setDate(scheduledDate.getDate() + i * 7);
+
+        const isLastSession = i === numSessions - 1;
+        const extraNote =
+          isLastSession && extraItems.length > 0
+            ? `Inclui: ${extraItems.map(e => e.serviceName).join(" + ")}`
+            : null;
+        const sessionNotes = [notes as string | undefined, extraNote].filter(Boolean).join(" | ") || null;
+
+        const [appt] = await tx
+          .insert(appointmentsTable)
+          .values({
+            tenantId: req.tenantId!,
+            clientId: Number(clientId),
+            petId: Number(petId),
+            serviceId: mainServiceId,
+            packageId: id,
+            scheduledDate,
+            status: "aguardando",
+            totalPrice: "0",
+            notes: sessionNotes,
+            recurringGroupId: groupId,
+            recurringWeeks: numSessions,
+          })
+          .returning();
+        ids.push(appt.id);
+      }
     }
+
+    const numSessions = ids.length;
 
     const [fe] = await tx
       .insert(financialEntriesTable)
