@@ -1808,7 +1808,7 @@ export default function Agendamentos() {
               <div className="space-y-2">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1.5"><CalendarCheck className="h-3.5 w-3.5" />Agendamentos que serão criados</p>
                 <div className="rounded-lg border divide-y text-sm">
-                  {sellSessions.map((s, i) => { const d = new Date(`${sell.startDate}T${sell.startTime}`); d.setDate(d.getDate() + i * 7); return (<div key={s.index} className="flex items-center justify-between px-3 py-2"><span className="text-muted-foreground">{d.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" })} às {sell.startTime}</span><span className={s.hasExtra ? "font-medium text-primary text-xs" : "text-xs"}>{s.label}</span></div>); })}
+                  {sellSessions.map((s, i) => { const d = new Date(`${sell.startDate}T${sell.startTime}`); d.setDate(d.getDate() + i * 7); return (<div key={s.index} className="flex items-center justify-between px-3 py-2"><span className="text-muted-foreground text-xs">{d.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" })} às {sell.startTime}</span><div className="text-right max-w-[50%]"><span className={`text-xs block truncate ${s.hasExtra ? "font-medium text-primary" : ""}`}>{s.serviceNames.join(" + ")}</span><span className="text-[11px] text-muted-foreground/60">{s.label}</span></div></div>); })}
                 </div>
               </div>
             )}

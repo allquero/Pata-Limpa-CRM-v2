@@ -202,6 +202,11 @@ router.post("/packages/:id/sell", async (req, res): Promise<void> => {
   const groupId = randomUUID();
   const dateStr = (startDate as string).substring(0, 10);
 
+  if (pkgSessions.length === 0 && serviceItems.length === 0) {
+    res.status(400).json({ error: "Pacote sem serviços definidos. Configure as sessões antes de vender." });
+    return;
+  }
+
   const allServices = await db
     .select()
     .from(servicesTable)
@@ -225,7 +230,12 @@ router.post("/packages/:id/sell", async (req, res): Promise<void> => {
         const primaryServiceId = sessionServices[0]?.id ?? null;
         const extraIds = sessionServices.slice(1).map(s => s.id);
 
-        const sessionNotes = notes as string | null ?? null;
+        const extraNote =
+          extraIds.length > 0
+            ? `Inclui: ${sessionServices.slice(1).map(s => s.name).join(" + ")}`
+            : null;
+        const sessionNotes =
+          [(notes as string | undefined) ?? null, extraNote].filter(Boolean).join(" | ") || null;
 
         const [appt] = await tx
           .insert(appointmentsTable)
@@ -247,10 +257,6 @@ router.post("/packages/:id/sell", async (req, res): Promise<void> => {
         ids.push(appt.id);
       }
     } else {
-      if (serviceItems.length === 0) {
-        throw new Error("Pacote sem serviços definidos");
-      }
-
       const sortedItems = [...serviceItems].sort((a, b) => b.quantity - a.quantity);
       const mainItem = sortedItems[0]!;
       const extraItems = sortedItems.slice(1);

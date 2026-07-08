@@ -626,9 +626,12 @@ export default function Pacotes() {
                           {d.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" })}
                           {" "}às {sellForm.startTime}
                         </span>
-                        <span className={`text-xs text-right max-w-[55%] truncate ${s.hasExtra ? "font-medium text-primary" : ""}`}>
-                          {s.label}
-                        </span>
+                        <div className="text-right max-w-[55%]">
+                          <span className={`text-xs block truncate ${s.hasExtra ? "font-medium text-primary" : ""}`}>
+                            {s.serviceNames.join(" + ")}
+                          </span>
+                          <span className="text-[11px] text-muted-foreground/60">{s.label}</span>
+                        </div>
                       </div>
                     );
                   })}
