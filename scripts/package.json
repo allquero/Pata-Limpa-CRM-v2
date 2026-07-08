@@ -7,6 +7,7 @@
     "hello": "tsx ./src/hello.ts",
     "fix-dev-tenant-user-id": "tsx ./src/fix-dev-tenant-user-id.ts",
     "backfill-package-sales": "tsx ./src/backfill-package-sales.ts",
+    "backfill-package-sessions": "tsx ./src/backfill-package-sessions.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

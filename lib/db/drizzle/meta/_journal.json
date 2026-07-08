@@ -8,6 +8,13 @@
       "when": 1780367729567,
       "tag": "0000_nice_blizzard",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1783545600000,
+      "tag": "0001_add_package_sessions",
+      "breakpoints": true
     }
   ]
 }
