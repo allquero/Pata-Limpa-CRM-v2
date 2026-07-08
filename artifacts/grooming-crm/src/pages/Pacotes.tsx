@@ -96,7 +96,7 @@ export default function Pacotes() {
   const petSize = selectedPet?.size as string | undefined;
   const petCoat = (selectedPet as any)?.coat as string | undefined;
   const priceForPet = petSize && sellTarget
-    ? (sellTarget.priceBySizes.find(p => p.size === petSize && p.coat === petCoat)?.price
+    ? (sellTarget.priceBySizes.find(p => p.size === petSize && (p.coat || "") === (petCoat || ""))?.price
       ?? sellTarget.priceBySizes.find(p => p.size === petSize && !p.coat)?.price
       ?? null)
     : null;
