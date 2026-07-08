@@ -71,6 +71,7 @@ type PetSession = {
   confirmed: boolean;
   origin: "avulso" | "pacote";
   packageName?: string | null;
+  notes?: string | null;
 };
 
 function buildPetView(history: ClientHistory): Map<number, { petName: string; sessions: PetSession[] }> {
@@ -87,6 +88,7 @@ function buildPetView(history: ClientHistory): Map<number, { petName: string; se
       status: a.status ?? "aguardando",
       confirmed: !!a.confirmedAt,
       origin: "avulso",
+      notes: (a as any).notes ?? null,
     });
   }
 
@@ -104,6 +106,7 @@ function buildPetView(history: ClientHistory): Map<number, { petName: string; se
         confirmed: !!ag.confirmedAt,
         origin: "pacote",
         packageName: p.packageName,
+        notes: (ag as any).notes ?? null,
       });
     }
   }
@@ -160,25 +163,30 @@ function PetHistorySection({ petName, sessions }: { petName: string; sessions: P
           {sessions.map((s, i) => {
             const si = STATUS_INFO[s.status] ?? STATUS_INFO.aguardando;
             return (
-              <div key={s.apptId} className="flex items-center gap-2 px-3 py-2 text-xs">
-                <span className="text-muted-foreground w-5 shrink-0 text-right">{i + 1}.</span>
-                <span className="text-muted-foreground w-24 shrink-0">{formatDate(s.scheduledDate)}</span>
-                {s.service && <span className="text-muted-foreground flex-1 truncate">{s.service}</span>}
-                {s.origin === "pacote" && s.packageName && !s.service && (
-                  <span className="text-muted-foreground flex-1 truncate">{s.packageName}</span>
+              <div key={s.apptId} className="flex flex-col px-3 py-2 text-xs gap-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground w-5 shrink-0 text-right">{i + 1}.</span>
+                  <span className="text-muted-foreground w-24 shrink-0">{formatDate(s.scheduledDate)}</span>
+                  {s.service && <span className="text-muted-foreground flex-1 truncate">{s.service}</span>}
+                  {s.origin === "pacote" && s.packageName && !s.service && (
+                    <span className="text-muted-foreground flex-1 truncate">{s.packageName}</span>
+                  )}
+                  <Badge className={`text-[10px] px-1 py-0 gap-0.5 shrink-0 ${si.color}`}>
+                    {si.icon}{si.label}
+                  </Badge>
+                  {s.confirmed ? (
+                    <span className="text-green-600 flex items-center gap-0.5 shrink-0 text-[11px]">
+                      <CheckCircle2 className="h-3 w-3" /> Presente
+                    </span>
+                  ) : s.status !== "cancelado" ? (
+                    <span className="text-red-400 flex items-center gap-0.5 shrink-0 text-[11px]">
+                      <XCircle className="h-3 w-3" /> Não confirmado
+                    </span>
+                  ) : null}
+                </div>
+                {s.notes && (
+                  <p className="text-[11px] text-muted-foreground italic pl-7 leading-snug">{s.notes}</p>
                 )}
-                <Badge className={`text-[10px] px-1 py-0 gap-0.5 shrink-0 ${si.color}`}>
-                  {si.icon}{si.label}
-                </Badge>
-                {s.confirmed ? (
-                  <span className="text-green-600 flex items-center gap-0.5 shrink-0 text-[11px]">
-                    <CheckCircle2 className="h-3 w-3" /> Presente
-                  </span>
-                ) : s.status !== "cancelado" ? (
-                  <span className="text-red-400 flex items-center gap-0.5 shrink-0 text-[11px]">
-                    <XCircle className="h-3 w-3" /> Não confirmado
-                  </span>
-                ) : null}
               </div>
             );
           })}

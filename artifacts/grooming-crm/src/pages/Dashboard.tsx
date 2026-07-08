@@ -293,7 +293,14 @@ function GerenciarServicosModal({ appt, services, pets, isSaving, onSave, onClos
   onClose: () => void;
 }) {
   const pet = appt ? pets.find(p => p.id === appt.petId) : null;
-  const filteredServices = pet?.size ? services.filter(s => s.size === pet.size) : services;
+  const isPackageAppt = !!(appt?.packageId);
+  const filteredServices = pet?.size
+    ? services.filter(s => {
+        if (s.size !== pet.size) return false;
+        if (pet.coat && s.coat) return s.coat === pet.coat;
+        return true;
+      })
+    : services;
   const [primaryServiceId, setPrimaryServiceId] = useState<string>("");
   const [extraServiceIds, setExtraServiceIds] = useState<number[]>([]);
   const [price, setPrice] = useState<string>("");
@@ -357,16 +364,18 @@ function GerenciarServicosModal({ appt, services, pets, isSaving, onSave, onClos
               <span className="font-medium">{pet?.name ?? "Pet"}</span>
               {pet?.size && <span className="text-xs text-muted-foreground">({getPorteLabel(pet.size)}{pet.coat ? ` · ${getCoatLabel(pet.coat)}` : ""})</span>}
             </div>
-            <div>
-              <Label className="text-xs">Serviço principal</Label>
-              <Select value={primaryServiceId} onValueChange={handlePrimaryChange}>
-                <SelectTrigger className="h-8 text-sm mt-1"><SelectValue placeholder="Selecione um serviço" /></SelectTrigger>
-                <SelectContent>
-                  {filteredServices.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.name} — {formatBRL(s.price)}</SelectItem>)}
-                  {filteredServices.length === 0 && <SelectItem value="_none" disabled>Nenhum serviço para este porte</SelectItem>}
-                </SelectContent>
-              </Select>
-            </div>
+            {!isPackageAppt && (
+              <div>
+                <Label className="text-xs">Serviço principal</Label>
+                <Select value={primaryServiceId} onValueChange={handlePrimaryChange}>
+                  <SelectTrigger className="h-8 text-sm mt-1"><SelectValue placeholder="Selecione um serviço" /></SelectTrigger>
+                  <SelectContent>
+                    {filteredServices.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.name} — {formatBRL(s.price)}</SelectItem>)}
+                    {filteredServices.length === 0 && <SelectItem value="_none" disabled>Nenhum serviço para este porte</SelectItem>}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             {extraServiceIds.length > 0 && (
               <div className="space-y-1.5">
                 <Label className="text-xs">Serviços adicionais</Label>

@@ -137,7 +137,8 @@ export default function Pacotes() {
       (pkg.priceBySizes ?? []).map(p => [sizeCoatKey(p.size, p.coat ?? ""), p.price])
     );
     const priceBySizes = allCombos.map(([size, coat]) => ({
-      size, coat, price: savedMap[sizeCoatKey(size, coat)] ?? 0,
+      size, coat,
+      price: savedMap[sizeCoatKey(size, coat)] ?? savedMap[sizeCoatKey(size, "")] ?? 0,
     }));
     setForm({
       name: pkg.name,
