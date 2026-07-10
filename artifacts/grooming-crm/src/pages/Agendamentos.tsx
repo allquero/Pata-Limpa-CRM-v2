@@ -585,10 +585,6 @@ function ConfirmacaoWhatsAppModal({
   onClose: () => void;
   tenantId: number;
 }) {
-  const [templateId, setTemplateId] = useState("default");
-
-  useEffect(() => { setTemplateId("default"); }, [appt?.id, mode]);
-
   const pet = appt ? pets.find(p => p.id === appt.petId) : null;
   const client = overrideClient ?? (appt ? clients.find(c => c.id === appt.clientId) : null);
   const service = appt ? services.find(s => s.id === appt.serviceId) : null;
@@ -614,6 +610,16 @@ function ConfirmacaoWhatsAppModal({
     ? "pet_pronto"
     : (mode === "agradecimento" || mode === "conclusao") ? "agradecimento" : "confirmacao";
   const filteredTemplates = (msgTemplates as MessageTemplate[]).filter(t => t.type === templateType);
+
+  const [templateId, setTemplateId] = useState<string>("");
+
+  useEffect(() => {
+    setTemplateId(prev => {
+      const ids = filteredTemplates.map(t => String(t.id));
+      if (ids.includes(prev)) return prev;
+      return ids.length > 0 ? ids[0] : "";
+    });
+  }, [appt?.id, mode, filteredTemplates.length]);
 
   const { data: tenantForMsg } = useGetTenant(tenantId);
   const schedulingMethodForMsg = (tenantForMsg as any)?.schedulingMethod ?? "hora";
@@ -652,17 +658,10 @@ function ConfirmacaoWhatsAppModal({
         }).join("\n")
       : isPeriodoMsg ? `${apptDate} — ${apptTime}` : `${apptDate} às ${apptTime}`;
 
-    const selectedTmpl = templateId !== "default"
-      ? filteredTemplates.find(t => String(t.id) === templateId)
-      : null;
+    const selectedTmpl = filteredTemplates.find(t => String(t.id) === templateId) ?? filteredTemplates[0];
+    if (!selectedTmpl) return "";
 
-    const defaultContent = mode === "pet_pronto"
-      ? `Olá {nome_cliente}! 🐾\n\nO(a) {nome_pet} já está prontinho(a) para ser buscado!\n\nPassamos aqui para avisar que o serviço foi concluído. Pode vir buscar quando quiser! 😊`
-      : mode === "agradecimento"
-        ? `Olá {nome_cliente}! Obrigado por agendar com a gente! 🐾\n\n{nome_pet} está agendado nas seguintes datas:\n{datas}\n\nServiço: {servico}\nValor: {preco}\n\nQualquer dúvida, estamos à disposição!`
-        : `Olá {nome_cliente}! Obrigado pela visita de {nome_pet} hoje! 🐾✨\n\nEsperamos que tenham gostado do serviço. Até a próxima! 😊`;
-
-    const baseContent = selectedTmpl?.content ?? defaultContent;
+    const baseContent = selectedTmpl.content;
 
     let msg = baseContent
       .replace(/\{nome_cliente\}/g, client.name)
@@ -730,25 +729,32 @@ function ConfirmacaoWhatsAppModal({
 
             <div className="space-y-1.5">
               <Label className="text-xs">{templateLabel}</Label>
-              <Select value={templateId} onValueChange={setTemplateId}>
-                <SelectTrigger className="h-8 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="default">Mensagem padrão</SelectItem>
-                  {filteredTemplates.map(t => (
-                    <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {filteredTemplates.length === 0 ? (
+                <p className="text-xs text-amber-600 flex items-center gap-1">
+                  ⚠️ Nenhum template cadastrado para este tipo. Crie um na página <strong>Mensagens</strong>.
+                </p>
+              ) : (
+                <Select value={templateId} onValueChange={setTemplateId}>
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filteredTemplates.map(t => (
+                      <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-xs">Pré-visualização da mensagem</Label>
-              <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-sm whitespace-pre-wrap font-mono text-green-900 max-h-52 overflow-y-auto">
-                {buildMessage()}
+            {filteredTemplates.length > 0 && (
+              <div className="space-y-1.5">
+                <Label className="text-xs">Pré-visualização da mensagem</Label>
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-sm whitespace-pre-wrap font-mono text-green-900 max-h-52 overflow-y-auto">
+                  {buildMessage()}
+                </div>
               </div>
-            </div>
+            )}
 
             {!client?.phone && (
               <p className="text-xs text-amber-600">
@@ -762,7 +768,7 @@ function ConfirmacaoWhatsAppModal({
           <Button
             className="bg-green-600 hover:bg-green-700 gap-2"
             onClick={handleSend}
-            disabled={!client?.phone}
+            disabled={!client?.phone || filteredTemplates.length === 0}
           >
             <MessageSquare className="h-4 w-4" />
             Enviar pelo WhatsApp
@@ -884,7 +890,7 @@ export default function Agendamentos() {
   const tomorrow = addDays(new Date(), 1);
   const tomorrowKey = format(tomorrow, "yyyy-MM-dd");
   const [remindersOpen, setRemindersOpen] = useState(false);
-  const [reminderTemplateId, setReminderTemplateId] = useState<string>("default");
+  const [reminderTemplateId, setReminderTemplateId] = useState<string>("");
   const [notifiedIds, setNotifiedIds] = useState<Set<number>>(() => {
     try {
       const raw = localStorage.getItem(`reminders_notified_${tomorrowKey}`);
@@ -1241,6 +1247,8 @@ export default function Agendamentos() {
     });
   };
 
+  const utcOffsetReminder: number = (tenantData as any)?.utcOffset ?? -3;
+
   const fillReminderTemplate = (appt: Appointment): string => {
     const pet = (allPets as Pet[]).find(p => p.id === appt.petId);
     const client = (clients as Client[]).find(c => c.id === appt.clientId);
@@ -1248,13 +1256,13 @@ export default function Agendamentos() {
     const pkg = (packages as Package[]).find(p => p.id === appt.packageId);
     const d = new Date(appt.scheduledDate);
     const rawTime = d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-    const periodoLabel = d.getUTCHours() < 12 ? "Manhã" : "Tarde";
+    const periodoLabel = (d.getUTCHours() + utcOffsetReminder) < 12 ? "Manhã" : "Tarde";
     const apptTime = isPeriodo ? periodoLabel : rawTime;
     const apptDate = format(tomorrow, "dd/MM/yyyy");
     const serviceName = service?.name ?? pkg?.name ?? "Serviço";
-    const selectedTmpl = reminderTemplateId !== "default" ? reminderTemplates.find(t => String(t.id) === reminderTemplateId) : null;
-    const content = selectedTmpl?.content ?? `Olá {nome_cliente}! Lembramos que {nome_pet} tem agendamento amanhã, dia {data} — {periodo}. Serviço: {servico}. Valor: {preco}. Aguardamos vocês! 🐾`;
-    return content
+    const selectedTmpl = reminderTemplates.find(t => String(t.id) === reminderTemplateId) ?? reminderTemplates[0];
+    if (!selectedTmpl) return "";
+    return selectedTmpl.content
       .replace(/\{nome_cliente\}/g, client?.name ?? "")
       .replace(/\{nome_pet\}/g, pet?.name ?? "")
       .replace(/\{data\}/g, apptDate)
@@ -1424,13 +1432,16 @@ export default function Agendamentos() {
           <div className="border-t">
             <div className="flex items-center gap-3 px-4 py-3 bg-muted/30 border-b flex-wrap">
               <Label className="text-xs whitespace-nowrap shrink-0">Template de lembrete:</Label>
-              <Select value={reminderTemplateId} onValueChange={setReminderTemplateId}>
-                <SelectTrigger className="h-7 text-xs w-auto min-w-[200px]"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="default">Mensagem padrão</SelectItem>
-                  {reminderTemplates.map(t => (<SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>))}
-                </SelectContent>
-              </Select>
+              {reminderTemplates.length === 0 ? (
+                <span className="text-xs text-amber-600">⚠️ Nenhum template de lembrete. Crie um na página <strong>Mensagens</strong>.</span>
+              ) : (
+                <Select value={reminderTemplateId} onValueChange={setReminderTemplateId}>
+                  <SelectTrigger className="h-7 text-xs w-auto min-w-[200px]"><SelectValue placeholder="Selecione um template" /></SelectTrigger>
+                  <SelectContent>
+                    {reminderTemplates.map(t => (<SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+              )}
               {notifiedIds.size > 0 && (
                 <span className="text-xs text-muted-foreground ml-auto">
                   <CheckCheck className="h-3.5 w-3.5 inline mr-1 text-green-600" />
