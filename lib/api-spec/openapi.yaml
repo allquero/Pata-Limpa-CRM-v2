@@ -1701,6 +1701,10 @@ components:
           items:
             type: string
           description: Pelagens configuradas pelo pet shop (ex ["curto","longo"])
+        utcOffset:
+          type: ["integer", "null"]
+          default: -3
+          description: UTC offset em horas (ex -3 para Brasília, -4 para Cuiabá/Manaus)
         createdAt:
           type: string
           format: date-time
@@ -1732,6 +1736,9 @@ components:
         schedulingMethod:
           type: string
           enum: [hora, periodo]
+        utcOffset:
+          type: integer
+          description: UTC offset em horas (ex -3 para Brasília)
         petSizes:
           type: array
           items:

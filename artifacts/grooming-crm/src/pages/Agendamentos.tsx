@@ -618,12 +618,13 @@ function ConfirmacaoWhatsAppModal({
   const { data: tenantForMsg } = useGetTenant(tenantId);
   const schedulingMethodForMsg = (tenantForMsg as any)?.schedulingMethod ?? "hora";
   const isPeriodoMsg = schedulingMethodForMsg === "periodo";
+  const utcOffsetForMsg: number = (tenantForMsg as any)?.utcOffset ?? -3;
 
   const buildMessage = (): string => {
     if (!appt || !client) return "";
     const d = new Date(appt.scheduledDate);
     const rawTime = d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-    const periodoLabel = d.getUTCHours() < 12 ? "Manhã" : "Tarde";
+    const periodoLabel = (d.getUTCHours() + utcOffsetForMsg) < 12 ? "Manhã" : "Tarde";
     const apptTime = isPeriodoMsg ? periodoLabel : rawTime;
     const apptDate = format(d, "dd/MM/yyyy");
     const extraNames = (appt.extraServiceIds ?? [])
@@ -641,8 +642,15 @@ function ConfirmacaoWhatsAppModal({
       : allAppts.filter(a => a.id !== appt.id && new Date(a.scheduledDate) > now);
 
     const datasStr = datesForList.length > 0
-      ? datesForList.map(a => `📅 ${format(new Date(a.scheduledDate), "dd/MM/yyyy 'às' HH:mm")}`).join("\n")
-      : apptDate + " às " + apptTime;
+      ? datesForList.map(a => {
+          const ad = new Date(a.scheduledDate);
+          if (isPeriodoMsg) {
+            const p = (ad.getUTCHours() + utcOffsetForMsg) < 12 ? "Manhã" : "Tarde";
+            return `📅 ${format(ad, "dd/MM/yyyy")} — ${p}`;
+          }
+          return `📅 ${format(ad, "dd/MM/yyyy 'às' HH:mm")}`;
+        }).join("\n")
+      : isPeriodoMsg ? `${apptDate} — ${apptTime}` : `${apptDate} às ${apptTime}`;
 
     const selectedTmpl = templateId !== "default"
       ? filteredTemplates.find(t => String(t.id) === templateId)
@@ -1184,7 +1192,8 @@ export default function Agendamentos() {
         const newPet: Pet = await createPet.mutateAsync({ data: { clientId: resolvedClientId, name: casual.petName.trim(), breed: casual.petBreed.trim() || undefined, size: casual.petSize, coat: casual.petCoat || undefined } });
         resolvedPetId = newPet.id;
       }
-      const dt = new Date(`${casual.scheduledDate}T${casual.scheduledTime}:00`);
+      const effectiveCasualTime = isPeriodo ? (casual.scheduledTime >= "12:00" ? "14:00" : "08:00") : casual.scheduledTime;
+      const dt = new Date(`${casual.scheduledDate}T${effectiveCasualTime}:00`);
       const createdAppts = await createAppointment.mutateAsync({ data: { tenantId: tenantId!, clientId: resolvedClientId, petId: resolvedPetId, serviceId: Number(casual.serviceId), extraServiceIds: casual.extraServiceIds.length > 0 ? casual.extraServiceIds : undefined, scheduledDate: dt.toISOString(), totalPrice: Number(casual.totalPrice), notes: casual.notes || undefined } });
       const clientName = casualFoundClient?.name ?? casual.clientName;
       const petName = casualSelectedPetId && casualSelectedPetId !== "new" ? (casualClientPets as Pet[]).find(p => p.id === Number(casualSelectedPetId))?.name ?? "" : casual.petName;
@@ -1209,7 +1218,8 @@ export default function Agendamentos() {
     if (!sell.petId) { toast({ title: "Selecione o pet", variant: "destructive" }); return; }
     if (!sell.startDate || !sell.startTime) { toast({ title: "Data e horário são obrigatórios", variant: "destructive" }); return; }
     try {
-      const result: SellPackageResult = await sellPackage.mutateAsync({ id: Number(sell.packageId), data: { tenantId: tenantId!, clientId: Number(sell.clientId), petId: Number(sell.petId), startDate: sell.startDate, startTime: sell.startTime, notes: sell.notes || null } });
+      const effectiveSellTime = isPeriodo ? (sell.startTime >= "12:00" ? "14:00" : "08:00") : sell.startTime;
+      const result: SellPackageResult = await sellPackage.mutateAsync({ id: Number(sell.packageId), data: { tenantId: tenantId!, clientId: Number(sell.clientId), petId: Number(sell.petId), startDate: sell.startDate, startTime: effectiveSellTime, notes: sell.notes || null } });
       const count = result.appointments.length;
       const price = result.financialEntry.amount;
       toast({ title: "Pacote vendido com sucesso!", description: `${count} agendamento${count !== 1 ? "s" : ""} criado${count !== 1 ? "s" : ""} · Receita: ${formatBRL(price)}` });

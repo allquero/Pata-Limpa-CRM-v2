@@ -13,6 +13,8 @@ export interface TenantUpdate {
   email?: string;
   address?: string;
   schedulingMethod?: TenantUpdateSchedulingMethod;
+  /** UTC offset em horas (ex -3 para Brasília) */
+  utcOffset?: number;
   petSizes?: string[];
   coatTypes?: string[];
 }

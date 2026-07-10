@@ -12,43 +12,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, MessageSquare, Copy, Wand2 } from "lucide-react";
+import { Plus, Pencil, Trash2, MessageSquare, Copy } from "lucide-react";
 
 type Template = { id: number; name: string; type: string; content: string };
 const emptyForm = { name: "", type: "confirmacao", content: "" };
-
-const DEFAULT_TEMPLATES: { name: string; type: string; content: string }[] = [
-  {
-    name: "Confirmação de Presença",
-    type: "confirmacao",
-    content:
-      "Olá {nome_cliente}! 🐾 Tudo bem?\n\nPassando para confirmar o agendamento do(a) {nome_pet} em {data} — {periodo}.\n\nResponda SIM para confirmar ou nos avise para remarcarmos. Obrigado! 😊",
-  },
-  {
-    name: "Lembrete de Agendamento",
-    type: "lembrete",
-    content:
-      "Oi {nome_cliente}! 🐾 Lembrando que o(a) {nome_pet} tem {servico} agendado para amanhã, {data} — {periodo}.\n\nNos vemos em breve! 🐶✂️",
-  },
-  {
-    name: "Agradecimento após atendimento",
-    type: "agradecimento",
-    content:
-      "Olá {nome_cliente}! Obrigado por trazer o(a) {nome_pet} hoje! 🐶✨\n\nEsperamos que tenham gostado do serviço. Até a próxima! 🐾",
-  },
-  {
-    name: "Reativação de cliente",
-    type: "leads",
-    content:
-      "Oi {nome_cliente}! 🐾 Faz um tempinho que não vemos o(a) {nome_pet} por aqui.\n\nQue tal agendar um banho e tosa? Entre em contato e garanta o horário! 😊",
-  },
-  {
-    name: "Pet Pronto!",
-    type: "pet_pronto",
-    content:
-      "Olá {nome_cliente}! 🐾\n\nO(a) {nome_pet} já está prontinho(a) para ser buscado!\n\nPassamos aqui para avisar que o serviço foi concluído. Pode vir buscar quando quiser! 😊",
-  },
-];
 
 const typeColors: Record<string, string> = {
   confirmacao: "bg-blue-100 text-blue-800",
@@ -71,7 +38,6 @@ export default function Mensagens() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Template | null>(null);
   const [form, setForm] = useState(emptyForm);
-  const [seedingDefaults, setSeedingDefaults] = useState(false);
 
   const openCreate = () => { setEditing(null); setForm(emptyForm); setModalOpen(true); };
   const openEdit = (t: Template) => { setEditing(t); setForm({ name: t.name, type: t.type, content: t.content }); setModalOpen(true); };
@@ -103,27 +69,6 @@ export default function Mensagens() {
     setForm(f => ({ ...f, content: f.content + v }));
   };
 
-  const criarTemplatesPadrao = async () => {
-    setSeedingDefaults(true);
-    try {
-      const existing = (templates as Template[]);
-      for (const t of DEFAULT_TEMPLATES) {
-        const found = existing.find(e => e.type === t.type && e.name === t.name);
-        if (found) {
-          await updateTemplate.mutateAsync({ id: found.id, data: { ...t, type: t.type as any } });
-        } else {
-          await createTemplate.mutateAsync({ data: { ...t, tenantId: tenantId!, type: t.type as any } });
-        }
-      }
-      toast({ title: "Templates padrão aplicados com sucesso!" });
-      refetch();
-    } catch {
-      toast({ title: "Erro ao aplicar templates padrão", variant: "destructive" });
-    } finally {
-      setSeedingDefaults(false);
-    }
-  };
-
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toast({ title: "Copiado!" });
@@ -136,13 +81,7 @@ export default function Mensagens() {
           <h1 className="text-2xl font-bold">Templates de Mensagem</h1>
           <p className="text-muted-foreground">Mensagens para WhatsApp — confirmações, lembretes, agradecimentos e leads</p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <Button variant="outline" onClick={criarTemplatesPadrao} disabled={seedingDefaults}>
-            <Wand2 className="h-4 w-4 mr-2" />
-            {seedingDefaults ? "Criando..." : "Templates padrão"}
-          </Button>
-          <Button onClick={openCreate}><Plus className="h-4 w-4 mr-2" />Novo Template</Button>
-        </div>
+        <Button onClick={openCreate}><Plus className="h-4 w-4 mr-2" />Novo Template</Button>
       </div>
 
       {isLoading ? (
@@ -150,11 +89,10 @@ export default function Mensagens() {
       ) : (templates as Template[]).length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center space-y-4">
-            <p className="text-muted-foreground">Nenhum template cadastrado.</p>
-            <Button variant="outline" onClick={criarTemplatesPadrao} disabled={seedingDefaults}>
-              <Wand2 className="h-4 w-4 mr-2" />
-              {seedingDefaults ? "Criando..." : "Criar templates padrão"}
-            </Button>
+            <MessageSquare className="h-10 w-10 text-muted-foreground/40 mx-auto" />
+            <p className="text-muted-foreground">Nenhum template cadastrado ainda.</p>
+            <p className="text-xs text-muted-foreground">Crie templates personalizados para confirmar presenças, enviar lembretes e agradecer clientes.</p>
+            <Button onClick={openCreate}><Plus className="h-4 w-4 mr-2" />Criar primeiro template</Button>
           </CardContent>
         </Card>
       ) : (

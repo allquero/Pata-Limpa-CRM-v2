@@ -105,6 +105,11 @@ export interface Tenant {
    * @nullable
    */
   coatTypes?: string[] | null;
+  /**
+   * UTC offset em horas (ex -3 para Brasília, -4 para Cuiabá/Manaus)
+   * @nullable
+   */
+  utcOffset?: number | null;
   createdAt: string;
 }
 
@@ -129,6 +134,8 @@ export interface TenantUpdate {
   email?: string;
   address?: string;
   schedulingMethod?: TenantUpdateSchedulingMethod;
+  /** UTC offset em horas (ex -3 para Brasília) */
+  utcOffset?: number;
   petSizes?: string[];
   coatTypes?: string[];
 }

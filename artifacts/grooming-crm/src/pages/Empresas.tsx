@@ -4,11 +4,12 @@ import { useAppAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Building2, Save, Clock, Sun, PawPrint, X, Plus } from "lucide-react";
+import { Building2, Save, Clock, Sun, PawPrint, X, Plus, Globe } from "lucide-react";
 import { DEFAULT_PORTE_ORDER, DEFAULT_COAT_LABELS } from "@/lib/constants";
 
 export default function Empresas() {
@@ -20,6 +21,7 @@ export default function Empresas() {
   const [form, setForm] = useState({
     name: "", phone: "", email: "", address: "",
     schedulingMethod: "hora" as "hora" | "periodo",
+    utcOffset: -3,
   });
 
   const [petSizes, setPetSizes] = useState<string[]>(DEFAULT_PORTE_ORDER.slice());
@@ -36,6 +38,7 @@ export default function Empresas() {
         email: t.email ?? "",
         address: t.address ?? "",
         schedulingMethod: (t.schedulingMethod ?? "hora") as "hora" | "periodo",
+        utcOffset: t.utcOffset ?? -3,
       });
       if (Array.isArray(t.petSizes) && t.petSizes.length > 0) setPetSizes(t.petSizes);
       if (Array.isArray(t.coatTypes) && t.coatTypes.length > 0) setCoatTypes(t.coatTypes);
@@ -168,12 +171,56 @@ export default function Empresas() {
                   <span className="text-xs text-center leading-tight">Manhã ou Tarde</span>
                 </button>
               </div>
+              <div>
+                <Label className="flex items-center gap-1.5 mb-1.5">
+                  <Globe className="h-4 w-4 text-muted-foreground" />
+                  Fuso horário (UTC offset)
+                </Label>
+                <Select
+                  value={String(form.utcOffset)}
+                  onValueChange={v => setForm(f => ({ ...f, utcOffset: Number(v) }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="-12">UTC-12</SelectItem>
+                    <SelectItem value="-11">UTC-11</SelectItem>
+                    <SelectItem value="-10">UTC-10 (Havaí)</SelectItem>
+                    <SelectItem value="-9">UTC-9 (Alasca)</SelectItem>
+                    <SelectItem value="-8">UTC-8 (Los Angeles)</SelectItem>
+                    <SelectItem value="-7">UTC-7 (Denver)</SelectItem>
+                    <SelectItem value="-6">UTC-6 (Chicago)</SelectItem>
+                    <SelectItem value="-5">UTC-5 (Nova York, Bogotá)</SelectItem>
+                    <SelectItem value="-4">UTC-4 (Manaus, Cuiabá, Santiago)</SelectItem>
+                    <SelectItem value="-3">UTC-3 (Brasília, Buenos Aires)</SelectItem>
+                    <SelectItem value="-2">UTC-2 (Noronha)</SelectItem>
+                    <SelectItem value="-1">UTC-1 (Açores)</SelectItem>
+                    <SelectItem value="0">UTC+0 (Lisboa, Londres)</SelectItem>
+                    <SelectItem value="1">UTC+1 (Paris, Madrid)</SelectItem>
+                    <SelectItem value="2">UTC+2 (Cairo, Atenas)</SelectItem>
+                    <SelectItem value="3">UTC+3 (Moscou, Nairobi)</SelectItem>
+                    <SelectItem value="4">UTC+4 (Dubai)</SelectItem>
+                    <SelectItem value="5">UTC+5 (Paquistão)</SelectItem>
+                    <SelectItem value="6">UTC+6 (Bangladesh)</SelectItem>
+                    <SelectItem value="7">UTC+7 (Bangkok)</SelectItem>
+                    <SelectItem value="8">UTC+8 (Pequim, Singapura)</SelectItem>
+                    <SelectItem value="9">UTC+9 (Tóquio, Seul)</SelectItem>
+                    <SelectItem value="10">UTC+10 (Sydney)</SelectItem>
+                    <SelectItem value="11">UTC+11 (Ilhas Salomão)</SelectItem>
+                    <SelectItem value="12">UTC+12 (Nova Zelândia)</SelectItem>
+                    <SelectItem value="13">UTC+13</SelectItem>
+                    <SelectItem value="14">UTC+14</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">Usado para classificar Manhã/Tarde corretamente nas mensagens.</p>
+              </div>
               <Button
                 onClick={handleSave}
                 disabled={!form.name || updateTenant.isPending}
                 className="w-full"
               >
-                <Save className="h-4 w-4 mr-2" />Salvar Método
+                <Save className="h-4 w-4 mr-2" />Salvar Método e Fuso
               </Button>
             </div>
           )}

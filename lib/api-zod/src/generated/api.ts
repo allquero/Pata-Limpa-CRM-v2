@@ -42,6 +42,7 @@ export const GetMyTenantHeader = zod.object({
 });
 
 export const getMyTenantResponseTenantOneSchedulingMethodDefault = `hora`;
+export const getMyTenantResponseTenantOneUtcOffsetDefault = -3;
 
 export const GetMyTenantResponse = zod.object({
   tenant: zod.union([
@@ -68,6 +69,13 @@ export const GetMyTenantResponse = zod.object({
         .nullish()
         .describe(
           'Pelagens configuradas pelo pet shop (ex [\"curto\",\"longo\"])',
+        ),
+      utcOffset: zod
+        .number()
+        .nullish()
+        .default(getMyTenantResponseTenantOneUtcOffsetDefault)
+        .describe(
+          "UTC offset em horas (ex -3 para Brasília, -4 para Cuiabá\/Manaus)",
         ),
       createdAt: zod.coerce.date(),
     }),
@@ -136,6 +144,7 @@ export const HealthCheckResponse = zod.object({
  * @summary List all pet shop tenants (admin only)
  */
 export const adminListTenantsResponseSchedulingMethodDefault = `hora`;
+export const adminListTenantsResponseUtcOffsetDefault = -3;
 
 export const AdminListTenantsResponseItem = zod.object({
   id: zod.number(),
@@ -159,6 +168,13 @@ export const AdminListTenantsResponseItem = zod.object({
     .array(zod.string())
     .nullish()
     .describe('Pelagens configuradas pelo pet shop (ex [\"curto\",\"longo\"])'),
+  utcOffset: zod
+    .number()
+    .nullish()
+    .default(adminListTenantsResponseUtcOffsetDefault)
+    .describe(
+      "UTC offset em horas (ex -3 para Brasília, -4 para Cuiabá\/Manaus)",
+    ),
   createdAt: zod.coerce.date(),
 });
 export const AdminListTenantsResponse = zod.array(AdminListTenantsResponseItem);
@@ -193,6 +209,7 @@ export const AdminUpdateTenantBody = zod.object({
 });
 
 export const adminUpdateTenantResponseSchedulingMethodDefault = `hora`;
+export const adminUpdateTenantResponseUtcOffsetDefault = -3;
 
 export const AdminUpdateTenantResponse = zod.object({
   id: zod.number(),
@@ -216,6 +233,13 @@ export const AdminUpdateTenantResponse = zod.object({
     .array(zod.string())
     .nullish()
     .describe('Pelagens configuradas pelo pet shop (ex [\"curto\",\"longo\"])'),
+  utcOffset: zod
+    .number()
+    .nullish()
+    .default(adminUpdateTenantResponseUtcOffsetDefault)
+    .describe(
+      "UTC offset em horas (ex -3 para Brasília, -4 para Cuiabá\/Manaus)",
+    ),
   createdAt: zod.coerce.date(),
 });
 
@@ -284,6 +308,7 @@ export const AdminDeleteSaleParams = zod.object({
  * @summary List all grooming businesses
  */
 export const listTenantsResponseSchedulingMethodDefault = `hora`;
+export const listTenantsResponseUtcOffsetDefault = -3;
 
 export const ListTenantsResponseItem = zod.object({
   id: zod.number(),
@@ -307,6 +332,13 @@ export const ListTenantsResponseItem = zod.object({
     .array(zod.string())
     .nullish()
     .describe('Pelagens configuradas pelo pet shop (ex [\"curto\",\"longo\"])'),
+  utcOffset: zod
+    .number()
+    .nullish()
+    .default(listTenantsResponseUtcOffsetDefault)
+    .describe(
+      "UTC offset em horas (ex -3 para Brasília, -4 para Cuiabá\/Manaus)",
+    ),
   createdAt: zod.coerce.date(),
 });
 export const ListTenantsResponse = zod.array(ListTenantsResponseItem);
@@ -329,6 +361,7 @@ export const GetTenantParams = zod.object({
 });
 
 export const getTenantResponseSchedulingMethodDefault = `hora`;
+export const getTenantResponseUtcOffsetDefault = -3;
 
 export const GetTenantResponse = zod.object({
   id: zod.number(),
@@ -352,6 +385,13 @@ export const GetTenantResponse = zod.object({
     .array(zod.string())
     .nullish()
     .describe('Pelagens configuradas pelo pet shop (ex [\"curto\",\"longo\"])'),
+  utcOffset: zod
+    .number()
+    .nullish()
+    .default(getTenantResponseUtcOffsetDefault)
+    .describe(
+      "UTC offset em horas (ex -3 para Brasília, -4 para Cuiabá\/Manaus)",
+    ),
   createdAt: zod.coerce.date(),
 });
 
@@ -368,11 +408,16 @@ export const UpdateTenantBody = zod.object({
   email: zod.string().optional(),
   address: zod.string().optional(),
   schedulingMethod: zod.enum(["hora", "periodo"]).optional(),
+  utcOffset: zod
+    .number()
+    .optional()
+    .describe("UTC offset em horas (ex -3 para Brasília)"),
   petSizes: zod.array(zod.string()).optional(),
   coatTypes: zod.array(zod.string()).optional(),
 });
 
 export const updateTenantResponseSchedulingMethodDefault = `hora`;
+export const updateTenantResponseUtcOffsetDefault = -3;
 
 export const UpdateTenantResponse = zod.object({
   id: zod.number(),
@@ -396,6 +441,13 @@ export const UpdateTenantResponse = zod.object({
     .array(zod.string())
     .nullish()
     .describe('Pelagens configuradas pelo pet shop (ex [\"curto\",\"longo\"])'),
+  utcOffset: zod
+    .number()
+    .nullish()
+    .default(updateTenantResponseUtcOffsetDefault)
+    .describe(
+      "UTC offset em horas (ex -3 para Brasília, -4 para Cuiabá\/Manaus)",
+    ),
   createdAt: zod.coerce.date(),
 });
 

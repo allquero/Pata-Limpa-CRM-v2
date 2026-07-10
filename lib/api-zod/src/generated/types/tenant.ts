@@ -33,5 +33,10 @@ export interface Tenant {
    * @nullable
    */
   coatTypes?: string[] | null;
+  /**
+   * UTC offset em horas (ex -3 para Brasília, -4 para Cuiabá/Manaus)
+   * @nullable
+   */
+  utcOffset?: number | null;
   createdAt: Date;
 }
