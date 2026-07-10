@@ -970,8 +970,8 @@ export default function Agendamentos() {
   const sellPetCoat = sellPet?.coat;
   const priceForPet = sellPetSize && selectedPkg
     ? (
-        selectedPkg.priceBySizes.find(p => p.size === sellPetSize && (p.coat || "") === (sellPetCoat || ""))?.price ??
-        selectedPkg.priceBySizes.find(p => p.size === sellPetSize && !p.coat)?.price ??
+        selectedPkg.priceBySizes.find(p => p.size === sellPetSize && p.coat === sellPetCoat)?.price ??
+        selectedPkg.priceBySizes.find(p => p.size === sellPetSize)?.price ??
         null
       )
     : null;
