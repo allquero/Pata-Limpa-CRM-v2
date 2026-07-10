@@ -314,13 +314,21 @@ function AvulsoItem({ item, clientId, onRefresh }: { item: Avulso; clientId: num
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-sm font-medium">{formatDateTime(item.scheduledDate)}</span>
-              {(item.service as { name?: string } | null)?.name && (
-                <span className="text-xs text-muted-foreground">— {(item.service as { name: string }).name}</span>
-              )}
+              {(() => {
+                const mainName = (item.service as { name?: string } | null)?.name;
+                const extras = ((item as any).extraServices as string[]) ?? [];
+                const parts = [mainName, ...extras].filter(Boolean);
+                return parts.length > 0
+                  ? <span className="text-xs text-muted-foreground">— {parts.join(" + ")}</span>
+                  : null;
+              })()}
               {(item.pet as { name?: string } | null)?.name && (
                 <span className="text-xs text-muted-foreground">({(item.pet as { name: string }).name})</span>
               )}
             </div>
+            {(item as any).notes && (
+              <p className="text-[11px] text-muted-foreground italic mt-0.5 leading-snug">{(item as any).notes}</p>
+            )}
             <div className="flex items-center gap-2 mt-0.5 flex-wrap">
               <Badge className={`text-[10px] px-1 py-0 gap-1 ${statusInfo.color}`}>{statusInfo.icon}{statusInfo.label}</Badge>
               <Badge className={`text-[10px] px-1.5 py-0 ${pagInfo.color}`}>{pagInfo.label}</Badge>
@@ -439,21 +447,30 @@ function PacoteItem({ item, clientId, onRefresh }: { item: Pacote; clientId: num
               <div className="space-y-1">
                 {agendamentos.map((a, i) => {
                   const si = STATUS_INFO[a.status ?? "aguardando"] ?? STATUS_INFO.aguardando;
+                  const extras = ((a as any).extraServices as string[]) ?? [];
+                  const svcParts = [a.service?.name, ...extras].filter(Boolean);
+                  const svcLabel = svcParts.join(" + ") || null;
+                  const agNotes = (a as any).notes as string | null | undefined;
                   return (
-                    <div key={a.id} className="flex items-center gap-2 text-xs px-2 py-1 bg-card border rounded">
-                      <span className="text-muted-foreground w-4 shrink-0">{i + 1}.</span>
-                      <span className="text-muted-foreground">{formatDate(a.scheduledDate)}</span>
-                      {a.service?.name && <span className="text-muted-foreground flex-1 truncate">{a.service.name}</span>}
-                      <Badge className={`text-[10px] px-1 py-0 gap-1 shrink-0 ${si.color}`}>{si.icon}{si.label}</Badge>
-                      {a.confirmedAt ? (
-                        <span className="text-[10px] text-green-600 flex items-center gap-0.5 shrink-0">
-                          <CheckCircle2 className="h-3 w-3" /> Presente
-                        </span>
-                      ) : a.status !== "cancelado" ? (
-                        <span className="text-[10px] text-red-400 flex items-center gap-0.5 shrink-0">
-                          <XCircle className="h-3 w-3" /> Não confirmado
-                        </span>
-                      ) : null}
+                    <div key={a.id} className="flex flex-col gap-0.5 text-xs px-2 py-1.5 bg-card border rounded">
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground w-4 shrink-0">{i + 1}.</span>
+                        <span className="text-muted-foreground">{formatDate(a.scheduledDate)}</span>
+                        {svcLabel && <span className="text-muted-foreground flex-1 truncate">{svcLabel}</span>}
+                        <Badge className={`text-[10px] px-1 py-0 gap-1 shrink-0 ${si.color}`}>{si.icon}{si.label}</Badge>
+                        {a.confirmedAt ? (
+                          <span className="text-[10px] text-green-600 flex items-center gap-0.5 shrink-0">
+                            <CheckCircle2 className="h-3 w-3" /> Presente
+                          </span>
+                        ) : a.status !== "cancelado" ? (
+                          <span className="text-[10px] text-red-400 flex items-center gap-0.5 shrink-0">
+                            <XCircle className="h-3 w-3" /> Não confirmado
+                          </span>
+                        ) : null}
+                      </div>
+                      {agNotes && (
+                        <p className="text-[11px] text-muted-foreground italic pl-6 leading-snug">{agNotes}</p>
+                      )}
                     </div>
                   );
                 })}
