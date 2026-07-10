@@ -81,7 +81,7 @@ function formatBRL(v: number) {
 
 // ─── Card components ──────────────────────────────────────────────────────────
 
-function AppointmentCard({ appt, clients, pets, services, packages, onDelete, onWhatsapp, onPetPronto, onEditService, onChangeStatus, onConfirm, isDragging = false, isEditingDate, editDate, editTime, onStartEditDate, onChangeEditDate, onSaveEditDate, onCancelEditDate }: {
+function AppointmentCard({ appt, clients, pets, services, packages, onDelete, onWhatsapp, onPetPronto, onEditService, onChangeStatus, onConfirm, isDragging = false, isEditingDate, editDate, editTime, onStartEditDate, onChangeEditDate, onSaveEditDate, onCancelEditDate, isPeriodo = false }: {
   appt: Appointment;
   clients: Client[];
   pets: Pet[];
@@ -101,6 +101,7 @@ function AppointmentCard({ appt, clients, pets, services, packages, onDelete, on
   onChangeEditDate?: (date: string, time: string) => void;
   onSaveEditDate?: () => void;
   onCancelEditDate?: () => void;
+  isPeriodo?: boolean;
 }) {
   const pet = pets.find(p => p.id === appt.petId);
   const client = clients.find(c => c.id === appt.clientId);
@@ -119,9 +120,9 @@ function AppointmentCard({ appt, clients, pets, services, packages, onDelete, on
             <span className="font-semibold text-sm truncate">{pet?.name ?? "Pet"}</span>
             {pet?.size && <Badge variant="secondary" className="text-xs px-1 py-0">{getPorteLabel(pet.size)}{pet.coat ? ` · ${getCoatLabel(pet.coat)}` : ""}</Badge>}
             {appt.confirmedAt && (
-              <span title="Presença confirmada" className="text-green-600">
-                <UserCheck className="h-3.5 w-3.5" />
-              </span>
+              <Badge className="text-[10px] px-1 py-0 bg-green-100 text-green-700 border border-green-300 font-medium gap-0.5">
+                <UserCheck className="h-2.5 w-2.5" />Confirmado
+              </Badge>
             )}
           </div>
           <p className="text-xs text-muted-foreground truncate">{client?.name ?? "Cliente"}</p>
@@ -172,12 +173,27 @@ function AppointmentCard({ appt, clients, pets, services, packages, onDelete, on
               onChange={e => onChangeEditDate?.(e.target.value, editTime ?? time)}
               className="h-6 text-[10px] px-1 py-0 w-[110px]"
             />
-            <Input
-              type="time"
-              value={editTime ?? time}
-              onChange={e => onChangeEditDate?.(editDate ?? dateStr, e.target.value)}
-              className="h-6 text-[10px] px-1 py-0 w-[70px]"
-            />
+            {isPeriodo ? (
+              <Select
+                value={(editTime ?? time) >= "12:00" ? "tarde" : "manha"}
+                onValueChange={v => onChangeEditDate?.(editDate ?? dateStr, v === "tarde" ? "14:00" : "08:00")}
+              >
+                <SelectTrigger className="h-6 text-[10px] px-1 w-[70px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="manha">Manhã</SelectItem>
+                  <SelectItem value="tarde">Tarde</SelectItem>
+                </SelectContent>
+              </Select>
+            ) : (
+              <Input
+                type="time"
+                value={editTime ?? time}
+                onChange={e => onChangeEditDate?.(editDate ?? dateStr, e.target.value)}
+                className="h-6 text-[10px] px-1 py-0 w-[70px]"
+              />
+            )}
             <button
               onClick={e => { e.stopPropagation(); onSaveEditDate?.(); }}
               className="p-0.5 rounded hover:bg-green-50 text-green-600"
@@ -247,7 +263,7 @@ function AppointmentCard({ appt, clients, pets, services, packages, onDelete, on
   );
 }
 
-function DraggableCard({ appt, clients, pets, services, packages, onDelete, onWhatsapp, onPetPronto, onEditService, onChangeStatus, onConfirm, isEditingDate, editDate, editTime, onStartEditDate, onChangeEditDate, onSaveEditDate, onCancelEditDate }: {
+function DraggableCard({ appt, clients, pets, services, packages, onDelete, onWhatsapp, onPetPronto, onEditService, onChangeStatus, onConfirm, isEditingDate, editDate, editTime, onStartEditDate, onChangeEditDate, onSaveEditDate, onCancelEditDate, isPeriodo }: {
   appt: Appointment;
   clients: Client[];
   pets: Pet[];
@@ -266,6 +282,7 @@ function DraggableCard({ appt, clients, pets, services, packages, onDelete, onWh
   onChangeEditDate?: (date: string, time: string) => void;
   onSaveEditDate?: () => void;
   onCancelEditDate?: () => void;
+  isPeriodo?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: appt.id });
   return (
@@ -290,12 +307,13 @@ function DraggableCard({ appt, clients, pets, services, packages, onDelete, onWh
         onChangeEditDate={onChangeEditDate}
         onSaveEditDate={onSaveEditDate}
         onCancelEditDate={onCancelEditDate}
+        isPeriodo={isPeriodo}
       />
     </div>
   );
 }
 
-function KanbanColumn({ status, label, color, bg, appointments, clients, pets, services, packages, onDelete, onWhatsapp, onPetPronto, onEditService, onChangeStatus, onConfirm, editingApptId, editDate, editTime, onStartEditDate, onChangeEditDate, onSaveEditDate, onCancelEditDate }: {
+function KanbanColumn({ status, label, color, bg, appointments, clients, pets, services, packages, onDelete, onWhatsapp, onPetPronto, onEditService, onChangeStatus, onConfirm, editingApptId, editDate, editTime, onStartEditDate, onChangeEditDate, onSaveEditDate, onCancelEditDate, isPeriodo }: {
   status: AppStatus;
   label: string;
   color: string;
@@ -318,6 +336,7 @@ function KanbanColumn({ status, label, color, bg, appointments, clients, pets, s
   onChangeEditDate: (date: string, time: string) => void;
   onSaveEditDate: (appt: Appointment) => void;
   onCancelEditDate: () => void;
+  isPeriodo: boolean;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
   return (
@@ -351,6 +370,7 @@ function KanbanColumn({ status, label, color, bg, appointments, clients, pets, s
             onChangeEditDate={onChangeEditDate}
             onSaveEditDate={() => onSaveEditDate(appt)}
             onCancelEditDate={onCancelEditDate}
+            isPeriodo={isPeriodo}
           />
         ))}
       </div>
@@ -938,11 +958,14 @@ export default function Agendamentos() {
     if (!editDate || !editTime) return;
     const dt = new Date(`${editDate}T${editTime}:00`);
     try {
+      if (appt.confirmedAt) {
+        await confirmPresence.mutateAsync({ id: appt.id, data: { confirmed: false } });
+      }
       await updateAppointment.mutateAsync({
         id: appt.id,
         data: { scheduledDate: dt.toISOString() },
       });
-      toast({ title: "Data/hora atualizada!" });
+      toast({ title: appt.confirmedAt ? "Data/hora atualizada. Confirmação removida." : "Data/hora atualizada!" });
       setEditingApptId(null);
       refetch();
     } catch {
@@ -1077,6 +1100,9 @@ export default function Agendamentos() {
       }
     }
     try {
+      if (cancellingAppt.confirmedAt) {
+        await confirmPresence.mutateAsync({ id: cancellingAppt.id, data: { confirmed: false } });
+      }
       await updateStatus.mutateAsync({ id: cancellingAppt.id, data: { status: "cancelado" } });
       refetch();
       toast({ title: reschedMode === "resched" ? "Reagendado com sucesso!" : "Agendamento cancelado." });
@@ -1345,6 +1371,7 @@ export default function Agendamentos() {
               onChangeEditDate={changeEditDate}
               onSaveEditDate={saveEditDate}
               onCancelEditDate={cancelEditDate}
+              isPeriodo={isPeriodo}
             />
           ))}
         </div>
@@ -1487,8 +1514,23 @@ export default function Agendamentos() {
                     <Input type="date" value={reschedDate} onChange={e => setReschedDate(e.target.value)} className="h-8 text-sm" />
                   </div>
                   <div>
-                    <Label className="text-xs">Horário *</Label>
-                    <Input type="time" value={reschedTime} onChange={e => setReschedTime(e.target.value)} className="h-8 text-sm" />
+                    <Label className="text-xs">{isPeriodo ? "Período *" : "Horário *"}</Label>
+                    {isPeriodo ? (
+                      <Select
+                        value={reschedTime >= "12:00" ? "tarde" : "manha"}
+                        onValueChange={v => setReschedTime(v === "tarde" ? "14:00" : "08:00")}
+                      >
+                        <SelectTrigger className="h-8 text-sm">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="manha">Manhã</SelectItem>
+                          <SelectItem value="tarde">Tarde</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Input type="time" value={reschedTime} onChange={e => setReschedTime(e.target.value)} className="h-8 text-sm" />
+                    )}
                   </div>
                 </div>
               </div>
