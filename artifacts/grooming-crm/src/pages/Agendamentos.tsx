@@ -877,6 +877,7 @@ const emptySell = {
   startDate: new Date().toISOString().substring(0, 10),
   startTime: "09:00",
   notes: "",
+  paidNow: false,
 };
 
 // ─── Step indicator ───────────────────────────────────────────────────────────
@@ -1299,7 +1300,7 @@ export default function Agendamentos() {
     if (!sell.startDate || !sell.startTime) { toast({ title: "Data e horário são obrigatórios", variant: "destructive" }); return; }
     try {
       const effectiveSellTime = isPeriodo ? (sell.startTime >= "12:00" ? "14:00" : "08:00") : sell.startTime;
-      const result: SellPackageResult = await sellPackage.mutateAsync({ id: Number(sell.packageId), data: { tenantId: tenantId!, clientId: Number(sell.clientId), petId: Number(sell.petId), startDate: sell.startDate, startTime: effectiveSellTime, notes: sell.notes || null } });
+      const result: SellPackageResult = await sellPackage.mutateAsync({ id: Number(sell.packageId), data: { tenantId: tenantId!, clientId: Number(sell.clientId), petId: Number(sell.petId), startDate: sell.startDate, startTime: effectiveSellTime, notes: sell.notes || null, paidNow: sell.paidNow || undefined } });
       const count = result.appointments.length;
       const price = result.financialEntry.amount;
       toast({ title: "Pacote vendido com sucesso!", description: `${count} agendamento${count !== 1 ? "s" : ""} criado${count !== 1 ? "s" : ""} · Receita: ${formatBRL(price)}` });
@@ -1957,6 +1958,15 @@ export default function Agendamentos() {
               </div>
             )}
             <div className="space-y-1.5"><Label>Observações</Label><Textarea placeholder="Observações para todos os agendamentos" value={sell.notes} onChange={e => setSell(f => ({ ...f, notes: e.target.value }))} rows={2} /></div>
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded"
+                checked={sell.paidNow}
+                onChange={e => setSell(f => ({ ...f, paidNow: e.target.checked }))}
+              />
+              <span className="text-sm">Pago agora — registrar pagamento imediatamente</span>
+            </label>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setSellOpen(false)}>Cancelar</Button>

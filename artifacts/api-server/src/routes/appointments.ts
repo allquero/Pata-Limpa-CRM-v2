@@ -338,10 +338,11 @@ router.post("/appointments/:id/payment", async (req, res): Promise<void> => {
   }
 
   const [appt] = await db
-    .select({ id: appointmentsTable.id, clientId: appointmentsTable.clientId, petId: appointmentsTable.petId })
+    .select({ id: appointmentsTable.id, clientId: appointmentsTable.clientId, petId: appointmentsTable.petId, status: appointmentsTable.status })
     .from(appointmentsTable)
     .where(and(eq(appointmentsTable.id, id), eq(appointmentsTable.tenantId, req.tenantId!)));
   if (!appt) { res.status(404).json({ error: "Agendamento não encontrado" }); return; }
+  if (appt.status !== "concluido") { res.status(422).json({ error: "Pagamento só pode ser registrado para agendamentos concluídos" }); return; }
 
   const dateStr = new Date().toISOString().substring(0, 10);
   const description = body.notes && typeof body.notes === "string" && body.notes.trim()
