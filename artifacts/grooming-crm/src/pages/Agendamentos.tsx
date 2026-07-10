@@ -119,10 +119,16 @@ function AppointmentCard({ appt, clients, pets, services, packages, onDelete, on
             <PawPrint className="h-3.5 w-3.5 text-primary shrink-0" />
             <span className="font-semibold text-sm truncate">{pet?.name ?? "Pet"}</span>
             {pet?.size && <Badge variant="secondary" className="text-xs px-1 py-0">{getPorteLabel(pet.size)}{pet.coat ? ` · ${getCoatLabel(pet.coat)}` : ""}</Badge>}
-            {appt.confirmedAt && (
-              <Badge className="text-[10px] px-1 py-0 bg-green-100 text-green-700 border border-green-300 font-medium gap-0.5">
-                <UserCheck className="h-2.5 w-2.5" />Confirmado
-              </Badge>
+            {appt.status !== "concluido" && appt.status !== "cancelado" && (
+              appt.confirmedAt ? (
+                <Badge className="text-[10px] px-1 py-0 bg-green-100 text-green-700 border border-green-300 font-medium gap-0.5">
+                  <UserCheck className="h-2.5 w-2.5" />Confirmado
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-[10px] px-1 py-0 text-muted-foreground gap-0.5">
+                  <UserCheck className="h-2.5 w-2.5" />Não confirmado
+                </Badge>
+              )
             )}
           </div>
           <p className="text-xs text-muted-foreground truncate">{client?.name ?? "Cliente"}</p>
@@ -1115,10 +1121,6 @@ export default function Agendamentos() {
 
   const handleConfirmPresence = useCallback(async (appt: Appointment) => {
     const newConfirmed = !appt.confirmedAt;
-    if (!newConfirmed) {
-      const ok = confirm("Desfazer a confirmação de presença deste agendamento?");
-      if (!ok) return;
-    }
     try {
       await confirmPresence.mutateAsync({ id: appt.id, data: { confirmed: newConfirmed } });
       toast({ title: newConfirmed ? "Presença confirmada!" : "Confirmação desfeita" });
