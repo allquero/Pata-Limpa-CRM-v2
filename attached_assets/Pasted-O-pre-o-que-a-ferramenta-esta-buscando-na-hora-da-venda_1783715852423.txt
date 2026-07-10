@@ -1,0 +1,14 @@
+O preço que a ferramenta esta buscando na hora da venda do pacotes esta desconsiderando a pelagem, colocando preço errado de venda.
+
+os cards no kamban continuam sem botão de confirmação de presença. Lembrando que pela logica alguém que confirmou a presença pode ser movida para o cancelado, e se isso acontecer a confirmação de presença tem que ser removida do histórico em caso de reagendamento também, fazer todo o protocolo novamente.
+
+A descrição dos serviços a serem prestados em cada semana no momento do agendamento esta errada. ela deve buscar corretamente os serviços de cada pacote cadastrado, "Semana 1 semana 2...".
+
+A ferramenta de agendamento quando a empresa esta configurada para agendamento por período esta criando horários aleatórios para o agendamento. isso esta errado, e ainda esta carregando esses horários para as mensagens geradas automaticamente para o whats app.
+
+Todos os smileys usados no sistema de mensagens automáticas não são compatíveis com WhatsApp, todos aparecem como ponto de interrogação deixando as mensagens feias esteticamente. Quando a empresa esta configurada para trabalhar com período os agendamentos não podem conter horários na mensgem enviado por whatsapp, apenas os períodos, mas o app insiste em registrar horário para agendamento e aidna coloca na mensagem. Poderiamos excluir as mesagens padões e ter apenas as mensagens editaveis. Até por que a nova variavel que foi criada de {periodo} nãoe esta funcionando.
+
+O Histórico só esta registrando o serviço principal do agendamento, todos os adicionais e serviços secundários estão ficando fora do histórico de atendimento, eles precisam ser incluídos no histórico.
+
+O financeiro não esta registrando as vendas executadas, ele deve registrar todas elas avulsa ou pacote. no histórico de vendas do financeiro seria legal ter um botão pra confirmar o pagamento na frente cada venda. No momento do agendamento. Se o pacote foi pago na hora, seria bom também ter uma forma de confirmação de pagamento já no momento da venda/agendamento.
+
