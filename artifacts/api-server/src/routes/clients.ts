@@ -109,11 +109,11 @@ router.get("/clients/:id/history", async (req: Request, res: Response): Promise<
     const extras = a.appt.extraServiceIds as number[] | null | undefined;
     if (Array.isArray(extras)) extras.forEach(id => allExtraIds.add(id));
   }
-  // Fetch extra service names in one query
+  // Fetch extra service names in one query — scoped to the current tenant
   const extraServicesRows = allExtraIds.size > 0
     ? await db.select({ id: servicesTable.id, name: servicesTable.name })
         .from(servicesTable)
-        .where(inArray(servicesTable.id, Array.from(allExtraIds)))
+        .where(and(eq(servicesTable.tenantId, req.tenantId!), inArray(servicesTable.id, Array.from(allExtraIds))))
     : [];
   const extraServiceMap = new Map<number, string>(extraServicesRows.map(s => [s.id, s.name]));
 
