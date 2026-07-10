@@ -92,8 +92,8 @@ export default function Pacotes() {
   const petSize = selectedPet?.size as string | undefined;
   const petCoat = (selectedPet as any)?.coat as string | undefined;
   const priceForPet = petSize && sellTarget
-    ? (sellTarget.priceBySizes.find(p => p.size === petSize && (p.coat || "") === (petCoat || ""))?.price
-      ?? sellTarget.priceBySizes.find(p => p.size === petSize && !p.coat)?.price
+    ? (sellTarget.priceBySizes.find(p => p.size === petSize && p.coat === petCoat)?.price
+      ?? sellTarget.priceBySizes.find(p => p.size === petSize)?.price
       ?? null)
     : null;
 
@@ -111,14 +111,18 @@ export default function Pacotes() {
     const main = items[0];
     const extras = items.slice(1);
     if (!main) return [];
-    return Array.from({ length: main.quantity }, (_, i) => ({
-      index: i + 1,
-      label: i === main.quantity - 1 && extras.length > 0
-        ? `${main.serviceName} + ${extras.map(e => e.serviceName).join(" + ")}`
-        : main.serviceName,
-      serviceNames: [] as string[],
-      hasExtra: i === main.quantity - 1 && extras.length > 0,
-    }));
+    return Array.from({ length: main.quantity }, (_, i) => {
+      const isLast = i === main.quantity - 1;
+      const names = isLast
+        ? [main.serviceName, ...extras.map(e => e.serviceName)]
+        : [main.serviceName];
+      return {
+        index: i + 1,
+        label: `Semana ${i + 1}`,
+        serviceNames: names,
+        hasExtra: isLast && extras.length > 0,
+      };
+    });
   })();
 
   const openCreate = () => {

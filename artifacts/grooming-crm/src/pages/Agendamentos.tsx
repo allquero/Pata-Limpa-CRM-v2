@@ -991,14 +991,18 @@ export default function Agendamentos() {
     const main = items[0];
     const extras = items.slice(1);
     if (!main) return [];
-    return Array.from({ length: main.quantity }, (_, i) => ({
-      index: i + 1,
-      label: i === main.quantity - 1 && extras.length > 0
-        ? `${main.serviceName} + ${extras.map(e => e.serviceName).join(" + ")}`
-        : main.serviceName,
-      serviceNames: [] as string[],
-      hasExtra: i === main.quantity - 1 && extras.length > 0,
-    }));
+    return Array.from({ length: main.quantity }, (_, i) => {
+      const isLast = i === main.quantity - 1;
+      const names = isLast
+        ? [main.serviceName, ...extras.map(e => e.serviceName)]
+        : [main.serviceName];
+      return {
+        index: i + 1,
+        label: `Semana ${i + 1}`,
+        serviceNames: names,
+        hasExtra: isLast && extras.length > 0,
+      };
+    });
   })();
 
   const confirmPresence = useConfirmAppointmentPresence();
