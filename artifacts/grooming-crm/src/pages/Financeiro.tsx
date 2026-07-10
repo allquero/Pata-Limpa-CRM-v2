@@ -40,7 +40,7 @@ const typeColors: Record<string, string> = {
   despesa_fixa: "bg-orange-100 text-orange-800",
 };
 
-function buildCupomText(entry: FinancialEntry, tenantName: string, tenantCnpj?: string | null) {
+function buildCupomText(entry: FinancialEntry, tenantName: string, tomador: string, tenantCnpj?: string | null) {
   const date = new Date(entry.date + "T12:00:00").toLocaleDateString("pt-BR");
   const amount = Number(entry.amount).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   const lines = [
@@ -49,8 +49,10 @@ function buildCupomText(entry: FinancialEntry, tenantName: string, tenantCnpj?: 
     `*Prestador:* ${tenantName}`,
     tenantCnpj ? `*CNPJ:* ${tenantCnpj}` : null,
     ``,
+    tomador ? `*Tomador:* ${tomador}` : null,
+    ``,
     `*Data:* ${date}`,
-    `*Serviço:* ${entry.description}`,
+    `*Discriminação:* ${entry.description}`,
     entry.category ? `*Categoria:* ${entry.category}` : null,
     ``,
     `*Valor:* ${amount}`,
@@ -99,6 +101,7 @@ export default function Financeiro() {
   const [form, setForm] = useState(emptyForm);
 
   const [cupomEntry, setCupomEntry] = useState<FinancialEntry | null>(null);
+  const [cupomTomador, setCupomTomador] = useState("");
 
   const openCreate = () => { setEditing(null); setForm(emptyForm); setModalOpen(true); };
   const openEdit = (e: FinancialEntry) => {
@@ -157,7 +160,7 @@ export default function Financeiro() {
   const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   const saldo = (summary?.totalReceitas ?? 0) - (summary?.totalDespesas ?? 0) - (summary?.totalDespesasFixas ?? 0);
 
-  const cupomText = cupomEntry ? buildCupomText(cupomEntry, tenant?.name ?? "Pet Shop", tenant?.cnpj) : "";
+  const cupomText = cupomEntry ? buildCupomText(cupomEntry, tenant?.name ?? "Pet Shop", cupomTomador, tenant?.cnpj) : "";
   const waLink = cupomEntry && tenant?.phone
     ? `https://wa.me/55${(tenant.phone as string).replace(/\D/g, "")}?text=${encodeURIComponent(cupomText)}`
     : `https://wa.me/?text=${encodeURIComponent(cupomText)}`;
@@ -286,7 +289,7 @@ export default function Financeiro() {
                           variant="ghost"
                           size="icon"
                           title="Gerar cupom / comprovante"
-                          onClick={() => setCupomEntry(entry)}
+                          onClick={() => { setCupomTomador(""); setCupomEntry(entry); }}
                         >
                           <Receipt className="h-4 w-4" />
                         </Button>
@@ -337,6 +340,15 @@ export default function Financeiro() {
           </DialogHeader>
           {cupomEntry && (
             <div className="space-y-3">
+              <div>
+                <Label className="text-xs">Tomador (cliente / pet)</Label>
+                <Input
+                  value={cupomTomador}
+                  onChange={e => setCupomTomador(e.target.value)}
+                  placeholder="Ex: Maria Silva — Luna (Poodle)"
+                  className="text-sm"
+                />
+              </div>
               <div className="bg-muted/40 border rounded-lg p-4 text-sm space-y-1 font-mono whitespace-pre-wrap text-xs leading-relaxed">
                 {cupomText}
               </div>

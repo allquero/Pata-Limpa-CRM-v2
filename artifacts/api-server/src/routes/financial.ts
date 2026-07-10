@@ -147,6 +147,7 @@ router.patch("/financial-entries/:id/pay", async (req, res): Promise<void> => {
     .from(financialEntriesTable)
     .where(and(eq(financialEntriesTable.id, id), eq(financialEntriesTable.tenantId, req.tenantId!)));
   if (!entry) { res.status(404).json({ error: "Lançamento não encontrado" }); return; }
+  if (entry.type !== "receita") { res.status(422).json({ error: "Confirmação de pagamento disponível apenas para lançamentos de receita" }); return; }
   const paidAt = entry.paidAt ? null : new Date();
   const [updated] = await db
     .update(financialEntriesTable)
