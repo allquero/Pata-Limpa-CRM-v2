@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, and, gte, lte } from "drizzle-orm";
-import { db, appointmentsTable, petsTable, clientsTable, servicesTable, packagesTable } from "@workspace/db";
+import { db, appointmentsTable, petsTable, clientsTable, servicesTable, packagesTable, financialEntriesTable } from "@workspace/db";
 import type { AppointmentStatus } from "@workspace/db";
 import {
   CreateAppointmentBody,
@@ -324,6 +324,45 @@ router.patch("/appointments/:id/confirm", async (req, res): Promise<void> => {
     return;
   }
   res.json(appt);
+});
+
+router.post("/appointments/:id/payment", async (req, res): Promise<void> => {
+  const id = Number(req.params.id);
+  if (isNaN(id)) { res.status(400).json({ error: "ID inválido" }); return; }
+
+  const body = req.body as { amount?: unknown; notes?: unknown };
+  const amount = Number(body.amount);
+  if (isNaN(amount) || amount <= 0) {
+    res.status(400).json({ error: "Valor deve ser maior que zero" });
+    return;
+  }
+
+  const [appt] = await db
+    .select({ id: appointmentsTable.id, clientId: appointmentsTable.clientId, petId: appointmentsTable.petId })
+    .from(appointmentsTable)
+    .where(and(eq(appointmentsTable.id, id), eq(appointmentsTable.tenantId, req.tenantId!)));
+  if (!appt) { res.status(404).json({ error: "Agendamento não encontrado" }); return; }
+
+  const dateStr = new Date().toISOString().substring(0, 10);
+  const description = body.notes && typeof body.notes === "string" && body.notes.trim()
+    ? body.notes.trim()
+    : "Atendimento avulso";
+
+  const [entry] = await db
+    .insert(financialEntriesTable)
+    .values({
+      tenantId: req.tenantId!,
+      type: "receita",
+      description,
+      amount: String(amount),
+      date: dateStr,
+      category: "Serviços",
+      appointmentId: id,
+      paidAt: new Date(),
+    })
+    .returning();
+
+  res.status(201).json({ ...entry, amount: parseFloat(entry.amount), paidAt: entry.paidAt?.toISOString() ?? null });
 });
 
 export default router;

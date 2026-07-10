@@ -15,6 +15,7 @@ export const financialEntriesTable = pgTable("financial_entries", {
   date: date("date").notNull(),
   category: text("category"),
   appointmentId: integer("appointment_id"),
+  paidAt: timestamp("paid_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

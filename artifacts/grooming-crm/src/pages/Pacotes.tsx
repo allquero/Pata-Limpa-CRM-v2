@@ -41,6 +41,7 @@ const emptySellForm = {
   startDate: format(new Date(), "yyyy-MM-dd"),
   startTime: "09:00",
   notes: "",
+  paidNow: false,
 };
 
 function formatBRL(v: number) {
@@ -264,6 +265,7 @@ export default function Pacotes() {
           startDate: sellForm.startDate,
           startTime: sellForm.startTime,
           notes: sellForm.notes || null,
+          paidNow: sellForm.paidNow || undefined,
         },
       });
       const count = (result as any).appointments?.length ?? 0;
@@ -652,6 +654,16 @@ export default function Pacotes() {
                 rows={2}
               />
             </div>
+
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded"
+                checked={sellForm.paidNow}
+                onChange={e => setSellForm(f => ({ ...f, paidNow: e.target.checked }))}
+              />
+              <span className="text-sm">Pago agora — registrar pagamento imediatamente</span>
+            </label>
           </div>
 
           <DialogFooter>

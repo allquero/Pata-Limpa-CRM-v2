@@ -15,4 +15,6 @@ export interface SellPackageInput {
   startTime: string;
   /** @nullable */
   notes?: string | null;
+  /** Se verdadeiro, registra o pagamento imediatamente (paidAt = now()) */
+  paidNow?: boolean;
 }

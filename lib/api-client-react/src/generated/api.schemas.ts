@@ -395,6 +395,13 @@ export interface PackageUpdate {
   sessions?: PackageSession[];
 }
 
+export interface AppointmentPaymentInput {
+  /** Valor recebido */
+  amount: number;
+  /** Descrição do pagamento (opcional) */
+  notes?: string;
+}
+
 export interface SellPackageInput {
   tenantId: number;
   clientId: number;
@@ -404,6 +411,8 @@ export interface SellPackageInput {
   startTime: string;
   /** @nullable */
   notes?: string | null;
+  /** Se verdadeiro, registra o pagamento imediatamente (paidAt = now()) */
+  paidNow?: boolean;
 }
 
 export type AppointmentFullStatus =
@@ -486,6 +495,8 @@ export interface FinancialEntry {
   category?: string | null;
   /** @nullable */
   appointmentId?: number | null;
+  /** @nullable */
+  paidAt?: string | null;
   createdAt: string;
 }
 

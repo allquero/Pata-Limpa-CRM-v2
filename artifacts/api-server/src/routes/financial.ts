@@ -18,6 +18,7 @@ router.use(requireTenant);
 const parseEntry = (e: typeof financialEntriesTable.$inferSelect) => ({
   ...e,
   amount: parseFloat(e.amount),
+  paidAt: e.paidAt?.toISOString() ?? null,
 });
 
 router.get("/financial-entries/summary", async (req, res): Promise<void> => {
@@ -136,6 +137,23 @@ router.patch("/financial-entries/:id", async (req, res): Promise<void> => {
     return;
   }
   res.json(parseEntry(entry));
+});
+
+router.patch("/financial-entries/:id/pay", async (req, res): Promise<void> => {
+  const id = Number(req.params.id);
+  if (isNaN(id)) { res.status(400).json({ error: "ID inválido" }); return; }
+  const [entry] = await db
+    .select()
+    .from(financialEntriesTable)
+    .where(and(eq(financialEntriesTable.id, id), eq(financialEntriesTable.tenantId, req.tenantId!)));
+  if (!entry) { res.status(404).json({ error: "Lançamento não encontrado" }); return; }
+  const paidAt = entry.paidAt ? null : new Date();
+  const [updated] = await db
+    .update(financialEntriesTable)
+    .set({ paidAt })
+    .where(eq(financialEntriesTable.id, id))
+    .returning();
+  res.json(parseEntry(updated));
 });
 
 router.delete("/financial-entries/:id", async (req, res): Promise<void> => {

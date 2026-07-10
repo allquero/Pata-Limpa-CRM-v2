@@ -12,6 +12,7 @@ import {
   getListAppointmentsQueryKey, getListMessageTemplatesQueryKey,
   useGetTenant,
   useConfirmAppointmentPresence,
+  useRegisterAppointmentPayment,
 } from "@workspace/api-client-react";
 import type {
   Client, Pet, Service, Package, SellPackageResult, MessageTemplate, AppointmentFull,
@@ -32,7 +33,7 @@ import {
   MessageSquare, UserPlus, ShoppingCart, CalendarCheck,
   ChevronRight as ArrowNext, Search, X, CalendarDays,
   Bell, ChevronDown, ChevronUp, CheckCheck, Pencil,
-  Scissors, Plus, UserCheck,
+  Scissors, Plus, UserCheck, DollarSign,
 } from "lucide-react";
 import { format, addDays, startOfWeek, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -103,6 +104,29 @@ function AppointmentCard({ appt, clients, pets, services, packages, onDelete, on
   onCancelEditDate?: () => void;
   isPeriodo?: boolean;
 }) {
+  const [payDialogOpen, setPayDialogOpen] = useState(false);
+  const [payAmount, setPayAmount] = useState("");
+  const [payNotes, setPayNotes] = useState("");
+  const { toast } = useToast();
+  const registerPayment = useRegisterAppointmentPayment();
+
+  const handleRegisterPayment = async () => {
+    const amount = parseFloat(payAmount.replace(",", "."));
+    if (isNaN(amount) || amount <= 0) {
+      toast({ title: "Informe um valor válido", variant: "destructive" });
+      return;
+    }
+    try {
+      await registerPayment.mutateAsync({ id: appt.id, data: { amount, notes: payNotes || undefined } });
+      toast({ title: "Pagamento registrado!", description: `R$ ${amount.toFixed(2).replace(".", ",")} lançado no financeiro` });
+      setPayDialogOpen(false);
+      setPayAmount("");
+      setPayNotes("");
+    } catch {
+      toast({ title: "Erro ao registrar pagamento", variant: "destructive" });
+    }
+  };
+
   const pet = pets.find(p => p.id === appt.petId);
   const client = clients.find(c => c.id === appt.clientId);
   const service = services.find(s => s.id === appt.serviceId);
@@ -265,6 +289,49 @@ function AppointmentCard({ appt, clients, pets, services, packages, onDelete, on
           </button>
         </div>
       )}
+      {appt.status === "concluido" && (
+        <div className="mt-2 pt-2 border-t border-dashed" onClick={e => e.stopPropagation()}>
+          <button
+            onClick={e => { e.stopPropagation(); setPayAmount(String(Number(appt.totalPrice) || "")); setPayDialogOpen(true); }}
+            className="w-full flex items-center justify-center gap-1 text-xs py-1 px-2 rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors border border-emerald-200"
+          >
+            <DollarSign className="h-3 w-3" /> Registrar pagamento
+          </button>
+        </div>
+      )}
+      <Dialog open={payDialogOpen} onOpenChange={o => { if (!o) setPayDialogOpen(false); }}>
+        <DialogContent className="max-w-xs" onClick={e => e.stopPropagation()}>
+          <DialogHeader><DialogTitle className="flex items-center gap-2"><DollarSign className="h-4 w-4 text-emerald-600" />Registrar pagamento</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Valor recebido (R$) *</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0.01"
+                value={payAmount}
+                onChange={e => setPayAmount(e.target.value)}
+                placeholder="0,00"
+                autoFocus
+              />
+            </div>
+            <div>
+              <Label>Descrição (opcional)</Label>
+              <Input
+                value={payNotes}
+                onChange={e => setPayNotes(e.target.value)}
+                placeholder="Ex: Banho + tosa do Thor"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setPayDialogOpen(false)}>Cancelar</Button>
+            <Button size="sm" onClick={handleRegisterPayment} disabled={registerPayment.isPending} className="bg-emerald-600 hover:bg-emerald-700">
+              {registerPayment.isPending ? "Salvando..." : "Confirmar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

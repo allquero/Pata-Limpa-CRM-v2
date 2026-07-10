@@ -162,7 +162,7 @@ router.post("/packages/:id/sell", async (req, res): Promise<void> => {
   if (isNaN(id)) { res.status(400).json({ error: "ID inválido" }); return; }
 
   const body = req.body as Record<string, unknown>;
-  const { clientId, petId, startDate, startTime, notes } = body;
+  const { clientId, petId, startDate, startTime, notes, paidNow } = body;
 
   if (!clientId || !petId || !startDate || !startTime) {
     res.status(400).json({ error: "clientId, petId, startDate e startTime são obrigatórios" });
@@ -307,6 +307,7 @@ router.post("/packages/:id/sell", async (req, res): Promise<void> => {
         amount: String(packagePrice),
         date: dateStr,
         category: "Pacotes",
+        paidAt: paidNow ? new Date() : null,
       })
       .returning();
 

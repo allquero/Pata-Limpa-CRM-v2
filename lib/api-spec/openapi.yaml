@@ -928,6 +928,43 @@ paths:
               schema:
                 $ref: "#/components/schemas/SellPackageResult"
 
+  /appointments/{id}/payment:
+    post:
+      operationId: registerAppointmentPayment
+      tags: [appointments]
+      summary: Register a payment for a concluded appointment (creates a financial entry)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppointmentPaymentInput"
+      responses:
+        "201":
+          description: Created financial entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinancialEntry"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "404":
+          description: Appointment not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
   # Appointments
   /appointments:
     get:
@@ -1244,6 +1281,31 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/FinancialSummary"
+
+  /financial-entries/{id}/pay:
+    patch:
+      operationId: payFinancialEntry
+      tags: [financial]
+      summary: Toggle paidAt on a financial entry (receita only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated entry with paidAt toggled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinancialEntry"
+        "404":
+          description: Entry not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
 
   /financial-entries/{id}:
     get:
@@ -2144,6 +2206,17 @@ components:
           items:
             $ref: "#/components/schemas/PackageSession"
 
+    AppointmentPaymentInput:
+      type: object
+      required: [amount]
+      properties:
+        amount:
+          type: number
+          description: Valor recebido
+        notes:
+          type: string
+          description: Descrição do pagamento (opcional)
+
     SellPackageInput:
       type: object
       required: [tenantId, clientId, petId, startDate, startTime]
@@ -2162,6 +2235,9 @@ components:
           description: "HH:MM"
         notes:
           type: ["string", "null"]
+        paidNow:
+          type: boolean
+          description: "Se verdadeiro, registra o pagamento imediatamente (paidAt = now())"
 
     SellPackageResult:
       type: object
@@ -2530,6 +2606,9 @@ components:
           type: ["string", "null"]
         appointmentId:
           type: ["integer", "null"]
+        paidAt:
+          type: ["string", "null"]
+          format: date-time
         createdAt:
           type: string
           format: date-time

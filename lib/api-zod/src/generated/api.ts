@@ -1302,6 +1302,24 @@ export const SellPackageBody = zod.object({
   startDate: zod.coerce.date(),
   startTime: zod.string().describe("HH:MM"),
   notes: zod.string().nullish(),
+  paidNow: zod
+    .boolean()
+    .optional()
+    .describe(
+      "Se verdadeiro, registra o pagamento imediatamente (paidAt = now())",
+    ),
+});
+
+/**
+ * @summary Register a payment for a concluded appointment (creates a financial entry)
+ */
+export const RegisterAppointmentPaymentParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const RegisterAppointmentPaymentBody = zod.object({
+  amount: zod.number().describe("Valor recebido"),
+  notes: zod.string().optional().describe("Descrição do pagamento (opcional)"),
 });
 
 /**
@@ -1844,6 +1862,7 @@ export const ListFinancialEntriesResponseItem = zod.object({
   date: zod.coerce.date(),
   category: zod.string().nullish(),
   appointmentId: zod.number().nullish(),
+  paidAt: zod.coerce.date().nullish(),
   createdAt: zod.coerce.date(),
 });
 export const ListFinancialEntriesResponse = zod.array(
@@ -1890,6 +1909,26 @@ export const GetFinancialSummaryResponse = zod.object({
 });
 
 /**
+ * @summary Toggle paidAt on a financial entry (receita only)
+ */
+export const PayFinancialEntryParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const PayFinancialEntryResponse = zod.object({
+  id: zod.number(),
+  tenantId: zod.number(),
+  type: zod.enum(["receita", "despesa", "despesa_fixa"]),
+  description: zod.string(),
+  amount: zod.number(),
+  date: zod.coerce.date(),
+  category: zod.string().nullish(),
+  appointmentId: zod.number().nullish(),
+  paidAt: zod.coerce.date().nullish(),
+  createdAt: zod.coerce.date(),
+});
+
+/**
  * @summary Get a financial entry
  */
 export const GetFinancialEntryParams = zod.object({
@@ -1905,6 +1944,7 @@ export const GetFinancialEntryResponse = zod.object({
   date: zod.coerce.date(),
   category: zod.string().nullish(),
   appointmentId: zod.number().nullish(),
+  paidAt: zod.coerce.date().nullish(),
   createdAt: zod.coerce.date(),
 });
 
@@ -1932,6 +1972,7 @@ export const UpdateFinancialEntryResponse = zod.object({
   date: zod.coerce.date(),
   category: zod.string().nullish(),
   appointmentId: zod.number().nullish(),
+  paidAt: zod.coerce.date().nullish(),
   createdAt: zod.coerce.date(),
 });
 

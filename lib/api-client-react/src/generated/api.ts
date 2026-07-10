@@ -26,6 +26,7 @@ import type {
   AppointmentConfirmInput,
   AppointmentFull,
   AppointmentInput,
+  AppointmentPaymentInput,
   AppointmentStatusUpdate,
   AppointmentUpdate,
   AppointmentsReport,
@@ -3794,6 +3795,94 @@ export const useSellPackage = <
 };
 
 /**
+ * @summary Register a payment for a concluded appointment (creates a financial entry)
+ */
+export const getRegisterAppointmentPaymentUrl = (id: number) => {
+  return `/api/appointments/${id}/payment`;
+};
+
+export const registerAppointmentPayment = async (
+  id: number,
+  appointmentPaymentInput: AppointmentPaymentInput,
+  options?: RequestInit,
+): Promise<FinancialEntry> => {
+  return customFetch<FinancialEntry>(getRegisterAppointmentPaymentUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(appointmentPaymentInput),
+  });
+};
+
+export const getRegisterAppointmentPaymentMutationOptions = <
+  TError = ErrorType<ErrorEnvelope>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof registerAppointmentPayment>>,
+    TError,
+    { id: number; data: BodyType<AppointmentPaymentInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof registerAppointmentPayment>>,
+  TError,
+  { id: number; data: BodyType<AppointmentPaymentInput> },
+  TContext
+> => {
+  const mutationKey = ["registerAppointmentPayment"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof registerAppointmentPayment>>,
+    { id: number; data: BodyType<AppointmentPaymentInput> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return registerAppointmentPayment(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RegisterAppointmentPaymentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof registerAppointmentPayment>>
+>;
+export type RegisterAppointmentPaymentMutationBody =
+  BodyType<AppointmentPaymentInput>;
+export type RegisterAppointmentPaymentMutationError = ErrorType<ErrorEnvelope>;
+
+/**
+ * @summary Register a payment for a concluded appointment (creates a financial entry)
+ */
+export const useRegisterAppointmentPayment = <
+  TError = ErrorType<ErrorEnvelope>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof registerAppointmentPayment>>,
+    TError,
+    { id: number; data: BodyType<AppointmentPaymentInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof registerAppointmentPayment>>,
+  TError,
+  { id: number; data: BodyType<AppointmentPaymentInput> },
+  TContext
+> => {
+  return useMutation(getRegisterAppointmentPaymentMutationOptions(options));
+};
+
+/**
  * @summary List appointments
  */
 export const getListAppointmentsUrl = (params?: ListAppointmentsParams) => {
@@ -4868,6 +4957,90 @@ export function useGetFinancialSummary<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Toggle paidAt on a financial entry (receita only)
+ */
+export const getPayFinancialEntryUrl = (id: number) => {
+  return `/api/financial-entries/${id}/pay`;
+};
+
+export const payFinancialEntry = async (
+  id: number,
+  options?: RequestInit,
+): Promise<FinancialEntry> => {
+  return customFetch<FinancialEntry>(getPayFinancialEntryUrl(id), {
+    ...options,
+    method: "PATCH",
+  });
+};
+
+export const getPayFinancialEntryMutationOptions = <
+  TError = ErrorType<ErrorEnvelope>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof payFinancialEntry>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof payFinancialEntry>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["payFinancialEntry"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof payFinancialEntry>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return payFinancialEntry(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PayFinancialEntryMutationResult = NonNullable<
+  Awaited<ReturnType<typeof payFinancialEntry>>
+>;
+
+export type PayFinancialEntryMutationError = ErrorType<ErrorEnvelope>;
+
+/**
+ * @summary Toggle paidAt on a financial entry (receita only)
+ */
+export const usePayFinancialEntry = <
+  TError = ErrorType<ErrorEnvelope>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof payFinancialEntry>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof payFinancialEntry>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getPayFinancialEntryMutationOptions(options));
+};
 
 /**
  * @summary Get a financial entry

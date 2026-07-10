@@ -18,5 +18,7 @@ export interface FinancialEntry {
   category?: string | null;
   /** @nullable */
   appointmentId?: number | null;
+  /** @nullable */
+  paidAt?: Date | null;
   createdAt: Date;
 }

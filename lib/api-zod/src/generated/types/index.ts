@@ -18,6 +18,7 @@ export * from "./appointmentFullPackage";
 export * from "./appointmentFullService";
 export * from "./appointmentFullStatus";
 export * from "./appointmentInput";
+export * from "./appointmentPaymentInput";
 export * from "./appointmentsReport";
 export * from "./appointmentsReportBySizeItem";
 export * from "./appointmentsReportByStatusItem";

@@ -1,5 +1,9 @@
 import { useState } from "react";
-import { useListFinancialEntries, useGetFinancialSummary, useCreateFinancialEntry, useUpdateFinancialEntry, useDeleteFinancialEntry } from "@workspace/api-client-react";
+import {
+  useListFinancialEntries, useGetFinancialSummary, useCreateFinancialEntry,
+  useUpdateFinancialEntry, useDeleteFinancialEntry, usePayFinancialEntry,
+  useGetTenant,
+} from "@workspace/api-client-react";
 import type { FinancialEntryInputType, FinancialEntryUpdateType } from "@workspace/api-client-react";
 import { FINANCIAL_TYPES } from "@/lib/constants";
 import { useAppAuth } from "@/lib/auth-context";
@@ -11,11 +15,23 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, TrendingUp, TrendingDown, Minus, ShoppingBag } from "lucide-react";
+import {
+  Plus, Pencil, Trash2, TrendingUp, TrendingDown, Minus, ShoppingBag,
+  CheckCircle2, Clock, Receipt, MessageSquare,
+} from "lucide-react";
 
-type FinancialEntry = { id: number; type: string; description: string; amount: number; date: string; category?: string | null };
+type FinancialEntry = {
+  id: number;
+  type: string;
+  description: string;
+  amount: number;
+  date: string;
+  category?: string | null;
+  appointmentId?: number | null;
+  paidAt?: string | null;
+};
+
 const emptyForm = { type: "receita", description: "", amount: "", date: new Date().toISOString().substring(0, 10), category: "" };
 
 const typeColors: Record<string, string> = {
@@ -24,18 +40,41 @@ const typeColors: Record<string, string> = {
   despesa_fixa: "bg-orange-100 text-orange-800",
 };
 
+function buildCupomText(entry: FinancialEntry, tenantName: string, tenantCnpj?: string | null) {
+  const date = new Date(entry.date + "T12:00:00").toLocaleDateString("pt-BR");
+  const amount = Number(entry.amount).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const lines = [
+    `🐾 *COMPROVANTE DE SERVIÇO*`,
+    ``,
+    `*Prestador:* ${tenantName}`,
+    tenantCnpj ? `*CNPJ:* ${tenantCnpj}` : null,
+    ``,
+    `*Data:* ${date}`,
+    `*Serviço:* ${entry.description}`,
+    entry.category ? `*Categoria:* ${entry.category}` : null,
+    ``,
+    `*Valor:* ${amount}`,
+    entry.paidAt ? `*Pagamento:* Confirmado em ${new Date(entry.paidAt).toLocaleDateString("pt-BR")}` : `*Pagamento:* Pendente`,
+    ``,
+    `_Documento gerado pelo Pata Limpa CRM_`,
+  ].filter(l => l !== null).join("\n");
+  return lines;
+}
+
 export default function Financeiro() {
   const { tenantId } = useAppAuth();
   const { toast } = useToast();
   const today = new Date();
   const monthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().substring(0, 10);
   const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().substring(0, 10);
-
   const todayStr = today.toISOString().substring(0, 10);
 
   const [startDate, setStartDate] = useState(monthStart);
   const [endDate, setEndDate] = useState(monthEnd);
   const [typeFilter, setTypeFilter] = useState("all");
+
+  const { data: tenantData } = useGetTenant(tenantId!);
+  const tenant = tenantData as any;
 
   const { data: todayEntries = [] } = useListFinancialEntries({ tenantId: tenantId!, startDate: todayStr, endDate: todayStr });
   const todayReceitas = (todayEntries as FinancialEntry[]).filter(e => e.type === "receita");
@@ -53,10 +92,13 @@ export default function Financeiro() {
   const createEntry = useCreateFinancialEntry();
   const updateEntry = useUpdateFinancialEntry();
   const deleteEntry = useDeleteFinancialEntry();
+  const payEntry = usePayFinancialEntry();
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<FinancialEntry | null>(null);
   const [form, setForm] = useState(emptyForm);
+
+  const [cupomEntry, setCupomEntry] = useState<FinancialEntry | null>(null);
 
   const openCreate = () => { setEditing(null); setForm(emptyForm); setModalOpen(true); };
   const openEdit = (e: FinancialEntry) => {
@@ -102,8 +144,23 @@ export default function Financeiro() {
     refetch();
   };
 
+  const handleTogglePay = async (entry: FinancialEntry) => {
+    try {
+      await payEntry.mutateAsync({ id: entry.id });
+      refetch();
+      toast({ title: entry.paidAt ? "Pagamento revertido" : "Pagamento confirmado!" });
+    } catch {
+      toast({ title: "Erro ao confirmar pagamento", variant: "destructive" });
+    }
+  };
+
   const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   const saldo = (summary?.totalReceitas ?? 0) - (summary?.totalDespesas ?? 0) - (summary?.totalDespesasFixas ?? 0);
+
+  const cupomText = cupomEntry ? buildCupomText(cupomEntry, tenant?.name ?? "Pet Shop", tenant?.cnpj) : "";
+  const waLink = cupomEntry && tenant?.phone
+    ? `https://wa.me/55${(tenant.phone as string).replace(/\D/g, "")}?text=${encodeURIComponent(cupomText)}`
+    : `https://wa.me/?text=${encodeURIComponent(cupomText)}`;
 
   return (
     <div className="p-6 space-y-6">
@@ -185,20 +242,56 @@ export default function Financeiro() {
           <CardContent className="p-0">
             <div className="divide-y">
               {(entries as FinancialEntry[]).sort((a, b) => b.date.localeCompare(a.date)).map(entry => (
-                <div key={entry.id} className="flex items-center justify-between p-4 hover:bg-accent/30 transition-colors">
-                  <div className="flex items-center gap-3">
+                <div key={entry.id} className="flex items-center justify-between p-4 hover:bg-accent/30 transition-colors gap-2">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
                     <Badge className={typeColors[entry.type] ?? ""} variant="outline">
                       {FINANCIAL_TYPES[entry.type as keyof typeof FINANCIAL_TYPES] ?? entry.type}
                     </Badge>
-                    <div>
-                      <p className="font-medium text-sm">{entry.description}</p>
-                      <p className="text-xs text-muted-foreground">{new Date(entry.date).toLocaleDateString("pt-BR")}{entry.category ? ` • ${entry.category}` : ""}</p>
+                    <div className="min-w-0">
+                      <p className="font-medium text-sm truncate">{entry.description}</p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-xs text-muted-foreground">{new Date(entry.date + "T12:00:00").toLocaleDateString("pt-BR")}{entry.category ? ` • ${entry.category}` : ""}</p>
+                        {entry.type === "receita" && (
+                          entry.paidAt ? (
+                            <span className="text-[10px] flex items-center gap-0.5 text-green-700 font-medium">
+                              <CheckCircle2 className="h-3 w-3" />
+                              Pago {new Date(entry.paidAt).toLocaleDateString("pt-BR")}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] flex items-center gap-0.5 text-amber-600">
+                              <Clock className="h-3 w-3" />
+                              Pendente
+                            </span>
+                          )
+                        )}
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className={`font-semibold ${entry.type === "receita" ? "text-green-600" : "text-red-600"}`}>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <span className={`font-semibold text-sm ${entry.type === "receita" ? "text-green-600" : "text-red-600"}`}>
                       {entry.type === "receita" ? "+" : "-"}{fmt(Number(entry.amount))}
                     </span>
+                    {entry.type === "receita" && (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title={entry.paidAt ? "Reverter pagamento" : "Confirmar pagamento"}
+                          className={entry.paidAt ? "text-green-600 hover:text-amber-600" : "text-muted-foreground hover:text-green-600"}
+                          onClick={() => handleTogglePay(entry)}
+                        >
+                          <CheckCircle2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title="Gerar cupom / comprovante"
+                          onClick={() => setCupomEntry(entry)}
+                        >
+                          <Receipt className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
                     <Button variant="ghost" size="icon" onClick={() => openEdit(entry)}><Pencil className="h-4 w-4" /></Button>
                     <Button variant="ghost" size="icon" onClick={() => handleDelete(entry.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                   </div>
@@ -209,6 +302,7 @@ export default function Financeiro() {
         </Card>
       )}
 
+      {/* Create / Edit Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>{editing ? "Editar Lançamento" : "Novo Lançamento"}</DialogTitle></DialogHeader>
@@ -228,6 +322,38 @@ export default function Financeiro() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setModalOpen(false)}>Cancelar</Button>
             <Button onClick={handleSave} disabled={!form.description || !form.amount}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cupom / Comprovante Modal */}
+      <Dialog open={!!cupomEntry} onOpenChange={o => { if (!o) setCupomEntry(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Receipt className="h-4 w-4 text-primary" />
+              Comprovante de Serviço
+            </DialogTitle>
+          </DialogHeader>
+          {cupomEntry && (
+            <div className="space-y-3">
+              <div className="bg-muted/40 border rounded-lg p-4 text-sm space-y-1 font-mono whitespace-pre-wrap text-xs leading-relaxed">
+                {cupomText}
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Este comprovante segue os campos mínimos de NFS-e (discriminação, prestador, tomador, valor) para facilitar futura integração com nota fiscal eletrônica.
+              </p>
+            </div>
+          )}
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setCupomEntry(null)}>Fechar</Button>
+            <Button
+              className="bg-green-600 hover:bg-green-700 gap-2"
+              onClick={() => window.open(waLink, "_blank")}
+            >
+              <MessageSquare className="h-4 w-4" />
+              Enviar via WhatsApp
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
