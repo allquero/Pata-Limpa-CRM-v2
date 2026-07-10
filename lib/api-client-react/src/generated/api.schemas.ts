@@ -577,6 +577,7 @@ export type ClientHistoryAvulsosItem = {
   notes?: string | null;
   /** @nullable */
   service?: ClientHistoryAvulsosItemService;
+  extraServices?: string[];
   pet?: ClientHistoryAvulsosItemPet;
   totalPago: number;
   saldo: number;
@@ -608,11 +609,14 @@ export type ClientHistoryPacotesItemAgendamentosItem = {
   /** @nullable */
   confirmedAt?: string | null;
   /** @nullable */
+  notes?: string | null;
+  /** @nullable */
   petId?: number | null;
   /** @nullable */
   petName?: string | null;
   /** @nullable */
   service?: ClientHistoryPacotesItemAgendamentosItemService;
+  extraServices?: string[];
 };
 
 export type ClientHistoryPacotesItem = {

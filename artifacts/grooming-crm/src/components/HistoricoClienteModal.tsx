@@ -67,6 +67,7 @@ type PetSession = {
   apptId: number;
   scheduledDate: string;
   service: string | null;
+  extraServices: string[];
   status: string;
   confirmed: boolean;
   origin: "avulso" | "pacote";
@@ -85,6 +86,7 @@ function buildPetView(history: ClientHistory): Map<number, { petName: string; se
       apptId: a.id,
       scheduledDate: a.scheduledDate as string,
       service: (a.service as { name?: string } | null)?.name ?? null,
+      extraServices: ((a as any).extraServices as string[]) ?? [],
       status: a.status ?? "aguardando",
       confirmed: !!a.confirmedAt,
       origin: "avulso",
@@ -102,6 +104,7 @@ function buildPetView(history: ClientHistory): Map<number, { petName: string; se
         apptId: ag.id as number,
         scheduledDate: ag.scheduledDate as string,
         service: ag.service?.name ?? null,
+        extraServices: ((ag as any).extraServices as string[]) ?? [],
         status: ag.status ?? "aguardando",
         confirmed: !!ag.confirmedAt,
         origin: "pacote",
@@ -167,10 +170,15 @@ function PetHistorySection({ petName, sessions }: { petName: string; sessions: P
                 <div className="flex items-center gap-2">
                   <span className="text-muted-foreground w-5 shrink-0 text-right">{i + 1}.</span>
                   <span className="text-muted-foreground w-24 shrink-0">{formatDate(s.scheduledDate)}</span>
-                  {s.service && <span className="text-muted-foreground flex-1 truncate">{s.service}</span>}
-                  {s.origin === "pacote" && s.packageName && !s.service && (
-                    <span className="text-muted-foreground flex-1 truncate">{s.packageName}</span>
-                  )}
+                  {(() => {
+                    const parts = [s.service, ...(s.extraServices ?? [])].filter(Boolean);
+                    const label = parts.length > 0
+                      ? parts.join(" + ")
+                      : s.origin === "pacote" && s.packageName ? s.packageName : null;
+                    return label ? (
+                      <span className="text-muted-foreground flex-1 truncate">{label}</span>
+                    ) : null;
+                  })()}
                   <Badge className={`text-[10px] px-1 py-0 gap-0.5 shrink-0 ${si.color}`}>
                     {si.icon}{si.label}
                   </Badge>

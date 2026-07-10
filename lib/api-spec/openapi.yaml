@@ -2358,6 +2358,10 @@ components:
                     type: integer
                   name:
                     type: string
+              extraServices:
+                type: array
+                items:
+                  type: string
               pet:
                 type: object
                 properties:
@@ -2419,6 +2423,8 @@ components:
                     confirmedAt:
                       type: ["string", "null"]
                       format: date-time
+                    notes:
+                      type: ["string", "null"]
                     petId:
                       type: ["integer", "null"]
                     petName:
@@ -2430,6 +2436,10 @@ components:
                           type: integer
                         name:
                           type: string
+                    extraServices:
+                      type: array
+                      items:
+                        type: string
               pagamentos:
                 type: array
                 items:

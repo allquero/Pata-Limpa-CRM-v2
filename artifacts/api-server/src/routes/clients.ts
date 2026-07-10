@@ -103,6 +103,20 @@ router.get("/clients/:id/history", async (req: Request, res: Response): Promise<
     .where(and(eq(appointmentsTable.clientId, clientId), eq(appointmentsTable.tenantId, req.tenantId!)))
     .orderBy(appointmentsTable.scheduledDate);
 
+  // Collect all unique extra service IDs across all appointments
+  const allExtraIds = new Set<number>();
+  for (const a of appts) {
+    const extras = a.appt.extraServiceIds as number[] | null | undefined;
+    if (Array.isArray(extras)) extras.forEach(id => allExtraIds.add(id));
+  }
+  // Fetch extra service names in one query
+  const extraServicesRows = allExtraIds.size > 0
+    ? await db.select({ id: servicesTable.id, name: servicesTable.name })
+        .from(servicesTable)
+        .where(inArray(servicesTable.id, Array.from(allExtraIds)))
+    : [];
+  const extraServiceMap = new Map<number, string>(extraServicesRows.map(s => [s.id, s.name]));
+
   // Get all payments for this client
   const allPayments = await db
     .select()
@@ -158,6 +172,10 @@ router.get("/clients/:id/history", async (req: Request, res: Response): Promise<
     const totalPago = apptPayments.reduce((sum, p) => sum + parseFloat(p.amount), 0);
     const saldo = price - totalPago;
     const statusPagamento = totalPago === 0 ? "pendente" : saldo <= 0 ? "quitado" : "parcial";
+    const extraIds = a.appt.extraServiceIds as number[] | null | undefined;
+    const extraServices = Array.isArray(extraIds)
+      ? extraIds.map(id => extraServiceMap.get(id)).filter(Boolean) as string[]
+      : [];
     return {
       id: a.appt.id,
       scheduledDate: a.appt.scheduledDate,
@@ -166,6 +184,7 @@ router.get("/clients/:id/history", async (req: Request, res: Response): Promise<
       confirmedAt: a.appt.confirmedAt,
       notes: a.appt.notes,
       service: a.service?.id ? a.service : null,
+      extraServices,
       pet: a.pet?.id ? a.pet : null,
       totalPago: Math.round(totalPago * 100) / 100,
       saldo: Math.round(saldo * 100) / 100,
@@ -193,15 +212,23 @@ router.get("/clients/:id/history", async (req: Request, res: Response): Promise<
       totalPago: Math.round(totalPago * 100) / 100,
       saldo: saldo != null ? Math.round(saldo * 100) / 100 : null,
       statusPagamento,
-      agendamentos: groupAppts.map(a => ({
-        id: a.appt.id,
-        scheduledDate: a.appt.scheduledDate,
-        status: a.appt.status,
-        confirmedAt: a.appt.confirmedAt,
-        petId: a.appt.petId ?? null,
-        petName: a.pet?.id ? a.pet.name : null,
-        service: a.service?.id ? { id: a.service.id, name: a.service.name } : null,
-      })),
+      agendamentos: groupAppts.map(a => {
+        const extraIds = a.appt.extraServiceIds as number[] | null | undefined;
+        const extraServices = Array.isArray(extraIds)
+          ? extraIds.map(id => extraServiceMap.get(id)).filter(Boolean) as string[]
+          : [];
+        return {
+          id: a.appt.id,
+          scheduledDate: a.appt.scheduledDate,
+          status: a.appt.status,
+          confirmedAt: a.appt.confirmedAt,
+          notes: a.appt.notes,
+          petId: a.appt.petId ?? null,
+          petName: a.pet?.id ? a.pet.name : null,
+          service: a.service?.id ? { id: a.service.id, name: a.service.name } : null,
+          extraServices,
+        };
+      }),
       pagamentos: salePayments.map(p => ({ ...p, amount: parseFloat(p.amount) })),
     };
   });

@@ -21,6 +21,7 @@ export type ClientHistoryAvulsosItem = {
   notes?: string | null;
   /** @nullable */
   service?: ClientHistoryAvulsosItemService;
+  extraServices?: string[];
   pet?: ClientHistoryAvulsosItemPet;
   totalPago: number;
   saldo: number;

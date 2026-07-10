@@ -522,6 +522,7 @@ export const GetClientHistoryResponse = zod.object({
           name: zod.string().optional(),
         })
         .nullish(),
+      extraServices: zod.array(zod.string()).optional(),
       pet: zod
         .object({
           id: zod.number().optional(),
@@ -567,6 +568,7 @@ export const GetClientHistoryResponse = zod.object({
           scheduledDate: zod.coerce.date().optional(),
           status: zod.string().optional(),
           confirmedAt: zod.coerce.date().nullish(),
+          notes: zod.string().nullish(),
           petId: zod.number().nullish(),
           petName: zod.string().nullish(),
           service: zod
@@ -575,6 +577,7 @@ export const GetClientHistoryResponse = zod.object({
               name: zod.string().optional(),
             })
             .nullish(),
+          extraServices: zod.array(zod.string()).optional(),
         }),
       ),
       pagamentos: zod

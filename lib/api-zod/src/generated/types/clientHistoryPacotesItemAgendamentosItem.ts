@@ -14,9 +14,12 @@ export type ClientHistoryPacotesItemAgendamentosItem = {
   /** @nullable */
   confirmedAt?: Date | null;
   /** @nullable */
+  notes?: string | null;
+  /** @nullable */
   petId?: number | null;
   /** @nullable */
   petName?: string | null;
   /** @nullable */
   service?: ClientHistoryPacotesItemAgendamentosItemService;
+  extraServices?: string[];
 };
