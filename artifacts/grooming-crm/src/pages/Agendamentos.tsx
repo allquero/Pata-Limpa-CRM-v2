@@ -675,7 +675,14 @@ function ConfirmacaoWhatsAppModal({
 
     if (mode === "conclusao" && !baseContent.includes("{datas}") && datesForList.length > 0) {
       const datesList = datesForList
-        .map(a => `📅 ${format(new Date(a.scheduledDate), "dd/MM/yyyy 'às' HH:mm")}`)
+        .map(a => {
+          const ad = new Date(a.scheduledDate);
+          if (isPeriodoMsg) {
+            const p = (ad.getUTCHours() + utcOffsetForMsg) < 12 ? "Manhã" : "Tarde";
+            return `📅 ${format(ad, "dd/MM/yyyy")} — ${p}`;
+          }
+          return `📅 ${format(ad, "dd/MM/yyyy 'às' HH:mm")}`;
+        })
         .join("\n");
       msg += `\n\nPróximos agendamentos:\n${datesList}`;
     }
@@ -1276,6 +1283,7 @@ export default function Agendamentos() {
     const client = (clients as Client[]).find(c => c.id === appt.clientId);
     if (!client?.phone) { toast({ title: "Cliente sem telefone cadastrado", variant: "destructive" }); return; }
     const message = fillReminderTemplate(appt);
+    if (!message) { toast({ title: "Nenhum template de lembrete cadastrado. Crie um na página Mensagens.", variant: "destructive" }); return; }
     const cleaned = client.phone.replace(/\D/g, "");
     const number = cleaned.length === 11 ? `55${cleaned}` : cleaned;
     window.open(`https://wa.me/${number}?text=${encodeURIComponent(message)}`, "_blank");
@@ -1480,7 +1488,7 @@ export default function Agendamentos() {
                           <button onClick={() => unmarkNotified(appt.id)} className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 ml-1">desfazer</button>
                         </div>
                       ) : (
-                        <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white gap-1.5 h-7 text-xs shrink-0" onClick={() => sendReminder(appt)} disabled={!client?.phone}>
+                        <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white gap-1.5 h-7 text-xs shrink-0" onClick={() => sendReminder(appt)} disabled={!client?.phone || reminderTemplates.length === 0}>
                           <MessageSquare className="h-3.5 w-3.5" />Lembrete
                         </Button>
                       )}
